@@ -1,0 +1,185 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://jarvis.local/schemas/action.schema.json",
+  "title": "JARVIS Action",
+  "description": "Universelles Aktionsobjekt. Beschreibt genau eine technisch ausfuehrbare Veraenderung in einem Zielsystem, ihre Risikoklasse, Freigabe, Ausfuehrung und ihren Ergebnisnachweis. Version 1.0.0.",
+  "type": "object",
+  "properties": {
+    "schema_version": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/schema_version" },
+    "action_id": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/action_id" },
+    "context_id": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/context_id" },
+
+    "goal": { "type": "string", "minLength": 3, "maxLength": 300, "description": "Was fachlich erreicht werden soll. Deutscher Freitext." },
+    "description": { "type": "string", "maxLength": 4000 },
+    "action_type": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*\\.[a-z][a-z0-9_]*$",
+      "description": "Englische Punktnotation, z. B. file.move, mail.send, task.create, calendar.create_event, crm.update_record."
+    },
+
+    "origin": {
+      "type": "object",
+      "properties": {
+        "event_id": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/event_id" },
+        "task_id": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/task_id" },
+        "trigger": { "type": "string", "enum": ["event", "schedule", "user_request", "escalation", "compensation"] },
+        "source_refs": { "type": "array", "items": { "$ref": "https://jarvis.local/schemas/object_ref.schema.json" }, "default": [] }
+      },
+      "required": ["trigger"],
+      "additionalProperties": false
+    },
+
+    "actor": {
+      "type": "string",
+      "const": "jarvis",
+      "description": "Technische Aktionen werden ausschliesslich durch JARVIS ueber einen registrierten Executor ausgefuehrt. Arbeiten, die ein Mensch erledigt, werden als Aufgabe mit entsprechendem actor abgebildet, nicht als Aktion."
+    },
+
+    "target": {
+      "type": "object",
+      "properties": {
+        "system_adapter_id": { "type": "string" },
+        "tool_id": { "type": "string" },
+        "tool_version": { "type": "string" },
+        "target_object": { "$ref": "https://jarvis.local/schemas/object_ref.schema.json" },
+        "recipients": {
+          "type": "array",
+          "items": { "$ref": "https://jarvis.local/schemas/object_ref.schema.json" },
+          "default": [],
+          "description": "Externe Empfaenger. Loest bei Vorhandensein mindestens Klasse B aus."
+        }
+      },
+      "required": ["system_adapter_id", "tool_id"],
+      "additionalProperties": false
+    },
+
+    "inputs": {
+      "type": "object",
+      "description": "Werkzeugspezifische Eingaben. Muessen dem input_schema_ref des Werkzeugs entsprechen.",
+      "additionalProperties": true
+    },
+    "missing_inputs": {
+      "type": "array",
+      "items": { "type": "string" },
+      "default": [],
+      "description": "Fehlende Pflichteingaben. Solange nicht leer, ist status blocked."
+    },
+
+    "risk_class": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/risk_class" },
+    "risk_rationale": { "type": "string", "maxLength": 1000 },
+    "risk_class_source": {
+      "type": "string",
+      "enum": ["tool_default", "context_override", "rule", "manual_escalation"],
+      "description": "Nachweis der Klassifizierung. Eine Herabstufung gegenueber tool_default ist unzulaessig."
+    },
+    "reversibility": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/reversibility" },
+    "compensation_action_id": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/action_id" },
+
+    "approval_id": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/approval_id" },
+    "approval_status": {
+      "type": "string",
+      "enum": ["not_required", "pending", "approved", "rejected", "expired", "revoked"],
+      "default": "not_required"
+    },
+
+    "status": {
+      "type": "string",
+      "enum": ["planned", "blocked", "awaiting_approval", "approved", "rejected", "running", "succeeded", "failed", "cancelled", "expired", "superseded"]
+    },
+    "dry_run": { "type": "boolean", "default": false },
+
+    "priority": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/priority" },
+    "due_at": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/timestamp_utc" },
+    "not_before": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/timestamp_utc" },
+
+    "idempotency_key": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/idempotency_key" },
+    "idempotency_basis": {
+      "type": "object",
+      "description": "Nachvollziehbare Bestandteile des Idempotenzschluessels. Ausschliesslich stabile Werte.",
+      "properties": {
+        "context_id": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/context_id" },
+        "source_ref": { "type": "string", "description": "Quellereignis-ID oder stabile Quellsystem-ID." },
+        "action_type": { "type": "string" },
+        "target_system": { "type": "string" },
+        "target_object_ref": { "type": "string" }
+      },
+      "required": ["context_id", "source_ref", "action_type", "target_system", "target_object_ref"],
+      "additionalProperties": false
+    },
+    "content_fingerprint": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$",
+      "description": "Hash ueber die entscheidungsrelevanten Inhalte. Aenderung nach Freigabe macht die Freigabe ungueltig."
+    },
+
+    "attempt_count": { "type": "integer", "minimum": 0, "default": 0 },
+    "max_attempts": { "type": "integer", "minimum": 1, "default": 3 },
+    "last_attempt_at": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/timestamp_utc" },
+    "next_attempt_at": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/timestamp_utc" },
+
+    "evidence_ids": {
+      "type": "array",
+      "items": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/evidence_id" },
+      "default": []
+    },
+    "error_ids": {
+      "type": "array",
+      "items": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/error_id" },
+      "default": []
+    },
+
+    "created_at": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/timestamp_utc" },
+    "updated_at": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/timestamp_utc" },
+    "executed_at": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/timestamp_utc" },
+    "verified_at": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/timestamp_utc" },
+    "producer": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/producer" },
+    "trace": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/trace" }
+  },
+  "required": [
+    "schema_version", "action_id", "context_id", "goal", "action_type", "origin",
+    "actor", "target", "inputs", "risk_class", "risk_class_source", "reversibility",
+    "status", "priority", "idempotency_key", "idempotency_basis", "created_at", "producer", "trace"
+  ],
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "description": "Klasse C erfordert eine Freigabe. Ohne approval_id darf der Status hoechstens awaiting_approval sein.",
+      "if": {
+        "properties": { "risk_class": { "const": "C" } },
+        "required": ["risk_class"]
+      },
+      "then": {
+        "properties": {
+          "approval_status": { "enum": ["pending", "approved", "rejected", "expired", "revoked"] }
+        },
+        "required": ["approval_status"]
+      }
+    },
+    {
+      "description": "Eine Klasse-C-Aktion darf nur laufen oder erfolgreich sein, wenn eine Freigabe vorliegt.",
+      "if": {
+        "allOf": [
+          { "properties": { "risk_class": { "const": "C" } }, "required": ["risk_class"] },
+          { "properties": { "status": { "enum": ["running", "succeeded"] } }, "required": ["status"] }
+        ]
+      },
+      "then": {
+        "properties": { "approval_status": { "const": "approved" } },
+        "required": ["approval_id", "approval_status"]
+      }
+    },
+    {
+      "description": "Erfolg erfordert mindestens einen Ergebnisnachweis.",
+      "if": { "properties": { "status": { "const": "succeeded" } }, "required": ["status"] },
+      "then": {
+        "properties": { "evidence_ids": { "minItems": 1 } },
+        "required": ["evidence_ids", "executed_at", "verified_at"]
+      }
+    },
+    {
+      "description": "Blockierte Aktionen benennen die fehlenden Eingaben.",
+      "if": { "properties": { "status": { "const": "blocked" } }, "required": ["status"] },
+      "then": { "properties": { "missing_inputs": { "minItems": 1 } }, "required": ["missing_inputs"] }
+    }
+  ]
+}

@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://jarvis.local/schemas/tools/storage_gdrive.get_file.output.json",
+  "title": "Ausgabe: Datei lesen",
+  "description": "Metadaten und optional der Inhalt der gelesenen Datei. Version 1.0.0, Phase 1.",
+  "type": "object",
+  "properties": {
+    "file_external_id": {
+      "type": "string"
+    },
+    "filename": {
+      "type": "string",
+      "maxLength": 300
+    },
+    "mime_type": {
+      "type": "string"
+    },
+    "size_bytes": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "modified_at": {
+      "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/timestamp_utc"
+    },
+    "parent_path": {
+      "type": "string",
+      "maxLength": 500
+    },
+    "content_hash": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "content_ref": {
+      "type": "string",
+      "description": "Verweis auf den zwischengespeicherten Inhalt. Der Inhalt selbst gelangt nie in ein Protokoll."
+    },
+    "provider_status": {
+      "type": "integer"
+    }
+  },
+  "required": [
+    "file_external_id",
+    "filename",
+    "mime_type",
+    "size_bytes",
+    "content_hash",
+    "provider_status"
+  ],
+  "additionalProperties": false
+}

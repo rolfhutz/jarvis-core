@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://jarvis.local/schemas/tools/ocr_default.analyze_document.input.json",
+  "title": "Eingabe: Dokument technisch erfassen",
+  "description": "Uebergibt ein Dokument an den Erfassungsdienst. Version 1.0.0, Phase 1.",
+  "type": "object",
+  "properties": {
+    "context_id": {
+      "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/context_id"
+    },
+    "document_id": {
+      "type": "string",
+      "pattern": "^doc_[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "adapter_id": {
+      "type": "string"
+    },
+    "content_ref": {
+      "type": "string",
+      "minLength": 1
+    },
+    "mime_type": {
+      "type": "string",
+      "enum": [
+        "application/pdf",
+        "image/jpeg",
+        "image/png",
+        "image/tiff"
+      ]
+    },
+    "content_hash": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "page_count_hint": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 0
+    },
+    "mode": {
+      "type": "string",
+      "enum": [
+        "text_only",
+        "full_layout"
+      ],
+      "default": "full_layout",
+      "description": "text_only fuer digitale PDF ohne Scan, spart Kosten."
+    },
+    "attempt": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 3,
+      "description": "Der zweite Versuch nutzt eine hoehere Aufloesung."
+    }
+  },
+  "required": [
+    "context_id",
+    "document_id",
+    "adapter_id",
+    "content_ref",
+    "mime_type",
+    "content_hash",
+    "mode",
+    "attempt"
+  ],
+  "additionalProperties": false
+}

@@ -1,0 +1,49 @@
+{
+  "schema_version": "1.0.0",
+  "approval_id": "apr_01JBQ8Z4K7M3N9P2R5T6V8W0ZA",
+  "context_id": "arbeitgeber_visolva",
+  "action_id": "act_01JBQ8Z4K7M3N9P2R5T6V8W0Z9",
+  "requested_risk_class": "C",
+  "action_fingerprint": "sha256:e7f4c94a3a7f15db0d489f0cba4eb14eba9dbaf6e9ea254e1994c403cf2daaa5",
+  "channel": {
+    "adapter_id": "approval_email",
+    "recipient_ref": "env:JV_VISOLVA_APPROVAL_RECIPIENT"
+  },
+  "decision_summary": {
+    "situation": "Der Kunde hat am 29.08.2026 nach der Lieferzeit zum Angebot 2026-0815 gefragt und erwartet eine Rueckmeldung bis 02.09.2026.",
+    "planned_action": "Versand einer individuellen Antwort mit der bestaetigten Lieferzeit.",
+    "recipients_label": "Kundenkontakt zum Angebot 2026-0815",
+    "consequences": "Externe verbindliche Aussage. Nach dem Versand nicht rueckholbar.",
+    "sources": [
+      {
+        "object_type": "email",
+        "object_id": "eml_01JBQ8Z4K7M3N9P2R5T6V8W0Z4",
+        "context_id": "arbeitgeber_visolva"
+      }
+    ]
+  },
+  "token_hash": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+  "requested_at": "2026-08-29T07:20:00Z",
+  "expires_at": "2026-08-31T07:20:00Z",
+  "status": "consumed",
+  "decided_at": "2026-08-29T07:58:02Z",
+  "decided_by": "rolf",
+  "decision_note": "Freigegeben.",
+  "decision_evidence": {
+    "method": "signed_link_confirm",
+    "confirmed_second_step": true,
+    "client_fingerprint": "sha256-truncated-hash"
+  },
+  "consumed_at": "2026-08-29T08:02:11Z",
+  "producer": {
+    "producer_type": "agent",
+    "producer_id": "approval_broker",
+    "producer_version": "1.0.0"
+  },
+  "trace": {
+    "trace_id": "tr-20260829-0002",
+    "correlation_id": "co-20260829-0002",
+    "workflow_name": "JV-P0-CORE-event_ingest-v1",
+    "workflow_version": "1.0.0"
+  }
+}

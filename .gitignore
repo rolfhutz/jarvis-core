@@ -1,0 +1,44 @@
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+credentials/
+secrets/
+
+# Database backups and runtime data
+backups/
+*.dump
+*.backup
+*.sql.gz
+runtime/
+logs/
+
+# Documents and extracted content
+documents/
+inbox/
+archive/
+working/
+reports/
+extracted_text/
+
+# Local environments and dependencies
+.venv/
+venv/
+__pycache__/
+*.pyc
+node_modules/
+
+# Editor and operating-system files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# n8n execution payloads and credential exports
+n8n/executions/
+n8n/credentials/
+*.credentials.json

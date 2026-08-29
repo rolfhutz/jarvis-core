@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://jarvis.local/schemas/approval.schema.json",
+  "title": "JARVIS Approval",
+  "description": "Freigabevorgang fuer eine Aktion. Eine Freigabe gilt genau fuer einen Aktionsinhalt, ist einmalig verwendbar und laeuft ab. Version 1.0.0.",
+  "type": "object",
+  "properties": {
+    "schema_version": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/schema_version" },
+    "approval_id": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/approval_id" },
+    "context_id": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/context_id" },
+    "action_id": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/action_id" },
+
+    "requested_risk_class": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/risk_class" },
+    "action_fingerprint": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$",
+      "description": "Kopie von action.content_fingerprint zum Zeitpunkt der Anforderung. Bei Abweichung ist die Freigabe ungueltig."
+    },
+
+    "channel": {
+      "type": "object",
+      "properties": {
+        "adapter_id": { "type": "string" },
+        "recipient_ref": { "type": "string", "description": "Verweis auf einen Empfaenger in der Kontextkonfiguration, keine Klartextadresse." },
+        "message_ref": { "$ref": "https://jarvis.local/schemas/object_ref.schema.json" }
+      },
+      "required": ["adapter_id", "recipient_ref"],
+      "additionalProperties": false
+    },
+
+    "decision_summary": {
+      "type": "object",
+      "description": "Was Rolf zur Entscheidung vorgelegt wird. Grundlage der Aktionskarte ab Phase 6.",
+      "properties": {
+        "situation": { "type": "string", "maxLength": 2000 },
+        "planned_action": { "type": "string", "maxLength": 2000 },
+        "recipients_label": { "type": "string", "maxLength": 500 },
+        "consequences": { "type": "string", "maxLength": 2000 },
+        "sources": { "type": "array", "items": { "$ref": "https://jarvis.local/schemas/object_ref.schema.json" }, "default": [] }
+      },
+      "required": ["situation", "planned_action", "consequences"],
+      "additionalProperties": false
+    },
+
+    "token_hash": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$",
+      "description": "Hash des Einmal-Tokens. Das Token selbst wird niemals gespeichert oder protokolliert."
+    },
+    "requested_at": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/timestamp_utc" },
+    "expires_at": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/timestamp_utc" },
+
+    "status": {
+      "type": "string",
+      "enum": ["pending", "approved", "rejected", "expired", "revoked", "consumed"],
+      "description": "consumed bedeutet: Freigabe wurde fuer genau eine Ausfuehrung verbraucht."
+    },
+    "decided_at": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/timestamp_utc" },
+    "decided_by": { "type": "string", "description": "Kennung des Entscheiders, z. B. rolf." },
+    "decision_note": { "type": "string", "maxLength": 2000 },
+    "decision_evidence": {
+      "type": "object",
+      "description": "Technischer Nachweis der Entscheidung ohne Token.",
+      "properties": {
+        "method": { "type": "string", "enum": ["signed_link_confirm", "reply_keyword", "ui_button", "manual_record"] },
+        "confirmed_second_step": { "type": "boolean" },
+        "client_fingerprint": { "type": "string", "description": "Gehashter Client-Hinweis, keine Rohdaten." }
+      },
+      "required": ["method"],
+      "additionalProperties": false
+    },
+    "consumed_at": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/timestamp_utc" },
+    "supersedes_approval_id": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/approval_id" },
+    "producer": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/producer" },
+    "trace": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/trace" }
+  },
+  "required": [
+    "schema_version", "approval_id", "context_id", "action_id", "requested_risk_class",
+    "action_fingerprint", "channel", "decision_summary", "token_hash",
+    "requested_at", "expires_at", "status", "producer", "trace"
+  ],
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": { "properties": { "status": { "enum": ["approved", "rejected"] } }, "required": ["status"] },
+      "then": { "required": ["decided_at", "decided_by", "decision_evidence"] }
+    },
+    {
+      "if": { "properties": { "status": { "const": "consumed" } }, "required": ["status"] },
+      "then": { "required": ["consumed_at", "decided_at"] }
+    }
+  ]
+}

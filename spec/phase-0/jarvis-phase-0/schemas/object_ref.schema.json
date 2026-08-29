@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://jarvis.local/schemas/object_ref.schema.json",
+  "title": "JARVIS Object Reference",
+  "description": "Einheitlicher Verweis auf ein Objekt innerhalb oder ausserhalb von JARVIS. Version 1.0.0.",
+  "type": "object",
+  "properties": {
+    "object_type": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/object_type" },
+    "object_id": {
+      "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/prefixed_id",
+      "description": "JARVIS-interne globale ID. Pflicht, sobald das Objekt in JARVIS registriert ist."
+    },
+    "context_id": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/context_id" },
+    "system": {
+      "type": "string",
+      "description": "Adapter-ID des fuehrenden Fremdsystems, z. B. storage_gdrive oder crm_odoo. Nie ein Klarname eines Arbeitgebers."
+    },
+    "external_id": {
+      "type": "string",
+      "description": "Stabile ID im Fremdsystem, z. B. Drive-File-ID oder Odoo-Record-ID."
+    },
+    "uri": {
+      "type": "string",
+      "description": "Aufloesbarer Verweis auf das Original. Kein Inhalt."
+    },
+    "label": {
+      "type": "string",
+      "maxLength": 300,
+      "description": "Menschenlesbare Bezeichnung. Kann fachlichen Inhalt enthalten und gehoert daher nur in Kontextschemata."
+    },
+    "version": { "type": "string" },
+    "content_hash": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$",
+      "description": "Inhalts-Hash zur Dublettenerkennung von Dateien."
+    }
+  },
+  "required": ["object_type", "context_id"],
+  "anyOf": [
+    { "required": ["object_id"] },
+    { "required": ["system", "external_id"] }
+  ],
+  "additionalProperties": false
+}

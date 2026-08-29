@@ -1,0 +1,176 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://jarvis.local/schemas/tools/ocr_default.analyze_document.output.json",
+  "title": "Ausgabe: Dokument technisch erfassen",
+  "description": "Volltext, Seitenstruktur, Bloecke, Tabellen und Formularfelder. Ein Dienst, der diesen Vertrag nicht erfuellt, scheidet in der Auswahl aus. Version 1.0.0, Phase 1.",
+  "type": "object",
+  "properties": {
+    "document_id": {
+      "type": "string",
+      "pattern": "^doc_[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "content_hash": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$",
+      "description": "Hash der uebermittelten Datei. Bindet das Ergebnis an die Vorlage."
+    },
+    "page_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "mean_confidence": {
+      "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/confidence"
+    },
+    "text_character_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "is_scanned": {
+      "type": "boolean"
+    },
+    "detected_language": {
+      "type": "string",
+      "maxLength": 10
+    },
+    "pages": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/page"
+      },
+      "minItems": 0
+    },
+    "provider_status": {
+      "type": "integer"
+    },
+    "provider_job_id": {
+      "type": "string",
+      "description": "Unveraenderliche Kennung des Erfassungslaufs beim Dienst."
+    }
+  },
+  "required": [
+    "document_id",
+    "content_hash",
+    "page_count",
+    "mean_confidence",
+    "text_character_count",
+    "pages",
+    "provider_status"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "page": {
+      "type": "object",
+      "properties": {
+        "page": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "text": {
+          "type": "string"
+        },
+        "confidence": {
+          "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/confidence"
+        },
+        "blocks": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/block"
+          },
+          "default": []
+        },
+        "tables": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/table"
+          },
+          "default": []
+        },
+        "form_fields": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/form_field"
+          },
+          "default": []
+        }
+      },
+      "required": [
+        "page",
+        "text",
+        "confidence"
+      ],
+      "additionalProperties": false
+    },
+    "block": {
+      "type": "object",
+      "properties": {
+        "text": {
+          "type": "string"
+        },
+        "confidence": {
+          "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/confidence"
+        },
+        "locator": {
+          "type": "string",
+          "maxLength": 200,
+          "description": "Positionsbezug, z. B. bbox. Pflicht, weil die Belegpflicht darauf aufsetzt."
+        }
+      },
+      "required": [
+        "text",
+        "confidence",
+        "locator"
+      ],
+      "additionalProperties": false
+    },
+    "table": {
+      "type": "object",
+      "properties": {
+        "rows": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "confidence": {
+          "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/confidence"
+        },
+        "locator": {
+          "type": "string",
+          "maxLength": 200
+        }
+      },
+      "required": [
+        "rows",
+        "confidence"
+      ],
+      "additionalProperties": false
+    },
+    "form_field": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "type": "string"
+        },
+        "value": {
+          "type": "string"
+        },
+        "confidence": {
+          "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/confidence"
+        },
+        "locator": {
+          "type": "string",
+          "maxLength": 200
+        }
+      },
+      "required": [
+        "key",
+        "value",
+        "confidence"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

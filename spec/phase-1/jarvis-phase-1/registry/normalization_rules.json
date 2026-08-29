@@ -1,0 +1,263 @@
+{
+  "registry_version": "1.1.0",
+  "description": "Registrierte Normalisierungsregeln der Extraktion. Verbindliche Referenzimplementierung: tools/normalization_reference.py. Die Beispiele werden bei jedem Testlauf gegen die Implementierung geprueft. Datums- und Zeitregeln pruefen das konkrete gregorianische Kalenderdatum. Dezimalregeln liefern monetaere Zeichenfolgen mit Dezimalpunkt und exakt zwei Nachkommastellen, niemals eine Binaer-Gleitkommazahl.",
+  "rules": [
+    {
+      "rule_id": "date.de_numeric",
+      "data_type": "date",
+      "description": "Deutsches Zahlendatum TT.MM.JJJJ oder TT.MM.JJ nach ISO 8601. Das konkrete Kalenderdatum wird geprueft.",
+      "examples": [
+        {
+          "raw": "30.09.2026",
+          "normalized": "2026-09-30"
+        },
+        {
+          "raw": "1.1.2027",
+          "normalized": "2027-01-01"
+        },
+        {
+          "raw": "05.03.26",
+          "normalized": "2026-03-05"
+        },
+        {
+          "raw": "29.02.2024",
+          "normalized": "2024-02-29"
+        },
+        {
+          "raw": "28.02.2023",
+          "normalized": "2023-02-28"
+        }
+      ],
+      "rejects": [
+        "31.02.2026",
+        "29.02.2023",
+        "31.04.2026",
+        "00.01.2026",
+        "01.13.2026"
+      ]
+    },
+    {
+      "rule_id": "date.de_long",
+      "data_type": "date",
+      "description": "Ausgeschriebenes deutsches Datum nach ISO 8601. Das konkrete Kalenderdatum wird geprueft.",
+      "examples": [
+        {
+          "raw": "1. Januar 2027",
+          "normalized": "2027-01-01"
+        },
+        {
+          "raw": "30. September 2026",
+          "normalized": "2026-09-30"
+        },
+        {
+          "raw": "15. Maerz 2026",
+          "normalized": "2026-03-15"
+        },
+        {
+          "raw": "3. Dez. 2026",
+          "normalized": "2026-12-03"
+        }
+      ],
+      "rejects": [
+        "30. Februar 2026",
+        "31. April 2026"
+      ]
+    },
+    {
+      "rule_id": "date.iso",
+      "data_type": "date",
+      "description": "Bereits normgerechtes Datum. Format und Kalenderdatum werden geprueft.",
+      "examples": [
+        {
+          "raw": "2026-09-30",
+          "normalized": "2026-09-30"
+        }
+      ],
+      "rejects": [
+        "2026-02-31",
+        "2023-02-29"
+      ]
+    },
+    {
+      "rule_id": "datetime.de_numeric",
+      "data_type": "datetime",
+      "description": "Deutscher Zeitpunkt ohne Zeitzone. Kalenderdatum und Uhrzeit werden geprueft. Die Umrechnung nach UTC erfolgt spaeter mit der Zeitzone des Kontexts.",
+      "examples": [
+        {
+          "raw": "30.09.2026 14:30",
+          "normalized": "2026-09-30T14:30:00"
+        },
+        {
+          "raw": "01.10.2026, 09:05 Uhr",
+          "normalized": "2026-10-01T09:05:00"
+        },
+        {
+          "raw": "31.12.2026 23:59",
+          "normalized": "2026-12-31T23:59:00"
+        }
+      ],
+      "rejects": [
+        "31.02.2026 10:00",
+        "01.01.2026 25:00",
+        "01.01.2026 12:75"
+      ]
+    },
+    {
+      "rule_id": "decimal.de",
+      "data_type": "money",
+      "description": "Deutsches Zahlformat mit Tausenderpunkt und Dezimalkomma. Waehrungszeichen werden entfernt. Ergebnis ist eine Geldzeichenfolge.",
+      "examples": [
+        {
+          "raw": "1.234,50",
+          "normalized": "1234.50"
+        },
+        {
+          "raw": "1.234,50 EUR",
+          "normalized": "1234.50"
+        },
+        {
+          "raw": "412,00",
+          "normalized": "412.00"
+        },
+        {
+          "raw": "0,10",
+          "normalized": "0.10"
+        },
+        {
+          "raw": "-89,90",
+          "normalized": "-89.90"
+        }
+      ]
+    },
+    {
+      "rule_id": "decimal.ch",
+      "data_type": "money",
+      "description": "Schweizerisches Zahlformat mit Hochkomma als Tausendertrenner und Dezimalpunkt. Ergebnis ist eine Geldzeichenfolge.",
+      "examples": [
+        {
+          "raw": "1'234.50",
+          "normalized": "1234.50"
+        },
+        {
+          "raw": "CHF 448.00",
+          "normalized": "448.00"
+        },
+        {
+          "raw": "12'000.-",
+          "normalized": "12000.00"
+        }
+      ]
+    },
+    {
+      "rule_id": "decimal.en",
+      "data_type": "money",
+      "description": "Englisches Zahlformat mit Tausenderkomma und Dezimalpunkt. Ergebnis ist eine Geldzeichenfolge.",
+      "examples": [
+        {
+          "raw": "1,234.50",
+          "normalized": "1234.50"
+        },
+        {
+          "raw": "99.99 USD",
+          "normalized": "99.99"
+        }
+      ]
+    },
+    {
+      "rule_id": "currency.iso4217",
+      "data_type": "currency_code",
+      "description": "Waehrungsbezeichnung oder Symbol nach ISO 4217.",
+      "examples": [
+        {
+          "raw": "CHF",
+          "normalized": "CHF"
+        },
+        {
+          "raw": "Fr.",
+          "normalized": "CHF"
+        },
+        {
+          "raw": "EUR",
+          "normalized": "EUR"
+        },
+        {
+          "raw": "1.234,50 EUR",
+          "normalized": "EUR"
+        }
+      ]
+    },
+    {
+      "rule_id": "integer.plain",
+      "data_type": "integer",
+      "description": "Ganzzahl, Tausendertrenner werden entfernt.",
+      "examples": [
+        {
+          "raw": "3",
+          "normalized": 3
+        },
+        {
+          "raw": "1'234",
+          "normalized": 1234
+        },
+        {
+          "raw": "12.000",
+          "normalized": 12000
+        }
+      ]
+    },
+    {
+      "rule_id": "identifier.strip_separators",
+      "data_type": "identifier",
+      "description": "Kennung ohne Trenn- und Leerzeichen, kleingeschrieben. Grundlage der Vorgangszuordnung.",
+      "examples": [
+        {
+          "raw": "KV-4711 882",
+          "normalized": "kv4711882"
+        },
+        {
+          "raw": "Police Nr. 4711/882",
+          "normalized": "policenr4711882"
+        },
+        {
+          "raw": "2026-0815",
+          "normalized": "20260815"
+        }
+      ]
+    },
+    {
+      "rule_id": "string.trim",
+      "data_type": "string",
+      "description": "Zeichenfolge ohne fuehrende, folgende und mehrfache Leerzeichen. Gross- und Kleinschreibung bleibt erhalten.",
+      "examples": [
+        {
+          "raw": "  Krankenversicherung   XY ",
+          "normalized": "Krankenversicherung XY"
+        }
+      ]
+    },
+    {
+      "rule_id": "boolean.de",
+      "data_type": "boolean",
+      "description": "Deutsche Ja-Nein-Angabe.",
+      "examples": [
+        {
+          "raw": "Ja",
+          "normalized": true
+        },
+        {
+          "raw": "nein",
+          "normalized": false
+        },
+        {
+          "raw": "erforderlich",
+          "normalized": true
+        }
+      ]
+    }
+  ],
+  "conventions": {
+    "two_digit_year": "00 bis 69 bedeutet 2000 bis 2069, 70 bis 99 bedeutet 1970 bis 1999. Bewusst beibehalten.",
+    "money": "Kanonische Darstellung als Zeichenfolge, Dezimalpunkt, genau zwei Nachkommastellen, keine Exponentialschreibweise, kaufmaennische Rundung. Berechnung ausschliesslich mit Decimal beziehungsweise NUMERIC.",
+    "non_monetary_decimals": "Dezimalwerte mit abweichender Genauigkeit, etwa Mengen oder Prozentsaetze, erhalten eine eigene registrierte Regel. Sie duerfen nicht ueber die Geldregeln abgebildet werden."
+  }
+}

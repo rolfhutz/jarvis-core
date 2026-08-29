@@ -1,0 +1,114 @@
+{
+  "registry_version": "1.1.0",
+  "description": "Verbindliche Zuordnung von der Art der Klaerung zum Ausgang. Es gibt zwei Ausgaenge: eine fortzusetzende Klaerung mit genau einem Wiederanlaufpunkt, oder eine terminale Klaerung ohne jede weitere Verarbeitung. Einzige Quelle fuer Spezifikation, Workflow und Pruefung.",
+  "outcomes": {
+    "resume": "Die Verarbeitung wird ab resume_from_stage fortgesetzt. terminal_status ist unzulaessig.",
+    "terminal": "Es findet keine weitere Verarbeitung statt. Der Dokumentdatensatz erhaelt terminal_status und bleibt zur Nachvollziehbarkeit bestehen. resume_from_stage ist null."
+  },
+  "stages": ["intake", "ocr", "extraction", "analysis", "case_match", "task_derive", "action_plan", "filing"],
+  "terminal_statuses": {
+    "duplicate": "Bestaetigte Dublette. Das Original ist bereits erfasst.",
+    "discarded": "Von Rolf verworfen. Keine fachliche Weiterverarbeitung.",
+    "misrouted": "Im falschen Kontext eingegangen. Der Datensatz wird hier abgeschlossen; ein neuer Eingang im richtigen Kontext erzeugt einen neuen Datensatz."
+  },
+  "resolutions": [
+    {
+      "resolution_type": "value_corrected",
+      "outcome": "resume",
+      "resume_from_stage": "analysis",
+      "terminal_status": null,
+      "requires_resolved_values": true,
+      "rationale": "Ein korrigierter Feldwert veraendert das Verstaendnis. Extraktion und OCR werden nicht wiederholt; der korrigierte Wert gilt als menschlich belegt und ersetzt den extrahierten."
+    },
+    {
+      "resolution_type": "deadline_confirmed",
+      "outcome": "resume",
+      "resume_from_stage": "task_derive",
+      "terminal_status": null,
+      "requires_resolved_values": true,
+      "rationale": "Die Frist ist bestaetigt. Das Verstaendnis bleibt gueltig, nur die Aufgabenableitung laeuft erneut."
+    },
+    {
+      "resolution_type": "category_assigned",
+      "outcome": "resume",
+      "resume_from_stage": "filing",
+      "terminal_status": null,
+      "requires_resolved_values": true,
+      "rationale": "Fehlte nur die Kategorie, ist alles andere bereits entschieden. Es fehlt ausschliesslich das Ablageziel."
+    },
+    {
+      "resolution_type": "case_selected",
+      "outcome": "resume",
+      "resume_from_stage": "task_derive",
+      "terminal_status": null,
+      "requires_resolved_values": false,
+      "rationale": "Der Vorgang steht fest. Aufgaben und Aktionen werden mit dem richtigen Vorgangsbezug neu abgeleitet."
+    },
+    {
+      "resolution_type": "case_created",
+      "outcome": "resume",
+      "resume_from_stage": "task_derive",
+      "terminal_status": null,
+      "requires_resolved_values": false,
+      "rationale": "Wie case_selected, nur mit einem neu angelegten Vorgang."
+    },
+    {
+      "resolution_type": "duplicate_rejected",
+      "outcome": "resume",
+      "resume_from_stage": "extraction",
+      "terminal_status": null,
+      "requires_resolved_values": false,
+      "rationale": "Das Dokument ist eigenstaendig. Der Volltext liegt bereits vor, die Auswertung beginnt bei der Extraktion."
+    },
+    {
+      "resolution_type": "rescan_provided",
+      "outcome": "resume",
+      "resume_from_stage": "ocr",
+      "terminal_status": null,
+      "requires_resolved_values": false,
+      "rationale": "Eine neue Vorlage ersetzt die unlesbare. Die Erfassung beginnt vollstaendig neu."
+    },
+    {
+      "resolution_type": "conflict_resolved",
+      "outcome": "resume",
+      "resume_from_stage": "analysis",
+      "terminal_status": null,
+      "requires_resolved_values": true,
+      "rationale": "Der geltende Wert ist entschieden. Das Verstaendnis wird mit diesem Wert neu gebildet."
+    },
+    {
+      "resolution_type": "technical_fixed",
+      "outcome": "resume",
+      "resume_from_stage": "intake",
+      "terminal_status": null,
+      "requires_resolved_values": false,
+      "rationale": "Bei einem technischen Fehler ist unklar, welche Stufe vollstaendig war. Der Lauf beginnt von vorne; die Idempotenz verhindert Dubletten."
+    },
+    {
+      "resolution_type": "duplicate_confirmed",
+      "outcome": "terminal",
+      "resume_from_stage": null,
+      "terminal_status": "duplicate",
+      "requires_resolved_values": false,
+      "rationale": "Bestaetigte Dublette. Es findet keine weitere Verarbeitung statt. Ein Wiederanlauf ab intake wuerde das Dokument erneut durch die Kette schicken und ist deshalb ausgeschlossen."
+    },
+    {
+      "resolution_type": "document_discarded",
+      "outcome": "terminal",
+      "resume_from_stage": null,
+      "terminal_status": "discarded",
+      "requires_resolved_values": false,
+      "rationale": "Das Dokument wird verworfen. Der Datensatz bleibt zur Nachvollziehbarkeit bestehen, wird aber nicht weiterverarbeitet."
+    },
+    {
+      "resolution_type": "context_corrected",
+      "outcome": "terminal",
+      "resume_from_stage": null,
+      "terminal_status": "misrouted",
+      "requires_resolved_values": false,
+      "rationale": "Ein Kontextwechsel ist kein Wiederanlauf desselben Datensatzes. Der Datensatz im falschen Kontext wird terminal als fehlgeleitet abgeschlossen. JARVIS schreibt nicht automatisch in das andere Kontextschema. Rolf legt das Original manuell in den richtigen Eingangsordner; dort entsteht ueber source_binding ein neuer Dokumentdatensatz. Ein Verweis auf den erwarteten neuen Eingang ist zulaessig, enthaelt aber keinen fachlichen Inhalt.",
+      "manual_step_required": true,
+      "no_cross_context_write": true
+    }
+  ]
+}

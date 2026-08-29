@@ -1,0 +1,49 @@
+{
+  "schema_version": "1.2.0",
+  "document_id": "doc_01JBQ8Z4K7M3N9P2R5T6V8W0Z6",
+  "context_id": "privat",
+  "intake": {
+    "channel": "drive_inbox",
+    "adapter_id": "storage_gdrive",
+    "source_external_id": "EXTERNAL_FILE_ID_MISROUTED",
+    "original_filename": "scan_20260829_0003.pdf",
+    "received_at": "2026-08-29T10:04:00Z",
+    "source_event_id": "evt_01JBQ8Z4K7M3N9P2R5T6V8W0Y5"
+  },
+  "file": {
+    "mime_type": "application/pdf",
+    "size_bytes": 122880,
+    "page_count": 1,
+    "content_hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+    "text_fingerprint": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+    "is_scanned": true,
+    "language": "de"
+  },
+  "status": "misrouted",
+  "processing_stage": {
+    "last_completed": "extraction",
+    "completed_at": "2026-08-29T10:06:12Z",
+    "attempt_count": 1
+  },
+  "review": {
+    "required": true,
+    "reasons": ["context_unresolved"],
+    "blocked_stage": "analysis",
+    "opened_at": "2026-08-29T10:06:13Z",
+    "resolution_type": "context_corrected",
+    "outcome": "terminal",
+    "terminal_status": "misrouted",
+    "resume_from_stage": null,
+    "successor_intake_hint": "reintake:arbeitgeber_visolva/inbox",
+    "resolved_at": "2026-08-29T11:30:00Z",
+    "resolved_by": "rolf",
+    "resolution_note": "Geschaeftliches Dokument im privaten Eingang. Datensatz hier terminal abgeschlossen. Original wird manuell in den Arbeitgeber-Eingang gelegt; dort entsteht ein neuer Datensatz."
+  },
+  "derived_task_ids": [],
+  "derived_action_ids": [],
+  "extraction_result_ref": "privat.document_extraction:doc_01JBQ8Z4K7M3N9P2R5T6V8W0Z6",
+  "created_at": "2026-08-29T10:04:08Z",
+  "updated_at": "2026-08-29T11:30:00Z",
+  "producer": { "producer_type": "workflow", "producer_id": "JV-P1-MAIN-document_intake-v1", "producer_version": "1.0.0" },
+  "trace": { "trace_id": "tr-20260829-0104", "workflow_name": "JV-P1-MAIN-document_intake-v1", "workflow_version": "1.0.0" }
+}

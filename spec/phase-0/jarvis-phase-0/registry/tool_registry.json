@@ -1,0 +1,210 @@
+{
+  "registry_version": "1.0.0",
+  "tools": [
+    {
+      "tool_id": "storage_gdrive.move_file",
+      "version": "1.0.0",
+      "display_name": "Datei ablegen",
+      "purpose": "Datei in den kontextbezogenen Zielordner verschieben und umbenennen.",
+      "adapter_id": "storage_gdrive",
+      "operation": "write",
+      "allowed_contexts": ["privat"],
+      "input_schema_ref": "schemas/tools/storage_gdrive.move_file.input.json",
+      "output_schema_ref": "schemas/tools/storage_gdrive.move_file.output.json",
+      "required_permissions": ["Datei lesen", "Datei verschieben", "Datei umbenennen"],
+      "side_effects": "Die Datei liegt danach an einem anderen Ort und traegt einen anderen Namen.",
+      "external_effect": "internal",
+      "risk_class_default": "A",
+      "reversibility": "reversible",
+      "undo_tool_id": "storage_gdrive.move_file",
+      "idempotency": {
+        "key_fields": ["context_id", "source_ref", "action_type", "target_system", "target_object_ref"],
+        "strategy": "db_unique_constraint",
+        "native_support": false,
+        "extra_dedup": "content_hash"
+      },
+      "evidence": {
+        "readback_supported": true,
+        "accepted_methods": ["readback"],
+        "required_types": ["file_ref", "state_readback"],
+        "verify_delay_seconds": 5,
+        "limitation": null,
+        "deferred_check_after_hours": null
+      },
+      "retry_policy": {
+        "retryable_error_classes": ["transient_network", "rate_limited", "timeout"],
+        "max_attempts": 3,
+        "backoff": "exponential_1m_factor5_jitter"
+      },
+      "timeout_seconds": 60,
+      "rate_limit": null,
+      "dry_run_supported": true,
+      "status": "draft",
+      "owner": "rolf"
+    },
+    {
+      "tool_id": "tasks_internal.create_task",
+      "version": "1.0.0",
+      "display_name": "Aufgabe anlegen",
+      "purpose": "Aufgabe im JARVIS-Aufgabenregister anlegen.",
+      "adapter_id": "tasks_internal",
+      "operation": "write",
+      "allowed_contexts": ["privat", "arbeitgeber_visolva"],
+      "input_schema_ref": "schemas/task.schema.json",
+      "output_schema_ref": "schemas/task.schema.json",
+      "required_permissions": ["Schreibrecht im Kontextschema"],
+      "side_effects": "Ein neuer Aufgabendatensatz entsteht.",
+      "external_effect": "internal",
+      "risk_class_default": "A",
+      "reversibility": "reversible",
+      "undo_tool_id": "tasks_internal.cancel_task",
+      "idempotency": {
+        "key_fields": ["context_id", "source_ref", "action_type", "target_system", "target_object_ref"],
+        "strategy": "db_unique_constraint",
+        "native_support": false,
+        "extra_dedup": null
+      },
+      "evidence": {
+        "readback_supported": true,
+        "accepted_methods": ["readback"],
+        "required_types": ["task_ref"],
+        "verify_delay_seconds": 0,
+        "limitation": null,
+        "deferred_check_after_hours": null
+      },
+      "retry_policy": {
+        "retryable_error_classes": ["transient_network", "timeout"],
+        "max_attempts": 3,
+        "backoff": "exponential_1m_factor5_jitter"
+      },
+      "timeout_seconds": 30,
+      "rate_limit": null,
+      "dry_run_supported": true,
+      "status": "draft",
+      "owner": "rolf"
+    },
+    {
+      "tool_id": "mail_default.send_message",
+      "version": "1.0.0",
+      "display_name": "E-Mail versenden",
+      "purpose": "Individuelle oder freigegebene E-Mail versenden.",
+      "adapter_id": "mail_default",
+      "operation": "write",
+      "allowed_contexts": ["privat", "arbeitgeber_visolva"],
+      "input_schema_ref": "schemas/tools/mail_default.send_message.input.json",
+      "output_schema_ref": "schemas/tools/mail_default.send_message.output.json",
+      "required_permissions": ["Nachricht senden", "Ordner Gesendet lesen"],
+      "side_effects": "Eine Nachricht verlaesst das System und erreicht einen externen Empfaenger.",
+      "external_effect": "external_recipient",
+      "risk_class_default": "C",
+      "reversibility": "irreversible",
+      "undo_tool_id": null,
+      "idempotency": {
+        "key_fields": ["context_id", "source_ref", "action_type", "target_system", "target_object_ref"],
+        "strategy": "db_plus_provider",
+        "native_support": false,
+        "extra_dedup": "content_fingerprint"
+      },
+      "evidence": {
+        "readback_supported": true,
+        "accepted_methods": ["readback"],
+        "required_types": ["message_ref"],
+        "verify_delay_seconds": 15,
+        "limitation": null,
+        "deferred_check_after_hours": null
+      },
+      "retry_policy": {
+        "retryable_error_classes": ["transient_network", "timeout", "rate_limited"],
+        "max_attempts": 3,
+        "backoff": "exponential_1m_factor5_jitter"
+      },
+      "timeout_seconds": 60,
+      "rate_limit": null,
+      "dry_run_supported": true,
+      "status": "draft",
+      "owner": "rolf"
+    },
+    {
+      "tool_id": "messaging_superchat.send_template_message",
+      "version": "1.0.0",
+      "display_name": "Standardnachricht ueber Messenger senden",
+      "purpose": "Freigegebene Standardnachricht ueber den Messenger-Kanal senden.",
+      "adapter_id": "messaging_superchat",
+      "operation": "write",
+      "allowed_contexts": ["arbeitgeber_visolva"],
+      "input_schema_ref": "schemas/tools/messaging_superchat.send_template_message.input.json",
+      "output_schema_ref": "schemas/tools/messaging_superchat.send_template_message.output.json",
+      "required_permissions": ["Nachricht senden"],
+      "side_effects": "Eine Nachricht wird an den Anbieter uebergeben und an einen externen Empfaenger zugestellt.",
+      "external_effect": "external_recipient",
+      "risk_class_default": "B",
+      "reversibility": "irreversible",
+      "undo_tool_id": null,
+      "idempotency": {
+        "key_fields": ["context_id", "source_ref", "action_type", "target_system", "target_object_ref"],
+        "strategy": "db_plus_provider",
+        "native_support": true,
+        "extra_dedup": "content_fingerprint"
+      },
+      "evidence": {
+        "readback_supported": false,
+        "accepted_methods": ["provider_message_id", "delivery_receipt", "recipient_reply"],
+        "required_types": ["provider_id", "delivery_receipt"],
+        "verify_delay_seconds": 30,
+        "limitation": "Der Anbieter stellt keinen Lesezugriff auf die versendete Nachricht bereit. Die Anbieter-ID belegt die Annahme des Auftrags und die Zustellquittung die Auslieferung an das Endgeraet, nicht jedoch, dass der Empfaenger die Nachricht gelesen oder inhaltlich verstanden hat.",
+        "deferred_check_after_hours": 24
+      },
+      "retry_policy": {
+        "retryable_error_classes": ["transient_network", "timeout", "rate_limited"],
+        "max_attempts": 3,
+        "backoff": "exponential_1m_factor5_jitter"
+      },
+      "timeout_seconds": 45,
+      "rate_limit": "60/Stunde",
+      "dry_run_supported": false,
+      "status": "draft",
+      "owner": "rolf"
+    },
+    {
+      "tool_id": "approval_email.request_decision",
+      "version": "1.0.0",
+      "display_name": "Freigabe anfordern",
+      "purpose": "Freigabeanforderung mit signiertem Einmal-Link an Rolf senden.",
+      "adapter_id": "approval_email",
+      "operation": "write",
+      "allowed_contexts": ["privat", "arbeitgeber_visolva"],
+      "input_schema_ref": "schemas/approval.schema.json",
+      "output_schema_ref": "schemas/approval.schema.json",
+      "required_permissions": ["Nachricht senden", "Ordner Gesendet lesen"],
+      "side_effects": "Rolf erhaelt eine Entscheidungsanfrage. Die freizugebende Aktion selbst bleibt unveraendert.",
+      "external_effect": "internal",
+      "risk_class_default": "A",
+      "reversibility": "reversible",
+      "undo_tool_id": "approval_email.revoke_request",
+      "idempotency": {
+        "key_fields": ["context_id", "source_ref", "action_type", "target_system", "target_object_ref"],
+        "strategy": "db_unique_constraint",
+        "native_support": false,
+        "extra_dedup": "action_fingerprint"
+      },
+      "evidence": {
+        "readback_supported": true,
+        "accepted_methods": ["readback"],
+        "required_types": ["message_ref"],
+        "verify_delay_seconds": 15,
+        "limitation": null,
+        "deferred_check_after_hours": null
+      },
+      "retry_policy": {
+        "retryable_error_classes": ["transient_network", "timeout"],
+        "max_attempts": 3,
+        "backoff": "exponential_1m_factor5_jitter"
+      },
+      "timeout_seconds": 30,
+      "rate_limit": null,
+      "dry_run_supported": true,
+      "status": "draft",
+      "owner": "rolf"
+    }
+  ]
+}

@@ -1,0 +1,170 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://jarvis.local/schemas/tools/llm_default.analyze_document.input.json",
+  "title": "Eingabe: Dokument verstehen",
+  "description": "Uebergibt die validierten Felder, den Volltext und die Vergleichsdokumente des Vorgangs. Version 1.0.0, Phase 1.",
+  "type": "object",
+  "properties": {
+    "context_id": {
+      "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/context_id"
+    },
+    "document_id": {
+      "type": "string",
+      "pattern": "^doc_[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "model_ref": {
+      "type": "string"
+    },
+    "prompt_version": {
+      "type": "string"
+    },
+    "pages": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/page_text"
+      },
+      "minItems": 1
+    },
+    "validated_fields": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/validated_field"
+      },
+      "description": "Ausschliesslich Felder mit validation_status accepted oder accepted_flagged.",
+      "default": []
+    },
+    "case_context": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "properties": {
+        "case_id": {
+          "type": "string",
+          "pattern": "^cse_[0-9A-HJKMNP-TV-Z]{26}$"
+        },
+        "case_number": {
+          "type": "string",
+          "pattern": "^V-[0-9]{4}-[0-9]{4}$"
+        },
+        "title": {
+          "type": "string",
+          "maxLength": 200
+        }
+      },
+      "required": [
+        "case_id",
+        "case_number"
+      ],
+      "additionalProperties": false
+    },
+    "comparison_documents": {
+      "type": "array",
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/comparison_document"
+      },
+      "description": "Frueher Dokumente desselben Vorgangs und derselben Art, fuer changes_vs_previous."
+    },
+    "today": {
+      "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/timestamp_utc"
+    }
+  },
+  "required": [
+    "context_id",
+    "document_id",
+    "model_ref",
+    "prompt_version",
+    "pages",
+    "validated_fields",
+    "today"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "page_text": {
+      "type": "object",
+      "properties": {
+        "page": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "page",
+        "text"
+      ],
+      "additionalProperties": false
+    },
+    "validated_field": {
+      "type": "object",
+      "properties": {
+        "field_key": {
+          "type": "string"
+        },
+        "normalized_value": {
+          "type": [
+            "string",
+            "integer",
+            "boolean",
+            "null"
+          ],
+          "description": "Kanonische Darstellung. Geldwerte sind Zeichenfolgen mit zwei Nachkommastellen, niemals Gleitkommazahlen."
+        },
+        "raw_value": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "data_type": {
+          "type": "string"
+        },
+        "confidence": {
+          "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/confidence"
+        },
+        "flagged": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "field_key",
+        "normalized_value",
+        "data_type"
+      ],
+      "additionalProperties": false
+    },
+    "comparison_document": {
+      "type": "object",
+      "properties": {
+        "document_id": {
+          "type": "string",
+          "pattern": "^doc_[0-9A-HJKMNP-TV-Z]{26}$"
+        },
+        "document_date": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "document_type_key": {
+          "type": "string"
+        },
+        "fields": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/validated_field"
+          }
+        }
+      },
+      "required": [
+        "document_id",
+        "document_type_key",
+        "fields"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

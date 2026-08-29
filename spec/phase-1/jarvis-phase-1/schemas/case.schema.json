@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://jarvis.local/schemas/case.schema.json",
+  "title": "JARVIS Case",
+  "description": "Vorgang: fachliche Klammer um mehrere Dokumente, Aufgaben und Aktionen zu demselben Sachverhalt. Version 1.0.0, Phase 1.",
+  "type": "object",
+  "properties": {
+    "schema_version": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/schema_version" },
+    "case_id": { "type": "string", "pattern": "^cse_[0-9A-HJKMNP-TV-Z]{26}$" },
+    "case_number": {
+      "type": "string",
+      "pattern": "^V-[0-9]{4}-[0-9]{4}$",
+      "description": "Menschenlesbare, je Kontext fortlaufende Nummer im Format V-JJJJ-NNNN. Wird im Dateinamen verwendet, damit ein Mensch die Zusammengehoerigkeit ohne System erkennt."
+    },
+    "context_id": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/context_id" },
+    "title": { "type": "string", "minLength": 3, "maxLength": 200, "description": "Deutscher Freitext." },
+    "category_key": { "type": "string", "pattern": "^[a-z][a-z0-9_]{2,63}$" },
+    "status": { "type": "string", "enum": ["open", "waiting", "closed", "archived"] },
+
+    "identifiers": {
+      "type": "array",
+      "description": "Stabile Kennungen, ueber die weitere Dokumente diesem Vorgang zugeordnet werden. Grundlage der automatischen Vorgangszuordnung.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "identifier_type": {
+            "type": "string",
+            "enum": ["policy_number", "contract_number", "case_number_external", "customer_number", "invoice_number", "reference_number", "tax_number", "other"]
+          },
+          "value_normalized": { "type": "string", "minLength": 2, "maxLength": 100 },
+          "issuer": { "type": "string", "maxLength": 200 },
+          "first_seen_document_id": { "type": "string", "pattern": "^doc_[0-9A-HJKMNP-TV-Z]{26}$" }
+        },
+        "required": ["identifier_type", "value_normalized"],
+        "additionalProperties": false
+      },
+      "default": []
+    },
+
+    "parties": {
+      "type": "array",
+      "items": { "$ref": "https://jarvis.local/schemas/object_ref.schema.json" },
+      "default": [],
+      "description": "Beteiligte Personen und Organisationen."
+    },
+    "document_ids": {
+      "type": "array",
+      "items": { "type": "string", "pattern": "^doc_[0-9A-HJKMNP-TV-Z]{26}$" },
+      "default": []
+    },
+    "open_task_ids": {
+      "type": "array",
+      "items": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/task_id" },
+      "default": []
+    },
+    "next_deadline_at": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/timestamp_utc" },
+    "opened_at": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/timestamp_utc" },
+    "closed_at": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/timestamp_utc" },
+    "created_at": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/timestamp_utc" },
+    "updated_at": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/timestamp_utc" },
+    "producer": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/producer" },
+    "trace": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/trace" }
+  },
+  "required": [
+    "schema_version", "case_id", "case_number", "context_id", "title",
+    "category_key", "status", "opened_at", "created_at", "producer"
+  ],
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": { "properties": { "status": { "const": "closed" } }, "required": ["status"] },
+      "then": { "required": ["closed_at"] }
+    }
+  ]
+}

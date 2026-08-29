@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://jarvis.local/schemas/tools/test.record_approved_action.input.json",
+  "title": "Eingabe: Testaktion mit Freigabe",
+  "description": "Ausschliesslich zum Nachweis des zweistufigen Klasse-C-Freigabewegs. Veraendert keine produktiven Dokumente und loest keine externe Kommunikation aus. Version 1.0.0, Phase 1.",
+  "type": "object",
+  "properties": {
+    "context_id": {
+      "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/context_id"
+    },
+    "action_id": {
+      "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/action_id"
+    },
+    "approval_id": {
+      "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/approval_id"
+    },
+    "action_fingerprint": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$",
+      "description": "Wird gegen die Freigabe geprueft. Abweichung fuehrt zur Verweigerung."
+    },
+    "test_label": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 200
+    },
+    "requested_at": {
+      "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/timestamp_utc"
+    }
+  },
+  "required": [
+    "context_id",
+    "action_id",
+    "approval_id",
+    "action_fingerprint",
+    "test_label",
+    "requested_at"
+  ],
+  "additionalProperties": false
+}

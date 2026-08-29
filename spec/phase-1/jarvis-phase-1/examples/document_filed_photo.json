@@ -1,0 +1,72 @@
+{
+  "schema_version": "1.2.0",
+  "document_id": "doc_01JBQ8Z4K7M3N9P2R5T6V8W0Z4",
+  "context_id": "privat",
+  "intake": {
+    "channel": "mobile_photo",
+    "adapter_id": "storage_gdrive",
+    "source_external_id": "EXTERNAL_PHOTO_ID_PLACEHOLDER",
+    "original_filename": "IMG_20260829_071455.jpg",
+    "received_at": "2026-08-29T07:14:55Z",
+    "source_event_id": "evt_01JBQ8Z4K7M3N9P2R5T6V8W0Y3"
+  },
+  "file": {
+    "mime_type": "image/jpeg",
+    "size_bytes": 1842233,
+    "page_count": 1,
+    "content_hash": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "text_fingerprint": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+    "is_scanned": true,
+    "language": "de"
+  },
+  "status": "filed",
+  "processing_stage": {
+    "last_completed": "filing",
+    "completed_at": "2026-08-29T07:21:10Z",
+    "attempt_count": 1
+  },
+  "review": {
+    "required": false
+  },
+  "classification": {
+    "document_type": "Quittung",
+    "document_type_key": "quittung",
+    "category_key": "anschaffungen_garantien",
+    "confidence": 0.91
+  },
+  "case_ref": {
+    "case_id": "cse_01JBQ8Z4K7M3N9P2R5T6V8W1A2",
+    "case_number": "V-2026-0043",
+    "match_method": "created_new",
+    "match_confidence": 1.0
+  },
+  "storage": {
+    "adapter_id": "storage_gdrive",
+    "target_path": "13_Anschaffungen_Garantien/2026",
+    "target_external_id": "EXTERNAL_TARGET_PHOTO_ID_PLACEHOLDER",
+    "final_filename": "2026-08-29__Elektrofachmarkt__Quittung__Waschmaschine__V-2026-0043.jpg",
+    "filed_at": "2026-08-29T07:21:10Z",
+    "filing_action_id": "act_01JBQ8Z4K7M3N9P2R5T6V8W1C3",
+    "filing_evidence_id": "evd_01JBQ8Z4K7M3N9P2R5T6V8W1D2"
+  },
+  "related_documents": [],
+  "derived_task_ids": [],
+  "derived_action_ids": [
+    "act_01JBQ8Z4K7M3N9P2R5T6V8W1C3"
+  ],
+  "extraction_result_ref": "privat.document_extraction:doc_01JBQ8Z4K7M3N9P2R5T6V8W0Z4",
+  "analysis_ref": "privat.document_analysis:doc_01JBQ8Z4K7M3N9P2R5T6V8W0Z4",
+  "analysis_version": "extract@1.0.0+analyze@1.0.0+rules@1.0.0",
+  "created_at": "2026-08-29T07:15:02Z",
+  "updated_at": "2026-08-29T07:21:10Z",
+  "producer": {
+    "producer_type": "workflow",
+    "producer_id": "JV-P1-MAIN-document_intake-v1",
+    "producer_version": "1.0.0"
+  },
+  "trace": {
+    "trace_id": "tr-20260829-0102",
+    "workflow_name": "JV-P1-MAIN-document_intake-v1",
+    "workflow_version": "1.0.0"
+  }
+}

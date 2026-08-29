@@ -1,0 +1,153 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://jarvis.local/schemas/tool_registry.schema.json",
+  "title": "JARVIS Tool Registry",
+  "description": "Maschinenlesbares Werkzeugregister. Einzige verbindliche Quelle fuer Mindest-Risikoklasse, Nachweisstrategie, Idempotenz und erlaubte Kontexte. Version 1.0.0.",
+  "type": "object",
+  "properties": {
+    "registry_version": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/schema_version" },
+    "tools": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/tool" },
+      "minItems": 1
+    }
+  },
+  "required": ["registry_version", "tools"],
+  "additionalProperties": false,
+  "$defs": {
+    "tool": {
+      "type": "object",
+      "properties": {
+        "tool_id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*\\.[a-z][a-z0-9_]*$" },
+        "version": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/schema_version" },
+        "display_name": { "type": "string", "minLength": 1 },
+        "purpose": { "type": "string", "minLength": 1 },
+        "adapter_id": { "type": "string", "pattern": "^[a-z][a-z0-9_]{2,63}$" },
+        "operation": { "type": "string", "enum": ["read", "write"] },
+        "allowed_contexts": {
+          "type": "array",
+          "items": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/context_id" },
+          "uniqueItems": true,
+          "description": "Positivliste. Leer bedeutet: nicht erlaubt."
+        },
+        "input_schema_ref": { "type": "string" },
+        "output_schema_ref": { "type": "string" },
+        "required_permissions": { "type": "array", "items": { "type": "string" } },
+        "side_effects": { "type": "string" },
+        "external_effect": {
+          "type": "string",
+          "enum": ["none", "internal", "external_recipient", "financial", "legal"]
+        },
+        "risk_class_default": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/risk_class" },
+        "reversibility": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/reversibility" },
+        "undo_tool_id": { "type": ["string", "null"] },
+        "idempotency": {
+          "type": "object",
+          "properties": {
+            "key_fields": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+            "strategy": { "type": "string", "enum": ["db_unique_constraint", "provider_native", "db_plus_provider"] },
+            "native_support": { "type": "boolean" },
+            "extra_dedup": { "type": ["string", "null"], "description": "z. B. content_hash bei Dateien" }
+          },
+          "required": ["key_fields", "strategy", "native_support"],
+          "additionalProperties": false
+        },
+        "evidence": {
+          "type": "object",
+          "description": "Nachweisstrategie nach Entscheidung D3 in der Fassung vom 29.08.2026.",
+          "properties": {
+            "readback_supported": {
+              "type": "boolean",
+              "description": "Erlaubt das Zielsystem einen unabhaengigen Lesevorgang des geschriebenen Objekts? Wenn ja, ist der Readback verpflichtend."
+            },
+            "accepted_methods": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": ["readback", "sent_folder_confirmation", "provider_message_id", "delivery_receipt", "provider_status", "recipient_reply", "human_confirm", "hash_compare", "deferred_reconciliation"]
+              },
+              "minItems": 1,
+              "uniqueItems": true,
+              "description": "Abschliessende Liste der Methoden, die dieser Vertrag als ausreichend fuer den Status succeeded anerkennt."
+            },
+            "required_types": {
+              "type": "array",
+              "items": { "type": "string" },
+              "minItems": 1
+            },
+            "verify_delay_seconds": { "type": "integer", "minimum": 0 },
+            "limitation": {
+              "type": ["string", "null"],
+              "description": "Was der Ersatznachweis nicht belegt. Pflicht, wenn readback_supported false ist."
+            },
+            "deferred_check_after_hours": { "type": ["integer", "null"], "minimum": 1 }
+          },
+          "required": ["readback_supported", "accepted_methods", "required_types", "verify_delay_seconds"],
+          "additionalProperties": false,
+          "allOf": [
+            {
+              "description": "Ist ein Readback moeglich, darf der Vertrag keine schwaechere Methode zulassen.",
+              "if": { "properties": { "readback_supported": { "const": true } }, "required": ["readback_supported"] },
+              "then": { "properties": { "accepted_methods": { "const": ["readback"] } } }
+            },
+            {
+              "description": "Ohne Readback muss der Vertrag die Grenzen des Ersatznachweises benennen.",
+              "if": { "properties": { "readback_supported": { "const": false } }, "required": ["readback_supported"] },
+              "then": { "properties": { "limitation": { "type": "string", "minLength": 10 } }, "required": ["limitation"] }
+            }
+          ]
+        },
+        "retry_policy": {
+          "type": "object",
+          "properties": {
+            "retryable_error_classes": { "type": "array", "items": { "type": "string" } },
+            "max_attempts": { "type": "integer", "minimum": 1, "maximum": 3 },
+            "backoff": { "type": "string" }
+          },
+          "required": ["retryable_error_classes", "max_attempts", "backoff"],
+          "additionalProperties": false
+        },
+        "timeout_seconds": { "type": "integer", "minimum": 1 },
+        "rate_limit": { "type": ["string", "null"] },
+        "dry_run_supported": { "type": "boolean" },
+        "status": { "type": "string", "enum": ["draft", "approved", "deprecated"] },
+        "owner": { "type": "string" }
+      },
+      "required": [
+        "tool_id", "version", "display_name", "purpose", "adapter_id", "operation",
+        "allowed_contexts", "side_effects", "external_effect", "risk_class_default",
+        "reversibility", "idempotency", "evidence", "retry_policy",
+        "timeout_seconds", "dry_run_supported", "status", "owner"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "description": "Externe Empfaenger erzwingen mindestens Klasse B.",
+          "if": {
+            "properties": { "external_effect": { "enum": ["external_recipient", "financial", "legal"] } },
+            "required": ["external_effect"]
+          },
+          "then": { "properties": { "risk_class_default": { "enum": ["B", "C"] } } }
+        },
+        {
+          "description": "Finanzielle und rechtliche Wirkung ist immer Klasse C.",
+          "if": {
+            "properties": { "external_effect": { "enum": ["financial", "legal"] } },
+            "required": ["external_effect"]
+          },
+          "then": { "properties": { "risk_class_default": { "const": "C" } } }
+        },
+        {
+          "description": "Irreversible schreibende Werkzeuge sind mindestens Klasse B.",
+          "if": {
+            "allOf": [
+              { "properties": { "operation": { "const": "write" } }, "required": ["operation"] },
+              { "properties": { "reversibility": { "const": "irreversible" } }, "required": ["reversibility"] }
+            ]
+          },
+          "then": { "properties": { "risk_class_default": { "enum": ["B", "C"] } } }
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://jarvis.local/schemas/tools/drafts_internal.create_draft.output.json",
+  "title": "Ausgabe: Entwurf erstellen",
+  "description": "Ergebnis der Entwurfsablage. Grundlage des Readback-Nachweises. Version 1.0.0, Phase 1.",
+  "type": "object",
+  "properties": {
+    "draft_external_id": {
+      "type": "string"
+    },
+    "final_path": {
+      "type": "string",
+      "maxLength": 500
+    },
+    "final_filename": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "content_hash": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "created_at": {
+      "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/timestamp_utc"
+    },
+    "provider_status": {
+      "type": "integer"
+    }
+  },
+  "required": [
+    "draft_external_id",
+    "final_path",
+    "final_filename",
+    "content_hash",
+    "created_at",
+    "provider_status"
+  ],
+  "additionalProperties": false
+}

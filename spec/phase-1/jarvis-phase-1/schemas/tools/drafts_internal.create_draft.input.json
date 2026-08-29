@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://jarvis.local/schemas/tools/drafts_internal.create_draft.input.json",
+  "title": "Eingabe: Entwurf erstellen",
+  "description": "Legt einen Antwort-, Rueckfrage- oder Kuendigungsentwurf als Datei im Entwurfsordner des Kontexts ab. Kein Versand. Version 1.0.0, Phase 1.",
+  "type": "object",
+  "properties": {
+    "context_id": {
+      "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/context_id"
+    },
+    "adapter_id": {
+      "type": "string"
+    },
+    "document_id": {
+      "type": "string",
+      "pattern": "^doc_[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "case_number": {
+      "type": "string",
+      "pattern": "^V-[0-9]{4}-[0-9]{4}$"
+    },
+    "draft_kind": {
+      "type": "string",
+      "enum": [
+        "reply",
+        "inquiry",
+        "cancellation",
+        "objection",
+        "note"
+      ]
+    },
+    "subject_de": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 200
+    },
+    "body_de": {
+      "type": "string",
+      "minLength": 10,
+      "maxLength": 20000
+    },
+    "recipient_label": {
+      "type": "string",
+      "maxLength": 200,
+      "description": "Anzeigename des vorgesehenen Empfaengers. Kein Versandziel; Phase 1 versendet nicht."
+    },
+    "source_refs": {
+      "type": "array",
+      "items": {
+        "$ref": "https://jarvis.local/schemas/object_ref.schema.json"
+      },
+      "minItems": 1,
+      "description": "Quellen, auf denen der Entwurf beruht. Ein Entwurf ohne Quelle ist unzulaessig."
+    },
+    "model_ref": {
+      "type": "string"
+    },
+    "prompt_version": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "context_id",
+    "adapter_id",
+    "document_id",
+    "draft_kind",
+    "subject_de",
+    "body_de",
+    "source_refs"
+  ],
+  "additionalProperties": false
+}

@@ -1,0 +1,45 @@
+{
+  "schema_version": "1.0.0",
+  "evidence_id": "evd_01JBQ8Z4K7M3N9P2R5T6V8W0ZB",
+  "context_id": "arbeitgeber_visolva",
+  "action_id": "act_01JBQ8Z4K7M3N9P2R5T6V8W0Z9",
+  "evidence_type": "message_ref",
+  "system_adapter_id": "mail_m365",
+  "object_ref": {
+    "object_type": "email",
+    "context_id": "arbeitgeber_visolva",
+    "system": "mail_m365",
+    "external_id": "EXTERNAL_SENT_MESSAGE_ID_PLACEHOLDER",
+    "uri": "adapter://mail_m365/sent/EXTERNAL_SENT_MESSAGE_ID_PLACEHOLDER"
+  },
+  "observed_at": "2026-08-29T08:02:34Z",
+  "observed_values": {
+    "folder": "sent_items",
+    "recipient_count": 1,
+    "sent_at": "2026-08-29T08:02:12Z"
+  },
+  "verification": {
+    "method": "readback",
+    "result": "confirmed",
+    "verified_at": "2026-08-29T08:02:34Z",
+    "verified_by": "verifier",
+    "detail": "Nachricht wurde nach dem Versand im Ordner der gesendeten Nachrichten erneut gelesen.",
+    "contract_ref": {
+      "tool_id": "mail_default.send_message",
+      "tool_version": "1.0.0",
+      "readback_supported": true
+    }
+  },
+  "created_at": "2026-08-29T08:02:34Z",
+  "producer": {
+    "producer_type": "agent",
+    "producer_id": "verifier",
+    "producer_version": "1.0.0"
+  },
+  "trace": {
+    "trace_id": "tr-20260829-0002",
+    "correlation_id": "co-20260829-0002",
+    "workflow_name": "JV-P0-CORE-event_ingest-v1",
+    "workflow_version": "1.0.0"
+  }
+}

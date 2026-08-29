@@ -1,0 +1,46 @@
+{
+  "schema_version": "1.0.0",
+  "task_id": "tsk_01JBQ8Z4K7M3N9P2R5T6V8W0Z5",
+  "context_id": "privat",
+  "title": "Sonderkuendigungsrecht Krankenversicherung pruefen",
+  "description": "Beitragsanpassung 2027 pruefen und ueber Kuendigung oder Verbleib entscheiden.",
+  "success_criterion": "Entscheidung dokumentiert; bei Kuendigung liegt eine Eingangsbestaetigung des Versicherers vor.",
+  "consequence_of_inaction": "Das Sonderkuendigungsrecht verfaellt am 30.09.2026.",
+  "actor": "rolf",
+  "assignee": {
+    "object_type": "person",
+    "context_id": "privat",
+    "system": "internal",
+    "external_id": "rolf"
+  },
+  "origin": {
+    "event_id": "evt_01JBQ8Z4K7M3N9P2R5T6V8W0XY",
+    "derivation": "extracted",
+    "source_refs": [
+      {
+        "object_type": "document",
+        "object_id": "doc_01JBQ8Z4K7M3N9P2R5T6V8W0Z3",
+        "context_id": "privat"
+      }
+    ]
+  },
+  "status": "open",
+  "priority": "high",
+  "due_at": "2026-09-23T12:00:00Z",
+  "action_ids": [
+    "act_01JBQ8Z4K7M3N9P2R5T6V8W0Z7"
+  ],
+  "idempotency_key": "7e7e6900b358c8fd7bd99dc058e83a8855882c2c4a5b4520c04f35f05f4387cc",
+  "created_at": "2026-08-29T07:12:00Z",
+  "producer": {
+    "producer_type": "agent",
+    "producer_id": "action_planner",
+    "producer_version": "1.0.0"
+  },
+  "trace": {
+    "trace_id": "tr-20260829-0001",
+    "correlation_id": "co-20260829-0001",
+    "workflow_name": "JV-P0-CORE-event_ingest-v1",
+    "workflow_version": "1.0.0"
+  }
+}

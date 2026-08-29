@@ -1,0 +1,97 @@
+{
+  "registry_version": "1.0.0",
+  "description": "Freigabeplan der in Phase 1 verwendeten Werkzeuge. Ein Werkzeug wechselt erst dann auf status approved, wenn alle fuenf Bedingungen erfuellt und belegt sind. Phase 1.0 gibt ausschliesslich Werkzeuge frei, die tatsaechlich geprueft wurden.",
+  "release_conditions": [
+    {"step": 1, "condition": "contract_complete", "description": "Werkzeugvertrag vollstaendig, Ein- und Ausgabeschema vorhanden und aufloesbar."},
+    {"step": 2, "condition": "adapter_configured", "description": "Konkreter Adapter ausgewaehlt und mit Credentials konfiguriert."},
+    {"step": 3, "condition": "run_successful", "description": "Testlauf oder Dry Run im Zielsystem erfolgreich."},
+    {"step": 4, "condition": "evidence_successful", "description": "Ergebnisnachweis nach Werkzeugvertrag erfolgreich erbracht."},
+    {"step": 5, "condition": "approved", "description": "Erst danach wechselt der Status auf approved."}
+  ],
+  "tools": [
+    {
+      "tool_id": "docstore_internal.upsert_document",
+      "release_in_step": "1.0",
+      "current_status": "draft",
+      "adapter_selection_open": false,
+      "rationale": "Interner Adapter auf das Kontextschema. Wird in Phase 1.0 mit den Trennungsnachweisen tatsaechlich ausgefuehrt und mit Readback belegt."
+    },
+    {
+      "tool_id": "casestore_internal.upsert_case",
+      "release_in_step": "1.0",
+      "current_status": "draft",
+      "adapter_selection_open": false,
+      "rationale": "Wie docstore. Vorgangsnummer und Kennungsindex werden in 1.0 mitgeprueft."
+    },
+    {
+      "tool_id": "tasks_internal.create_task",
+      "release_in_step": "1.0",
+      "current_status": "draft",
+      "adapter_selection_open": false,
+      "rationale": "Interner Adapter. Wird fuer den Idempotenznachweis A-4 in 1.0 ohnehin ausgefuehrt."
+    },
+    {
+      "tool_id": "storage_gdrive.get_file",
+      "release_in_step": "1.1",
+      "current_status": "draft",
+      "adapter_selection_open": false,
+      "rationale": "Speicheradapter steht fest, die Konfiguration der Ordner erfolgt jedoch erst in 1.1."
+    },
+    {
+      "tool_id": "ocr_default.analyze_document",
+      "release_in_step": "1.1",
+      "current_status": "draft",
+      "adapter_selection_open": true,
+      "rationale": "Der Dienst wird erst in 1.1 nach dem Bewertungsraster ausgewaehlt. Vor der Auswahl gibt es keinen konfigurierten Adapter und damit keine Grundlage fuer eine Freigabe."
+    },
+    {
+      "tool_id": "llm_default.extract_fields",
+      "release_in_step": "1.2",
+      "current_status": "draft",
+      "adapter_selection_open": true,
+      "rationale": "Modellauswahl je Rolle erfolgt erst nach dem Benchmark in 1.2."
+    },
+    {
+      "tool_id": "llm_default.analyze_document",
+      "release_in_step": "1.2",
+      "current_status": "draft",
+      "adapter_selection_open": true,
+      "rationale": "Wie extract_fields."
+    },
+    {
+      "tool_id": "approval_email.request_decision",
+      "release_in_step": "1.3",
+      "current_status": "draft",
+      "adapter_selection_open": true,
+      "rationale": "Der Freigabekanal haengt an der offenen Entscheidung P1-O2. Vor deren Klaerung ist der Adapter nicht konfiguriert."
+    },
+    {
+      "tool_id": "test.record_approved_action",
+      "release_in_step": "1.3",
+      "current_status": "draft",
+      "adapter_selection_open": false,
+      "rationale": "Interner Testadapter. Freigabe zusammen mit dem Freigabeweg, den es nachweist."
+    },
+    {
+      "tool_id": "storage_gdrive.move_file",
+      "release_in_step": "1.4",
+      "current_status": "draft",
+      "adapter_selection_open": false,
+      "rationale": "Die Ablage veraendert Originale. Freigabe erst, wenn Zielordner, Benennung und Readback zusammen erfolgreich geprueft sind."
+    },
+    {
+      "tool_id": "drafts_internal.create_draft",
+      "release_in_step": "1.4",
+      "current_status": "draft",
+      "adapter_selection_open": false,
+      "rationale": "Setzt den Entwurfsordner und das drafting_model voraus."
+    },
+    {
+      "tool_id": "report_internal.write_daily_report",
+      "release_in_step": "1.4",
+      "current_status": "draft",
+      "adapter_selection_open": false,
+      "rationale": "Setzt den Berichtsordner und die Aufgabendaten voraus."
+    }
+  ]
+}

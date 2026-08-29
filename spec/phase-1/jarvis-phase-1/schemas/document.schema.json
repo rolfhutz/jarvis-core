@@ -1,0 +1,354 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://jarvis.local/schemas/document.schema.json",
+  "title": "JARVIS Document",
+  "description": "Version 1.2.0. Dokumentregister-Eintrag. Fuehrender Datensatz eines Dokuments von der Annahme bis zur Ablage. Ergaenzt die Phase-0-Vertraege, ersetzt sie nicht: Aufgaben, Aktionen, Freigaben und Nachweise bleiben eigene Objekte. Phase 1.",
+  "type": "object",
+  "properties": {
+    "schema_version": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/schema_version" },
+    "document_id": { "type": "string", "pattern": "^doc_[0-9A-HJKMNP-TV-Z]{26}$" },
+    "context_id": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/context_id" },
+
+    "intake": {
+      "type": "object",
+      "description": "Wie das Dokument in das System gelangt ist.",
+      "properties": {
+        "channel": { "type": "string", "enum": ["drive_inbox", "scan", "mobile_photo", "manual_upload", "api"] },
+        "adapter_id": { "type": "string" },
+        "source_external_id": { "type": "string", "description": "Stabile ID im Quellsystem, z. B. Drive-File-ID." },
+        "original_filename": { "type": "string", "maxLength": 300 },
+        "received_at": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/timestamp_utc" },
+        "source_event_id": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/event_id" }
+      },
+      "required": ["channel", "adapter_id", "source_external_id", "received_at", "source_event_id"],
+      "additionalProperties": false
+    },
+
+    "file": {
+      "type": "object",
+      "properties": {
+        "mime_type": { "type": "string" },
+        "size_bytes": { "type": "integer", "minimum": 0 },
+        "page_count": { "type": "integer", "minimum": 0 },
+        "content_hash": {
+          "type": "string",
+          "pattern": "^sha256:[a-f0-9]{64}$",
+          "description": "Hash der unveraenderten Originaldatei. Harter Dublettenstopp."
+        },
+        "text_fingerprint": {
+          "type": ["string", "null"],
+          "description": "Hash des normalisierten Volltextes. Erkennt inhaltsgleiche Scans mit abweichenden Bytes. Erzeugt einen Dublettenverdacht, keinen harten Stopp."
+        },
+        "is_scanned": { "type": "boolean" },
+        "language": { "type": "string", "maxLength": 10 }
+      },
+      "required": ["mime_type", "size_bytes", "content_hash"],
+      "additionalProperties": false
+    },
+
+    "status": {
+      "type": "string",
+      "enum": [
+        "received", "original_secured", "text_extracted", "fields_extracted",
+        "understood", "planned", "filed",
+        "duplicate", "unreadable", "needs_review", "failed", "quarantined",
+        "discarded", "misrouted"
+      ],
+      "description": "Lebenszyklus des Dokuments. Getrennt vom Aufgaben- und Aktionsstatus: Ein Dokument kann abgelegt sein, waehrend Aufgaben offen bleiben."
+    },
+    "processing_stage": {
+      "type": "object",
+      "description": "Wiederanlaufpunkt. Ein erneuter Lauf setzt bei der letzten abgeschlossenen Stufe auf.",
+      "properties": {
+        "last_completed": { "$ref": "#/$defs/processing_stage_key" },
+        "completed_at": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/timestamp_utc" },
+        "attempt_count": { "type": "integer", "minimum": 0 }
+      },
+      "required": ["last_completed"],
+      "additionalProperties": false
+    },
+    "review": {
+      "type": "object",
+      "description": "Grund, Zustand und Wiederanlaufpunkt einer manuellen Pruefung. Nach der Klaerung steht deterministisch fest, welcher Verarbeitungsschritt erneut ausgefuehrt wird.",
+      "properties": {
+        "required": { "type": "boolean" },
+        "reasons": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "context_unresolved", "ocr_quality_low", "mandatory_field_missing",
+              "low_confidence_actionable_field", "deadline_uncertain", "amount_implausible",
+              "case_ambiguous", "duplicate_suspected", "document_conflict",
+              "unknown_document_type", "tool_error"
+            ]
+          }
+        },
+        "blocked_stage": {
+          "$ref": "#/$defs/processing_stage_key",
+          "description": "Verarbeitungsstufe, in der die Pruefung ausgeloest wurde."
+        },
+        "opened_at": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/timestamp_utc" },
+        "resolution_type": {
+          "type": "string",
+          "enum": [
+            "value_corrected", "deadline_confirmed", "category_assigned", "case_selected",
+            "case_created", "duplicate_confirmed", "duplicate_rejected", "rescan_provided",
+            "context_corrected", "conflict_resolved", "technical_fixed", "document_discarded"
+          ],
+          "description": "Art der Klaerung. Bestimmt zusammen mit registry/review_resume_map.json den Wiederanlaufpunkt."
+        },
+        "outcome": {
+          "type": "string",
+          "enum": ["resume", "terminal"],
+          "description": "resume: die Verarbeitung wird fortgesetzt. terminal: es findet keine weitere Verarbeitung statt."
+        },
+        "resume_from_stage": {
+          "oneOf": [
+            { "$ref": "#/$defs/processing_stage_key" },
+            { "type": "null" }
+          ],
+          "description": "Stufe, ab der erneut verarbeitet wird. Nur bei outcome resume. Muss dem Eintrag zu resolution_type in registry/review_resume_map.json entsprechen."
+        },
+        "terminal_status": {
+          "type": "string",
+          "enum": ["duplicate", "discarded", "misrouted"],
+          "description": "Endzustand bei outcome terminal. Nur dort zulaessig."
+        },
+        "successor_intake_hint": {
+          "type": "string",
+          "maxLength": 200,
+          "description": "Nur bei terminal_status misrouted. Verweis auf den erwarteten neuen Eingangsort, z. B. 'reintake:arbeitgeber_visolva/inbox'. Enthaelt keinen fachlichen Inhalt und loest keinen kontextuebergreifenden Schreibzugriff aus."
+        },
+        "resolved_values": {
+          "type": "object",
+          "description": "Von Rolf gesetzte oder bestaetigte Werte, nach Feldschluessel. Sie ersetzen die extrahierten Werte und gelten als menschlich belegt.",
+          "additionalProperties": true
+        },
+        "resolved_at": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/timestamp_utc" },
+        "resolved_by": { "type": "string" },
+        "resolution_note": { "type": "string", "maxLength": 2000 }
+      },
+      "required": ["required"],
+      "additionalProperties": false
+    },
+
+    "classification": {
+      "type": "object",
+      "properties": {
+        "document_type": { "type": "string", "description": "Deutsches Anzeigelabel, z. B. Beitragsanpassung." },
+        "document_type_key": { "type": "string", "pattern": "^[a-z][a-z0-9_]{2,63}$" },
+        "category_key": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]{2,63}$",
+          "description": "Steuert das Ablageziel ueber das Kategorie-Mapping der Kontextkonfiguration."
+        },
+        "confidence": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/confidence" }
+      },
+      "required": ["document_type_key", "category_key", "confidence"],
+      "additionalProperties": false
+    },
+
+    "case_ref": {
+      "type": "object",
+      "properties": {
+        "case_id": { "type": "string", "pattern": "^cse_[0-9A-HJKMNP-TV-Z]{26}$" },
+        "case_number": {
+          "type": "string",
+          "pattern": "^V-[0-9]{4}-[0-9]{4}$",
+          "description": "Menschenlesbare Vorgangsnummer je Kontext. Bestandteil des Dateinamens."
+        },
+        "match_method": { "type": "string", "enum": ["identifier_match", "created_new", "user_confirmed", "unresolved"] },
+        "match_confidence": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/confidence" }
+      },
+      "required": ["match_method"],
+      "additionalProperties": false
+    },
+
+    "storage": {
+      "type": "object",
+      "description": "Ablageziel des Originals. Das Original wird verschoben und umbenannt, niemals inhaltlich veraendert.",
+      "properties": {
+        "adapter_id": { "type": "string" },
+        "target_path": { "type": "string", "maxLength": 500 },
+        "target_external_id": { "type": "string" },
+        "final_filename": {
+          "type": "string",
+          "maxLength": 200,
+          "pattern": "^(E-)?[0-9]{4}-[0-9]{2}-[0-9]{2}__.+__.+__.+__V-[0-9]{4}-[0-9]{4}\\.(pdf|jpg|png|tif)$",
+          "description": "Die Endung wird deterministisch aus dem geprueften MIME-Typ abgeleitet, niemals aus dem urspruenglichen Dateinamen. Das Original wird nicht konvertiert."
+        },
+        "filed_at": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/timestamp_utc" },
+        "filing_action_id": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/action_id" },
+        "filing_evidence_id": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/evidence_id" }
+      },
+      "additionalProperties": false
+    },
+
+    "duplicate_of": { "type": "string", "pattern": "^doc_[0-9A-HJKMNP-TV-Z]{26}$" },
+    "related_documents": {
+      "type": "array",
+      "items": { "$ref": "https://jarvis.local/schemas/object_ref.schema.json" },
+      "default": []
+    },
+    "derived_task_ids": {
+      "type": "array",
+      "items": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/task_id" },
+      "default": []
+    },
+    "derived_action_ids": {
+      "type": "array",
+      "items": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/action_id" },
+      "default": []
+    },
+    "extraction_result_ref": { "type": "string", "description": "Verweis auf den gespeicherten Extraktionsdatensatz im Kontextschema." },
+    "analysis_ref": { "type": "string", "description": "Verweis auf den gespeicherten Analysedatensatz im Kontextschema." },
+    "analysis_version": { "type": "string", "description": "Version von Prompt und Regelwerk, mit der das Dokument verstanden wurde." },
+
+    "created_at": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/timestamp_utc" },
+    "updated_at": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/timestamp_utc" },
+    "producer": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/producer" },
+    "trace": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/trace" }
+  },
+  "required": [
+    "schema_version", "document_id", "context_id", "intake", "file",
+    "status", "review", "created_at", "producer", "trace"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "processing_stage_key": {
+      "type": "string",
+      "enum": ["intake", "ocr", "extraction", "analysis", "case_match", "task_derive", "action_plan", "filing"],
+      "description": "Verarbeitungsstufen in fester Reihenfolge."
+    }
+  },
+  "allOf": [
+    {
+      "description": "Ein abgelegtes Dokument braucht Klassifikation, Vorgang und Ablageziel.",
+      "if": { "properties": { "status": { "const": "filed" } }, "required": ["status"] },
+      "then": { "required": ["storage", "classification", "case_ref"] }
+    },
+    {
+      "description": "Eine Dublette verweist auf das Original.",
+      "if": { "properties": { "status": { "const": "duplicate" } }, "required": ["status"] },
+      "then": { "required": ["duplicate_of"] }
+    },
+    {
+      "description": "Manuelle Pruefung braucht Grund, Zeitpunkt und die blockierte Stufe.",
+      "if": {
+        "properties": { "review": { "properties": { "required": { "const": true } }, "required": ["required"] } },
+        "required": ["review"]
+      },
+      "then": {
+        "properties": {
+          "review": {
+            "properties": { "reasons": { "minItems": 1 } },
+            "required": ["reasons", "opened_at", "blocked_stage"]
+          }
+        }
+      }
+    },
+    {
+      "description": "Eine abgeschlossene Pruefung benennt Art der Klaerung, Ausgang und Entscheider.",
+      "if": {
+        "properties": { "review": { "required": ["resolved_at"] } },
+        "required": ["review"]
+      },
+      "then": {
+        "properties": {
+          "review": { "required": ["resolution_type", "outcome", "resolved_by", "blocked_stage"] }
+        }
+      }
+    },
+    {
+      "description": "Eine fortzusetzende Klaerung braucht einen Wiederanlaufpunkt und darf keinen Endzustand tragen.",
+      "if": {
+        "properties": {
+          "review": { "properties": { "outcome": { "const": "resume" } }, "required": ["outcome"] }
+        },
+        "required": ["review"]
+      },
+      "then": {
+        "properties": {
+          "review": {
+            "required": ["resume_from_stage"],
+            "properties": {
+              "resume_from_stage": { "$ref": "#/$defs/processing_stage_key" },
+              "terminal_status": false,
+              "successor_intake_hint": false
+            }
+          }
+        }
+      }
+    },
+    {
+      "description": "Eine terminale Klaerung braucht einen Endzustand und darf keinen Wiederanlaufpunkt tragen.",
+      "if": {
+        "properties": {
+          "review": { "properties": { "outcome": { "const": "terminal" } }, "required": ["outcome"] }
+        },
+        "required": ["review"]
+      },
+      "then": {
+        "properties": {
+          "review": {
+            "required": ["terminal_status"],
+            "properties": { "resume_from_stage": { "type": "null" } }
+          }
+        }
+      }
+    },
+    {
+      "description": "Ein Hinweis auf einen neuen Eingang ist nur bei einem fehlgeleiteten Dokument zulaessig.",
+      "if": {
+        "properties": { "review": { "required": ["successor_intake_hint"] } },
+        "required": ["review"]
+      },
+      "then": {
+        "properties": {
+          "review": {
+            "properties": { "terminal_status": { "const": "misrouted" } },
+            "required": ["terminal_status"]
+          }
+        }
+      }
+    },
+    {
+      "description": "Terminale Endzustaende schlagen auf den Dokumentstatus durch.",
+      "if": {
+        "properties": {
+          "review": { "properties": { "terminal_status": { "const": "misrouted" } }, "required": ["terminal_status"] }
+        },
+        "required": ["review"]
+      },
+      "then": { "properties": { "status": { "const": "misrouted" } } }
+    },
+    {
+      "description": "Ein verworfenes Dokument traegt den Status discarded.",
+      "if": {
+        "properties": {
+          "review": { "properties": { "terminal_status": { "const": "discarded" } }, "required": ["terminal_status"] }
+        },
+        "required": ["review"]
+      },
+      "then": { "properties": { "status": { "const": "discarded" } } }
+    },
+    {
+      "description": "Korrigierte Werte setzen eine Wertkorrektur voraus.",
+      "if": {
+        "properties": { "review": { "required": ["resolved_values"] } },
+        "required": ["review"]
+      },
+      "then": {
+        "properties": {
+          "review": {
+            "properties": {
+              "resolution_type": { "enum": ["value_corrected", "deadline_confirmed", "category_assigned", "conflict_resolved"] }
+            },
+            "required": ["resolution_type"]
+          }
+        }
+      }
+    }
+  ]
+}

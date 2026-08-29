@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://jarvis.local/schemas/memory_entry.schema.json",
+  "title": "JARVIS Memory Entry",
+  "description": "Einheitlicher Eintrag fuer alle vier Gedaechtnisarten. In Phase 0 wird nur das Schema verbindlich festgelegt, die produktive Nutzung folgt in Phase 4. Version 1.0.0.",
+  "type": "object",
+  "properties": {
+    "schema_version": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/schema_version" },
+    "memory_id": { "type": "string", "pattern": "^mem_[0-9A-HJKMNP-TV-Z]{26}$" },
+    "context_id": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/context_id" },
+
+    "memory_store": {
+      "type": "string",
+      "enum": ["session", "profile", "working", "source_knowledge"],
+      "description": "session: laufendes Gespraech. profile: persoenliches Langzeitgedaechtnis. working: Ziele, Projekte, Entscheidungen, offene Punkte. source_knowledge: Quellenwissen."
+    },
+    "entry_type": {
+      "type": "string",
+      "enum": [
+        "fact", "preference", "relationship", "goal", "metric",
+        "project", "decision", "commitment", "open_point",
+        "experience", "correction", "knowledge_chunk", "session_note"
+      ]
+    },
+    "epistemic_status": {
+      "type": "string",
+      "enum": ["fact", "assumption", "interpretation", "user_statement"],
+      "description": "Pflichtfeld. Fakten, Annahmen und Interpretationen duerfen niemals vermischt werden."
+    },
+
+    "statement": { "type": "string", "minLength": 3, "maxLength": 4000, "description": "Deutscher Freitext." },
+    "subject_refs": {
+      "type": "array",
+      "items": { "$ref": "https://jarvis.local/schemas/object_ref.schema.json" },
+      "default": []
+    },
+    "source_refs": {
+      "type": "array",
+      "items": { "$ref": "https://jarvis.local/schemas/object_ref.schema.json" },
+      "default": [],
+      "description": "Pflicht fuer alle Eintraege ausser session und user_statement."
+    },
+    "confidence": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/confidence" },
+
+    "valid_from": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/timestamp_utc" },
+    "valid_to": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/timestamp_utc" },
+    "status": {
+      "type": "string",
+      "enum": ["active", "superseded", "retracted", "disputed"],
+      "description": "Veraltete Eintraege werden auf superseded gesetzt, nicht parallel weitergefuehrt."
+    },
+    "supersedes_memory_id": { "type": "string", "pattern": "^mem_[0-9A-HJKMNP-TV-Z]{26}$" },
+    "superseded_by_memory_id": { "type": "string", "pattern": "^mem_[0-9A-HJKMNP-TV-Z]{26}$" },
+    "conflict_with": {
+      "type": "array",
+      "items": { "type": "string", "pattern": "^mem_[0-9A-HJKMNP-TV-Z]{26}$" },
+      "default": []
+    },
+
+    "visibility": {
+      "type": "string",
+      "enum": ["context_only", "cross_context_readable"],
+      "default": "context_only",
+      "description": "cross_context_readable erlaubt nur Lesen bei ausdruecklicher Anweisung, niemals kontextuebergreifendes Schreiben."
+    },
+    "expires_at": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/timestamp_utc" },
+    "review_at": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/timestamp_utc" },
+    "created_at": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/timestamp_utc" },
+    "updated_at": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/timestamp_utc" },
+    "producer": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/producer" },
+    "trace": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/trace" }
+  },
+  "required": [
+    "schema_version", "memory_id", "context_id", "memory_store", "entry_type",
+    "epistemic_status", "statement", "status", "created_at", "producer"
+  ],
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "description": "Langzeit-, Arbeits- und Quellenwissen benoetigen eine Quelle.",
+      "if": {
+        "properties": { "memory_store": { "enum": ["profile", "working", "source_knowledge"] } },
+        "required": ["memory_store"]
+      },
+      "then": { "properties": { "source_refs": { "minItems": 1 } }, "required": ["source_refs"] }
+    },
+    {
+      "if": { "properties": { "status": { "const": "superseded" } }, "required": ["status"] },
+      "then": { "required": ["superseded_by_memory_id"] }
+    }
+  ]
+}

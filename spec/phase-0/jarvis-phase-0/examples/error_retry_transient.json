@@ -1,0 +1,39 @@
+{
+  "schema_version": "1.0.0",
+  "error_id": "err_01JBQ8Z4K7M3N9P2R5T6V8W0ZC",
+  "context_id": "arbeitgeber_visolva",
+  "action_id": "act_01JBQ8Z4K7M3N9P2R5T6V8W0Z9",
+  "occurred_at": "2026-08-29T08:01:05Z",
+  "error_class": "transient_network",
+  "error_code": "ETIMEDOUT",
+  "message_safe": "Zielsystem antwortete nicht innerhalb des Zeitlimits.",
+  "adapter_id": "mail_m365",
+  "tool_id": "mail_default.send_message",
+  "retryable": true,
+  "attempt": 1,
+  "max_attempts": 3,
+  "next_attempt_at": "2026-08-29T08:02:05Z",
+  "reconciliation": {
+    "performed": true,
+    "method": "readback",
+    "result": "not_executed",
+    "checked_at": "2026-08-29T08:01:50Z"
+  },
+  "escalation_level": "L0_retry",
+  "resolution": {
+    "status": "resolved_auto",
+    "resolved_at": "2026-08-29T08:02:34Z",
+    "note": "Zweiter Versuch innerhalb gueltiger Freigabe erfolgreich, identischer Idempotenzschluessel."
+  },
+  "producer": {
+    "producer_type": "agent",
+    "producer_id": "executor",
+    "producer_version": "1.0.0"
+  },
+  "trace": {
+    "trace_id": "tr-20260829-0002",
+    "correlation_id": "co-20260829-0002",
+    "workflow_name": "JV-P0-CORE-event_ingest-v1",
+    "workflow_version": "1.0.0"
+  }
+}

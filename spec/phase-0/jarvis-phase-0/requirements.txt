@@ -1,0 +1,13 @@
+# JARVIS Phase 0 - Abhaengigkeiten der Pruefwerkzeuge
+#
+# Getestet am 29.08.2026 mit Python 3.12 in einer leeren virtuellen Umgebung.
+# Es werden ausschliesslich Pruefbibliotheken benoetigt. Die Artefakte selbst
+# sind reine JSON-, SQL- und Markdown-Dateien ohne Laufzeitabhaengigkeit.
+#
+# jsonschema   Validierung der Datenvertraege nach Draft 2020-12
+# referencing  Aufloesung der $ref-Verweise zwischen den Schemata
+# pglast       PostgreSQL-Grammatikpruefung der SQL-Vorlagen ohne Datenbank
+
+jsonschema==4.26.0
+referencing==0.37.0
+pglast==8.4

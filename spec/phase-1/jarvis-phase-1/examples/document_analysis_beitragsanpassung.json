@@ -1,0 +1,105 @@
+{
+  "schema_version": "1.1.0",
+  "document_id": "doc_01JBQ8Z4K7M3N9P2R5T6V8W0Z3",
+  "context_id": "privat",
+  "analyzed_at": "2026-08-29T07:20:11Z",
+  "model_role": "reasoning_model",
+  "model_ref": "env:JV_MODEL_REASONING",
+  "prompt_version": "analyze_document@1.0.0",
+  "summary_de": "Die Krankenversicherung kuendigt zur Police KV-4711-882 eine Erhoehung der Monatspraemie ab dem 1. Januar 2027 von 412.00 CHF auf 448.00 CHF an. Das Schreiben weist auf ein Sonderkuendigungsrecht hin, das bis zum 30. September 2026 ausgeuebt werden kann. Eine Reaktion ist nicht zwingend; ohne Reaktion gilt die neue Praemie ab 2027.",
+  "subject_de": "Praemie 2027",
+  "obligations": [
+    {
+      "statement_de": "Ueber Verbleib oder Kuendigung entscheiden, wenn das Sonderkuendigungsrecht genutzt werden soll.",
+      "due_date": "2026-09-30",
+      "due_date_source": "explicit",
+      "consequence_de": "Nach dem 30.09.2026 erlischt das Sonderkuendigungsrecht und die neue Praemie gilt ab 01.01.2027 unveraendert weiter.",
+      "evidence_snippet": "Sonderkuendigungsrecht bis zum 30.09.2026",
+      "page": 1,
+      "confidence": 0.94
+    }
+  ],
+  "opportunities": [
+    {
+      "statement_de": "Wechsel zu einer anderen Grundversicherung ist ohne Einhaltung der ordentlichen Kuendigungsfrist moeglich.",
+      "expires_at": "2026-09-30",
+      "evidence_snippet": "koennen Sie den Vertrag ausserordentlich kuendigen",
+      "page": 2,
+      "confidence": 0.88
+    }
+  ],
+  "risks": [
+    {
+      "statement_de": "Bei Kuendigung ohne vorher abgeschlossene Anschlussloesung besteht ab 01.01.2027 keine Deckung.",
+      "severity": "high",
+      "evidence_snippet": "Der Versicherungsschutz endet am 31.12.2026",
+      "page": 2
+    }
+  ],
+  "changes_vs_previous": [
+    {
+      "field_key": "monthly_premium",
+      "previous_value": "412.00",
+      "current_value": "448.00",
+      "delta_absolute": "36.00",
+      "delta_percent": "8.74",
+      "compared_document_id": "doc_01JBQ8Z4K7M3N9P2R5T6V8W0Z1"
+    }
+  ],
+  "missing_information": [
+    {
+      "what_de": "Aktuelle Policenkopie 2026 mit vollstaendigem Leistungsumfang",
+      "why_needed_de": "Ohne den Leistungsumfang laesst sich nicht beurteilen, ob ein guenstigeres Angebot gleichwertig waere.",
+      "searchable_in_archive": true
+    }
+  ],
+  "conflicts": [],
+  "proposed_tasks": [
+    {
+      "title_de": "Praemie 2027 mit der Police 2026 vergleichen und ueber die Ausuebung des Sonderkuendigungsrechts entscheiden",
+      "success_criterion_de": "Entscheidung ist dokumentiert. Bei Kuendigung liegt eine Eingangsbestaetigung des Versicherers vor, bei Verbleib ein Vermerk mit Begruendung.",
+      "proposed_actor": "rolf",
+      "due_date": "2026-09-23",
+      "priority": "high",
+      "consequence_of_inaction_de": "Das Sonderkuendigungsrecht verfaellt am 30.09.2026.",
+      "required_inputs": [
+        "Police 2026",
+        "Vergleichsangebot"
+      ],
+      "proposed_action_type": null,
+      "evidence_snippet": "Sonderkuendigungsrecht bis zum 30.09.2026",
+      "page": 1,
+      "confidence": 0.94
+    },
+    {
+      "title_de": "Policenkopie 2026 im vorhandenen Dokumentbestand suchen und dem Vorgang zuordnen",
+      "success_criterion_de": "Die Police 2026 ist dem Vorgang V-2026-0042 zugeordnet oder es ist dokumentiert, dass sie im Bestand nicht vorhanden ist.",
+      "proposed_actor": "jarvis",
+      "due_date": "2026-08-31",
+      "priority": "normal",
+      "consequence_of_inaction_de": "Der Praemienvergleich bleibt unvollstaendig und die Entscheidung verzoegert sich.",
+      "required_inputs": [],
+      "proposed_action_type": "document.search_archive",
+      "evidence_snippet": "Ihre bisherige Praemie betrug CHF 412.00",
+      "page": 1,
+      "confidence": 0.91
+    }
+  ],
+  "uncertainties": [
+    {
+      "topic_de": "Ob die genannte Praemie den Unfalleinschluss enthaelt, geht aus dem Schreiben nicht eindeutig hervor.",
+      "blocks_action": false
+    }
+  ],
+  "overall_confidence": 0.92,
+  "producer": {
+    "producer_type": "agent",
+    "producer_id": "document_analyst",
+    "producer_version": "1.0.0"
+  },
+  "trace": {
+    "trace_id": "tr-20260829-0101",
+    "workflow_name": "JV-P1-SUB-document_understand-v1",
+    "workflow_version": "1.0.0"
+  }
+}
