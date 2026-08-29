@@ -1,0 +1,202 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://jarvis.local/schemas/extraction_result.schema.json",
+  "title": "JARVIS Extraction Result",
+  "description": "Ergebnis der feldweisen Extraktion aus einem Dokument. Ausgabevertrag des Werkzeugs llm_default.extract_fields. Jedes Feld traegt Rohwert, kanonischen Wert, Normalisierungsregel, Konfidenz und Textbeleg. Die Belegpruefung erfolgt zweistufig und deterministisch. Version 1.2.0, Phase 1.",
+  "type": "object",
+  "properties": {
+    "schema_version": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/schema_version" },
+    "document_id": { "type": "string", "pattern": "^doc_[0-9A-HJKMNP-TV-Z]{26}$" },
+    "context_id": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/context_id" },
+    "extracted_at": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/timestamp_utc" },
+    "model_role": { "type": "string", "const": "extraction_model" },
+    "model_ref": { "type": "string", "description": "Verweis auf den Konfigurationseintrag des verwendeten Modells, kein fester Modellname." },
+    "prompt_version": { "type": "string" },
+    "normalization_registry_version": {
+      "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/schema_version",
+      "description": "Version von registry/normalization_rules.json, gegen die geprueft wurde."
+    },
+
+    "fields": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/extracted_field" }
+    },
+
+    "line_items": {
+      "type": "array",
+      "description": "Tabellenpositionen, z. B. Rechnungszeilen. Handlungsrelevante Werte unterliegen derselben Belegpflicht wie Einzelfelder.",
+      "default": [],
+      "items": { "$ref": "#/$defs/line_item" }
+    },
+
+    "quality": {
+      "type": "object",
+      "properties": {
+        "ocr_mean_confidence": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/confidence" },
+        "text_character_count": { "type": "integer", "minimum": 0 },
+        "mandatory_fields_missing": { "type": "array", "items": { "type": "string" }, "default": [] },
+        "actionable_fields_uncertain": { "type": "array", "items": { "type": "string" }, "default": [] }
+      },
+      "required": ["ocr_mean_confidence", "text_character_count", "mandatory_fields_missing", "actionable_fields_uncertain"],
+      "additionalProperties": false
+    },
+    "producer": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/producer" },
+    "trace": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/trace" }
+  },
+  "required": [
+    "schema_version", "document_id", "context_id", "extracted_at",
+    "model_role", "model_ref", "prompt_version", "normalization_registry_version",
+    "fields", "quality", "producer", "trace"
+  ],
+  "additionalProperties": false,
+
+  "$defs": {
+    "data_type": {
+      "type": "string",
+      "enum": ["string", "date", "datetime", "money", "integer", "boolean", "currency_code", "identifier"],
+      "description": "money steht fuer Geldwerte in kanonischer Zeichenfolgendarstellung. Nicht monetaere Dezimalwerte erhalten bei Bedarf einen eigenen Datentyp und eine eigene registrierte Regel; sie werden nicht ueber die Geldregeln abgebildet."
+    },
+    "normalization_rule": {
+      "type": "string",
+      "enum": [
+        "date.de_numeric", "date.de_long", "date.iso", "datetime.de_numeric",
+        "decimal.de", "decimal.ch", "decimal.en", "currency.iso4217",
+        "integer.plain", "identifier.strip_separators", "string.trim", "boolean.de"
+      ],
+      "description": "Registrierte Regel aus registry/normalization_rules.json. Referenzimplementierung: tools/normalization_reference.py."
+    },
+    "evidence": {
+      "type": "object",
+      "description": "Textbeleg aus dem Dokument. Der Rohwert muss nach technischer Textnormalisierung im snippet auffindbar sein.",
+      "properties": {
+        "snippet": { "type": "string", "minLength": 1, "maxLength": 500 },
+        "page": { "type": "integer", "minimum": 1 },
+        "locator": { "type": "string", "maxLength": 200, "description": "Optionaler Positionsbezug, z. B. bbox oder Zeilennummer." }
+      },
+      "required": ["snippet", "page"],
+      "additionalProperties": false
+    },
+    "validation_status": {
+      "type": "string",
+      "enum": [
+        "accepted", "accepted_flagged", "rejected_low_confidence",
+        "rejected_no_evidence", "rejected_evidence_mismatch",
+        "rejected_normalization_mismatch", "rejected_implausible", "not_found"
+      ],
+      "description": "Ergebnis der deterministischen Nachpruefung. Wird niemals vom Sprachmodell gesetzt, sondern ausschliesslich vom Regelwerk."
+    },
+    "extracted_field": {
+      "type": "object",
+      "properties": {
+        "field_key": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]{2,63}$",
+          "description": "Technischer Feldschluessel aus dem Feldkatalog der Spezifikation, Abschnitt 9."
+        },
+        "raw_value": {
+          "type": ["string", "null"],
+          "maxLength": 300,
+          "description": "Darstellung so, wie sie im Dokument steht, z. B. '1. Januar 2027'. null bedeutet: nicht erkannt."
+        },
+        "normalized_value": {
+          "type": ["string", "integer", "boolean", "null"],
+          "description": "Kanonische Darstellung fuer die weitere Verarbeitung, z. B. '2027-01-01' oder '448.00'. Wird aus raw_value ueber normalization_rule abgeleitet. Geldwerte sind immer Zeichenfolgen; eine Gleitkommazahl ist unzulaessig."
+        },
+        "data_type": { "$ref": "#/$defs/data_type" },
+        "normalization_rule": { "$ref": "#/$defs/normalization_rule" },
+        "confidence": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/confidence" },
+        "evidence": { "$ref": "#/$defs/evidence" },
+        "validation_status": { "$ref": "#/$defs/validation_status" },
+        "validation_note": { "type": "string", "maxLength": 500 }
+      },
+      "required": ["field_key", "raw_value", "normalized_value", "data_type", "confidence", "validation_status"],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "description": "Geldwerte werden als Zeichenfolge mit Dezimalpunkt und genau zwei Nachkommastellen gefuehrt, niemals als Gleitkommazahl.",
+          "if": { "properties": { "data_type": { "const": "money" } }, "required": ["data_type"] },
+          "then": {
+            "properties": {
+              "normalized_value": {
+                "oneOf": [
+                  { "type": "string", "pattern": "^-?[0-9]+\\.[0-9]{2}$" },
+                  { "type": "null" }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "description": "Ein erkannter Wert braucht Rohwert, Beleg und Normalisierungsregel.",
+          "if": { "properties": { "normalized_value": { "not": { "type": "null" } } }, "required": ["normalized_value"] },
+          "then": {
+            "required": ["raw_value", "evidence", "normalization_rule"],
+            "properties": { "raw_value": { "type": "string", "minLength": 1 } }
+          }
+        },
+        {
+          "description": "Ohne Rohwert gibt es keinen kanonischen Wert.",
+          "if": { "properties": { "raw_value": { "type": "null" } }, "required": ["raw_value"] },
+          "then": { "properties": { "normalized_value": { "type": "null" } } }
+        }
+      ]
+    },
+    "line_item": {
+      "type": "object",
+      "description": "Eine Tabellenposition. Jeder Betragswert traegt entweder einen eigenen Beleg oder verweist auf ein belegtes Extraktionsfeld.",
+      "properties": {
+        "position": { "type": "integer", "minimum": 1 },
+        "description": { "type": "string", "minLength": 1, "maxLength": 500 },
+        "quantity_raw": { "type": ["string", "null"] },
+        "quantity": { "type": ["integer", "null"], "description": "Stueckzahl. Nicht monetaer und daher ganzzahlig." },
+        "unit_amount_raw": { "type": ["string", "null"] },
+        "unit_amount": {
+          "type": ["string", "null"],
+          "pattern": "^-?[0-9]+\\.[0-9]{2}$",
+          "description": "Geldwert als kanonische Zeichenfolge, niemals als Gleitkommazahl."
+        },
+        "total_amount_raw": { "type": ["string", "null"] },
+        "total_amount": {
+          "type": ["string", "null"],
+          "pattern": "^-?[0-9]+\\.[0-9]{2}$",
+          "description": "Geldwert als kanonische Zeichenfolge, niemals als Gleitkommazahl."
+        },
+        "currency": { "type": ["string", "null"], "pattern": "^[A-Z]{3}$" },
+        "normalization_rule": { "$ref": "#/$defs/normalization_rule" },
+        "evidence": { "$ref": "#/$defs/evidence" },
+        "field_ref": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]{2,63}$",
+          "description": "Alternative zum eigenen Beleg: Verweis auf ein bereits belegtes Feld in fields."
+        },
+        "validation_status": { "$ref": "#/$defs/validation_status" }
+      },
+      "required": ["position", "description", "validation_status"],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "description": "Ein Betrag in einer Position braucht Rohwert, Regel und entweder einen eigenen Beleg oder einen Feldverweis.",
+          "if": {
+            "anyOf": [
+              { "properties": { "total_amount": { "type": "string" } }, "required": ["total_amount"] },
+              { "properties": { "unit_amount": { "type": "string" } }, "required": ["unit_amount"] }
+            ]
+          },
+          "then": {
+            "required": ["normalization_rule"],
+            "anyOf": [{ "required": ["evidence"] }, { "required": ["field_ref"] }]
+          }
+        },
+        {
+          "if": { "properties": { "total_amount": { "type": "string" } }, "required": ["total_amount"] },
+          "then": { "required": ["total_amount_raw"], "properties": { "total_amount_raw": { "type": "string", "minLength": 1 } } }
+        },
+        {
+          "if": { "properties": { "unit_amount": { "type": "string" } }, "required": ["unit_amount"] },
+          "then": { "required": ["unit_amount_raw"], "properties": { "unit_amount_raw": { "type": "string", "minLength": 1 } } }
+        }
+      ]
+    }
+  }
+}

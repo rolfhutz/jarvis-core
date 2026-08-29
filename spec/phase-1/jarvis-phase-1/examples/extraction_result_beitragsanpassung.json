@@ -1,0 +1,222 @@
+{
+  "schema_version": "1.2.0",
+  "document_id": "doc_01JBQ8Z4K7M3N9P2R5T6V8W0Z3",
+  "context_id": "privat",
+  "extracted_at": "2026-08-29T07:16:04Z",
+  "model_role": "extraction_model",
+  "model_ref": "env:JV_MODEL_EXTRACTION",
+  "prompt_version": "extract_fields@1.0.0",
+  "normalization_registry_version": "1.1.0",
+  "fields": [
+    {
+      "field_key": "document_type_key",
+      "raw_value": "Beitragsanpassung 2027",
+      "normalized_value": "Beitragsanpassung 2027",
+      "data_type": "string",
+      "normalization_rule": "string.trim",
+      "confidence": 0.96,
+      "evidence": {
+        "snippet": "Beitragsanpassung 2027",
+        "page": 1,
+        "locator": "page=1;block=2"
+      },
+      "validation_status": "accepted"
+    },
+    {
+      "field_key": "document_date",
+      "raw_value": "25. August 2026",
+      "normalized_value": "2026-08-25",
+      "data_type": "date",
+      "normalization_rule": "date.de_long",
+      "confidence": 0.97,
+      "evidence": {
+        "snippet": "Zuerich, 25. August 2026",
+        "page": 1,
+        "locator": "page=1;block=1"
+      },
+      "validation_status": "accepted"
+    },
+    {
+      "field_key": "deadline",
+      "raw_value": "30.09.2026",
+      "normalized_value": "2026-09-30",
+      "data_type": "date",
+      "normalization_rule": "date.de_numeric",
+      "confidence": 0.94,
+      "evidence": {
+        "snippet": "Sonderkuendigungsrecht bis zum 30.09.2026",
+        "page": 1,
+        "locator": "page=1;block=7"
+      },
+      "validation_status": "accepted_flagged",
+      "validation_note": "Frist unter der Sonderschwelle 0,95. Wird uebernommen und zur Bestaetigung vorgelegt."
+    },
+    {
+      "field_key": "policy_number",
+      "raw_value": "KV-4711 882",
+      "normalized_value": "kv4711882",
+      "data_type": "identifier",
+      "normalization_rule": "identifier.strip_separators",
+      "confidence": 0.98,
+      "evidence": {
+        "snippet": "Ihre Police KV-4711 882",
+        "page": 1,
+        "locator": "page=1;block=3"
+      },
+      "validation_status": "accepted"
+    },
+    {
+      "field_key": "new_amount",
+      "raw_value": "CHF 448.00",
+      "normalized_value": "448.00",
+      "data_type": "money",
+      "normalization_rule": "decimal.ch",
+      "confidence": 0.95,
+      "evidence": {
+        "snippet": "Neue Monatspraemie ab 01.01.2027: CHF 448.00",
+        "page": 1,
+        "locator": "page=1;block=5"
+      },
+      "validation_status": "accepted"
+    },
+    {
+      "field_key": "previous_amount",
+      "raw_value": "412.00",
+      "normalized_value": "412.00",
+      "data_type": "money",
+      "normalization_rule": "decimal.ch",
+      "confidence": 0.93,
+      "evidence": {
+        "snippet": "Ihre bisherige Praemie betrug CHF 412.00",
+        "page": 1,
+        "locator": "page=1;block=5"
+      },
+      "validation_status": "accepted"
+    },
+    {
+      "field_key": "currency",
+      "raw_value": "CHF",
+      "normalized_value": "CHF",
+      "data_type": "currency_code",
+      "normalization_rule": "currency.iso4217",
+      "confidence": 0.99,
+      "evidence": {
+        "snippet": "Neue Monatspraemie ab 01.01.2027: CHF 448.00",
+        "page": 1
+      },
+      "validation_status": "accepted"
+    },
+    {
+      "field_key": "effective_date",
+      "raw_value": "1. Januar 2027",
+      "normalized_value": "2027-01-01",
+      "data_type": "date",
+      "normalization_rule": "date.de_long",
+      "confidence": 0.96,
+      "evidence": {
+        "snippet": "gueltig ab dem 1. Januar 2027",
+        "page": 1,
+        "locator": "page=1;block=5"
+      },
+      "validation_status": "accepted"
+    },
+    {
+      "field_key": "sender_name",
+      "raw_value": "Krankenversicherung",
+      "normalized_value": "Krankenversicherung",
+      "data_type": "string",
+      "normalization_rule": "string.trim",
+      "confidence": 0.95,
+      "evidence": {
+        "snippet": "Krankenversicherung",
+        "page": 1,
+        "locator": "page=1;block=0"
+      },
+      "validation_status": "accepted"
+    },
+    {
+      "field_key": "has_action_required",
+      "raw_value": "Ja",
+      "normalized_value": true,
+      "data_type": "boolean",
+      "normalization_rule": "boolean.de",
+      "confidence": 0.9,
+      "evidence": {
+        "snippet": "Eine Reaktion ist erforderlich: Ja, falls Sie kuendigen moechten",
+        "page": 1
+      },
+      "validation_status": "accepted"
+    },
+    {
+      "field_key": "page_count_stated",
+      "raw_value": "3",
+      "normalized_value": 3,
+      "data_type": "integer",
+      "normalization_rule": "integer.plain",
+      "confidence": 0.88,
+      "evidence": {
+        "snippet": "Seite 1 von 3",
+        "page": 1
+      },
+      "validation_status": "accepted_flagged",
+      "validation_note": "Konfidenz zwischen 0,70 und 0,89, nicht handlungsrelevant."
+    },
+    {
+      "field_key": "contact_person",
+      "raw_value": null,
+      "normalized_value": null,
+      "data_type": "string",
+      "confidence": 0.0,
+      "validation_status": "not_found"
+    }
+  ],
+  "line_items": [
+    {
+      "position": 1,
+      "description": "Grundversicherung, Monatspraemie 2027",
+      "total_amount_raw": "CHF 448.00",
+      "total_amount": "448.00",
+      "currency": "CHF",
+      "normalization_rule": "decimal.ch",
+      "field_ref": "new_amount",
+      "validation_status": "accepted"
+    },
+    {
+      "position": 2,
+      "description": "Unfalleinschluss",
+      "total_amount_raw": "1'234.50",
+      "total_amount": "1234.50",
+      "currency": "CHF",
+      "normalization_rule": "decimal.ch",
+      "evidence": {
+        "snippet": "Unfalleinschluss jaehrlich 1'234.50",
+        "page": 2,
+        "locator": "page=2;table=1;row=2"
+      },
+      "validation_status": "accepted"
+    },
+    {
+      "position": 3,
+      "description": "Hinweis auf Anlagen",
+      "validation_status": "accepted"
+    }
+  ],
+  "quality": {
+    "ocr_mean_confidence": 0.93,
+    "text_character_count": 4187,
+    "mandatory_fields_missing": [],
+    "actionable_fields_uncertain": [
+      "deadline"
+    ]
+  },
+  "producer": {
+    "producer_type": "agent",
+    "producer_id": "field_extractor",
+    "producer_version": "1.0.0"
+  },
+  "trace": {
+    "trace_id": "tr-20260829-0101",
+    "workflow_name": "JV-P1-SUB-document_extract-v1",
+    "workflow_version": "1.0.0"
+  }
+}

@@ -1,0 +1,100 @@
+{
+  "config_version": "1.0.0",
+  "schema_ref": "https://jarvis.local/schemas/context.schema.json",
+  "generated_note": "Vorlage. Enthaelt keine Zugangsdaten, keine Ordner-IDs und keine Konten. Alle konkreten Werte werden ueber env-Referenzen aufgeloest.",
+  "contexts": [
+    {
+      "schema_version": "1.0.0",
+      "context_id": "privat",
+      "display_name": "Privat",
+      "context_kind": "private",
+      "status": "active",
+      "timezone_display": "Europe/Zurich",
+      "persistence": {
+        "db_schema": "jarvis_privat",
+        "credential_ref": "jv_privat_postgres"
+      },
+      "adapters": {
+        "storage": { "adapter_id": "storage_gdrive", "credential_ref": "jv_privat_gdrive", "config_ref": "env:JV_PRIVAT_STORAGE_ROOT", "enabled": true },
+        "mail": { "adapter_id": "mail_gmail", "credential_ref": "jv_privat_mail", "config_ref": "env:JV_PRIVAT_MAIL_LABELS", "enabled": false },
+        "calendar": { "adapter_id": "calendar_google", "credential_ref": "jv_privat_calendar", "config_ref": "env:JV_PRIVAT_CALENDAR_ID", "enabled": false },
+        "tasks": { "adapter_id": "tasks_internal", "config_ref": "env:JV_PRIVAT_TASKS_ROOT", "enabled": true },
+        "ocr": { "adapter_id": "ocr_default", "credential_ref": "jv_shared_ocr", "enabled": false },
+        "llm": { "adapter_id": "llm_default", "credential_ref": "jv_shared_llm", "config_ref": "env:JV_LLM_MODEL_PRIVAT", "enabled": true },
+        "approval": { "adapter_id": "approval_email", "credential_ref": "jv_privat_mail", "config_ref": "env:JV_PRIVAT_APPROVAL_RECIPIENT", "enabled": true },
+        "notification": { "adapter_id": "notify_email", "credential_ref": "jv_privat_mail", "config_ref": "env:JV_PRIVAT_NOTIFY_RECIPIENT", "enabled": true }
+      },
+      "policy": {
+        "allowed_action_classes": ["A", "B", "C"],
+        "risk_class_overrides": [],
+        "approval": {
+          "channel_adapter": "approval_email",
+          "recipient_ref": "env:JV_PRIVAT_APPROVAL_RECIPIENT",
+          "ttl_hours_default": 72,
+          "require_second_step_confirmation": true
+        },
+        "cross_context_read_allowed": false,
+        "max_autonomous_risk_class": "B"
+      },
+      "retention": {
+        "session_memory_days": 30,
+        "tech_log_days": 90,
+        "fach_log_days": 3650
+      },
+      "valid_from": "2026-08-29T00:00:00Z"
+    },
+    {
+      "schema_version": "1.0.0",
+      "context_id": "arbeitgeber_visolva",
+      "display_name": "Arbeitgeber",
+      "context_kind": "employer",
+      "status": "active",
+      "timezone_display": "Europe/Zurich",
+      "persistence": {
+        "db_schema": "jarvis_visolva",
+        "credential_ref": "jv_visolva_postgres"
+      },
+      "adapters": {
+        "storage": { "adapter_id": "storage_gdrive", "credential_ref": "jv_visolva_storage", "config_ref": "env:JV_VISOLVA_STORAGE_ROOT", "enabled": true },
+        "mail": { "adapter_id": "mail_m365", "credential_ref": "jv_visolva_mail", "config_ref": "env:JV_VISOLVA_MAIL_LABELS", "enabled": false },
+        "calendar": { "adapter_id": "calendar_m365", "credential_ref": "jv_visolva_calendar", "config_ref": "env:JV_VISOLVA_CALENDAR_ID", "enabled": false },
+        "tasks": { "adapter_id": "tasks_internal", "config_ref": "env:JV_VISOLVA_TASKS_ROOT", "enabled": true },
+        "crm": { "adapter_id": "crm_odoo", "credential_ref": "jv_visolva_crm", "config_ref": "env:JV_VISOLVA_CRM_BASE", "enabled": false },
+        "messaging": { "adapter_id": "messaging_superchat", "credential_ref": "jv_visolva_messaging", "enabled": false },
+        "ocr": { "adapter_id": "ocr_default", "credential_ref": "jv_shared_ocr", "enabled": false },
+        "llm": { "adapter_id": "llm_default", "credential_ref": "jv_shared_llm", "config_ref": "env:JV_LLM_MODEL_VISOLVA", "enabled": true },
+        "approval": { "adapter_id": "approval_email", "credential_ref": "jv_visolva_mail", "config_ref": "env:JV_VISOLVA_APPROVAL_RECIPIENT", "enabled": true },
+        "notification": { "adapter_id": "notify_email", "credential_ref": "jv_visolva_mail", "config_ref": "env:JV_VISOLVA_NOTIFY_RECIPIENT", "enabled": true }
+      },
+      "policy": {
+        "allowed_action_classes": ["A", "B", "C"],
+        "risk_class_overrides": [
+          {
+            "action_type": "mail.send",
+            "min_risk_class": "C",
+            "reason": "Externe Aussenwirkung im Arbeitgeberkontext. Kein automatischer Versand ohne Freigabe."
+          },
+          {
+            "action_type": "crm.update_record",
+            "min_risk_class": "B",
+            "reason": "CRM-Aenderungen sind korrigierbar, muessen aber immer gemeldet werden."
+          }
+        ],
+        "approval": {
+          "channel_adapter": "approval_email",
+          "recipient_ref": "env:JV_VISOLVA_APPROVAL_RECIPIENT",
+          "ttl_hours_default": 48,
+          "require_second_step_confirmation": true
+        },
+        "cross_context_read_allowed": false,
+        "max_autonomous_risk_class": "B"
+      },
+      "retention": {
+        "session_memory_days": 30,
+        "tech_log_days": 90,
+        "fach_log_days": 3650
+      },
+      "valid_from": "2026-08-29T00:00:00Z"
+    }
+  ]
+}

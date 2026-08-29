@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://jarvis.local/schemas/task.schema.json",
+  "title": "JARVIS Task",
+  "description": "Fachliche Verpflichtung: was erreicht werden muss, von wem, bis wann und woran der Erfolg gemessen wird. Eine Aufgabe kann null bis mehrere Aktionen ausloesen. Version 1.0.0.",
+  "type": "object",
+  "properties": {
+    "schema_version": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/schema_version" },
+    "task_id": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/task_id" },
+    "context_id": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/context_id" },
+    "title": { "type": "string", "minLength": 3, "maxLength": 200, "description": "Deutscher Freitext." },
+    "description": { "type": "string", "maxLength": 4000 },
+    "success_criterion": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 1000,
+      "description": "Ueberpruefbares Erfolgskriterium. Pflicht, damit Erledigung nicht interpretierbar ist."
+    },
+    "consequence_of_inaction": { "type": "string", "maxLength": 1000 },
+    "actor": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/actor" },
+    "assignee": {
+      "$ref": "https://jarvis.local/schemas/object_ref.schema.json",
+      "description": "Konkrete Person oder Organisation, falls actor nicht jarvis ist."
+    },
+    "origin": {
+      "type": "object",
+      "properties": {
+        "event_id": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/event_id" },
+        "source_refs": { "type": "array", "items": { "$ref": "https://jarvis.local/schemas/object_ref.schema.json" } },
+        "derivation": { "type": "string", "enum": ["extracted", "inferred", "user_instructed", "rule", "manual"] }
+      },
+      "required": ["derivation"],
+      "additionalProperties": false
+    },
+    "case_ref": { "$ref": "https://jarvis.local/schemas/object_ref.schema.json" },
+    "status": {
+      "type": "string",
+      "enum": ["open", "in_progress", "blocked", "waiting_external", "done", "cancelled", "superseded"]
+    },
+    "priority": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/priority" },
+    "due_at": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/timestamp_utc" },
+    "reminder_at": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/timestamp_utc" },
+    "blocked_by": { "type": "array", "items": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/task_id" }, "default": [] },
+    "action_ids": {
+      "type": "array",
+      "items": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/action_id" },
+      "default": [],
+      "description": "Aktionen, die zur Erfuellung dieser Aufgabe geplant oder ausgefuehrt wurden."
+    },
+    "external_refs": {
+      "type": "array",
+      "items": { "$ref": "https://jarvis.local/schemas/object_ref.schema.json" },
+      "default": [],
+      "description": "Spiegelung in einem externen Aufgabensystem."
+    },
+    "idempotency_key": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/idempotency_key" },
+    "closed_at": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/timestamp_utc" },
+    "closing_evidence_ids": {
+      "type": "array",
+      "items": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/evidence_id" },
+      "default": []
+    },
+    "created_at": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/timestamp_utc" },
+    "updated_at": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/timestamp_utc" },
+    "producer": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/producer" },
+    "trace": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/trace" }
+  },
+  "required": [
+    "schema_version", "task_id", "context_id", "title", "success_criterion",
+    "actor", "origin", "status", "priority", "idempotency_key", "created_at", "producer"
+  ],
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": { "properties": { "status": { "const": "done" } }, "required": ["status"] },
+      "then": { "required": ["closed_at", "closing_evidence_ids"] }
+    },
+    {
+      "if": {
+        "properties": { "actor": { "enum": ["rolf", "mitarbeiter", "externer"] } },
+        "required": ["actor"]
+      },
+      "then": { "required": ["assignee"] }
+    }
+  ]
+}

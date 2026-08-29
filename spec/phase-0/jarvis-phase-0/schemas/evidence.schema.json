@@ -1,0 +1,128 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://jarvis.local/schemas/evidence.schema.json",
+  "title": "JARVIS Evidence",
+  "description": "Ueberpruefbarer Ergebnisnachweis einer Aktion. Welche Nachweismethode ausreicht, bestimmt der Werkzeugvertrag. Ein fehlerfrei beendeter Workflow ist niemals ein Nachweis. Version 1.1.0.",
+  "type": "object",
+  "properties": {
+    "schema_version": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/schema_version" },
+    "evidence_id": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/evidence_id" },
+    "context_id": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/context_id" },
+    "action_id": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/action_id" },
+
+    "evidence_type": {
+      "type": "string",
+      "enum": [
+        "file_ref", "task_ref", "calendar_event_ref", "message_ref",
+        "crm_record_ref", "provider_id", "delivery_receipt", "provider_status",
+        "content_hash", "recipient_confirmation", "human_confirmation",
+        "state_readback", "deferred_reconciliation"
+      ]
+    },
+    "system_adapter_id": { "type": "string" },
+    "object_ref": { "$ref": "https://jarvis.local/schemas/object_ref.schema.json" },
+    "observed_at": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/timestamp_utc" },
+    "observed_values": {
+      "type": "object",
+      "description": "Beobachtete Zielwerte, z. B. Pfad, Status, Aenderungszeit. Fachlicher Inhalt, nur im Kontextschema.",
+      "additionalProperties": true
+    },
+
+    "verification": {
+      "type": "object",
+      "properties": {
+        "method": {
+          "type": "string",
+          "enum": [
+            "readback",
+            "sent_folder_confirmation",
+            "provider_message_id",
+            "delivery_receipt",
+            "provider_status",
+            "recipient_reply",
+            "human_confirm",
+            "hash_compare",
+            "deferred_reconciliation"
+          ],
+          "description": "readback = unabhaengiger Lesevorgang des Zielobjekts nach dem Schreiben. Ist ein Readback im Zielsystem moeglich, ist er verpflichtend; andernfalls gilt die im Werkzeugvertrag festgelegte Ersatzmethode."
+        },
+        "result": { "type": "string", "enum": ["confirmed", "not_confirmed", "inconclusive"] },
+        "verified_at": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/timestamp_utc" },
+        "verified_by": { "type": "string" },
+        "detail": { "type": "string", "maxLength": 2000 },
+        "contract_ref": {
+          "type": "object",
+          "description": "Werkzeugvertrag, der diese Nachweismethode als ausreichend definiert. Pflicht, damit die Bewertung nachvollziehbar bleibt.",
+          "properties": {
+            "tool_id": { "type": "string" },
+            "tool_version": { "type": "string" },
+            "readback_supported": {
+              "type": "boolean",
+              "description": "Aussage des Vertrags, ob das Zielsystem einen unabhaengigen Readback zulaesst."
+            }
+          },
+          "required": ["tool_id", "tool_version", "readback_supported"],
+          "additionalProperties": false
+        },
+        "limitation": {
+          "type": "string",
+          "maxLength": 1000,
+          "description": "Was dieser Nachweis ausdruecklich NICHT belegt. Pflicht bei allen Methoden ausser readback."
+        },
+        "deferred_check_due_at": {
+          "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/timestamp_utc",
+          "description": "Zeitpunkt eines vereinbarten nachgelagerten Abgleichs."
+        }
+      },
+      "required": ["method", "result", "verified_at", "contract_ref"],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "description": "Ist ein unabhaengiger Readback moeglich, ist er verpflichtend.",
+          "if": {
+            "properties": { "contract_ref": { "properties": { "readback_supported": { "const": true } }, "required": ["readback_supported"] } },
+            "required": ["contract_ref"]
+          },
+          "then": { "properties": { "method": { "const": "readback" } } }
+        },
+        {
+          "description": "Ersatzmethoden muessen ihre Grenzen benennen.",
+          "if": {
+            "properties": { "method": { "not": { "const": "readback" } } },
+            "required": ["method"]
+          },
+          "then": { "required": ["limitation"] }
+        },
+        {
+          "if": { "properties": { "method": { "const": "deferred_reconciliation" } }, "required": ["method"] },
+          "then": { "required": ["deferred_check_due_at"] }
+        }
+      ]
+    },
+
+    "raw_response_ref": {
+      "type": "string",
+      "description": "Verweis auf eine gespeicherte Rohantwort im Kontextschema. Niemals die Rohantwort im gemeinsamen technischen Log."
+    },
+    "created_at": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/timestamp_utc" },
+    "producer": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/producer" },
+    "trace": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/trace" }
+  },
+  "required": [
+    "schema_version", "evidence_id", "context_id", "action_id", "evidence_type",
+    "system_adapter_id", "observed_at", "verification", "created_at", "producer", "trace"
+  ],
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "description": "Objektbezogene Nachweise brauchen einen aufloesbaren Verweis.",
+      "if": {
+        "properties": {
+          "evidence_type": { "enum": ["file_ref", "task_ref", "calendar_event_ref", "message_ref", "crm_record_ref"] }
+        },
+        "required": ["evidence_type"]
+      },
+      "then": { "required": ["object_ref"] }
+    }
+  ]
+}

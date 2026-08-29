@@ -1,0 +1,57 @@
+{
+  "schema_version": "1.0.0",
+  "event_id": "evt_01JBQ8Z4K7M3N9P2R5T6V8W0Y2",
+  "event_type": "email.received",
+  "event_time": "2026-08-29T06:41:03Z",
+  "received_at": "2026-08-29T07:12:00Z",
+  "context_id": "arbeitgeber_visolva",
+  "context_resolution": {
+    "method": "source_binding",
+    "rule_id": "ctx_rule_visolva_mailbox",
+    "confidence": 1.0,
+    "confirmed_by_human": false
+  },
+  "source": {
+    "adapter_id": "mail_m365",
+    "channel": "mail_label",
+    "external_id": "EXTERNAL_MESSAGE_ID_PLACEHOLDER",
+    "received_via": "webhook"
+  },
+  "subject": {
+    "object_type": "email",
+    "object_id": "eml_01JBQ8Z4K7M3N9P2R5T6V8W0Z4",
+    "context_id": "arbeitgeber_visolva",
+    "system": "mail_m365",
+    "external_id": "EXTERNAL_MESSAGE_ID_PLACEHOLDER",
+    "label": "Rueckfrage zum Angebot 2026-0815"
+  },
+  "related": [],
+  "severity": "notice",
+  "idempotency_key": "f669c038e3dbcd887cdf95f0763c18f36b8fdaf55493ddda179979dd0ca7a3d8",
+  "payload": {
+    "sender_label": "Kunde",
+    "subject_de": "Rueckfrage zum Angebot 2026-0815",
+    "deadline": "2026-09-02",
+    "summary_de": "Der Kunde bittet bis zum 02.09.2026 um eine Rueckmeldung zur Lieferzeit."
+  },
+  "field_evidence": [
+    {
+      "field": "deadline",
+      "value": "2026-09-02",
+      "confidence": 0.88,
+      "snippet": "Rueckmeldung bis 02.09.",
+      "locator": "body"
+    }
+  ],
+  "producer": {
+    "producer_type": "agent",
+    "producer_id": "event_normalizer",
+    "producer_version": "1.0.0"
+  },
+  "trace": {
+    "trace_id": "tr-20260829-0002",
+    "correlation_id": "co-20260829-0002",
+    "workflow_name": "JV-P0-CORE-event_ingest-v1",
+    "workflow_version": "1.0.0"
+  }
+}

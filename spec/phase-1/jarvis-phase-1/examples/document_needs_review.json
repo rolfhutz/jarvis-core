@@ -1,0 +1,71 @@
+{
+  "schema_version": "1.2.0",
+  "document_id": "doc_01JBQ8Z4K7M3N9P2R5T6V8W0Z5",
+  "context_id": "privat",
+  "intake": {
+    "channel": "drive_inbox",
+    "adapter_id": "storage_gdrive",
+    "source_external_id": "EXTERNAL_FILE_ID_REVIEW",
+    "original_filename": "scan_20260829_0002.pdf",
+    "received_at": "2026-08-29T08:02:00Z",
+    "source_event_id": "evt_01JBQ8Z4K7M3N9P2R5T6V8W0Y4"
+  },
+  "file": {
+    "mime_type": "application/pdf",
+    "size_bytes": 190455,
+    "page_count": 2,
+    "content_hash": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+    "text_fingerprint": "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+    "is_scanned": true,
+    "language": "de"
+  },
+  "status": "needs_review",
+  "processing_stage": {
+    "last_completed": "extraction",
+    "completed_at": "2026-08-29T08:05:30Z",
+    "attempt_count": 1
+  },
+  "review": {
+    "required": true,
+    "reasons": [
+      "deadline_uncertain"
+    ],
+    "blocked_stage": "analysis",
+    "opened_at": "2026-08-29T08:05:31Z",
+    "resolution_type": "deadline_confirmed",
+    "outcome": "resume",
+    "resume_from_stage": "task_derive",
+    "resolved_values": {
+      "deadline": "2026-10-15"
+    },
+    "resolved_at": "2026-08-29T09:12:00Z",
+    "resolved_by": "rolf",
+    "resolution_note": "Frist im Anschreiben bestaetigt. Der zweite Termin auf Seite 2 betrifft einen anderen Vertrag."
+  },
+  "classification": {
+    "document_type": "Fristsetzung",
+    "document_type_key": "fristsetzung",
+    "category_key": "person_identitaet_behoerden",
+    "confidence": 0.87
+  },
+  "case_ref": {
+    "match_method": "unresolved"
+  },
+  "related_documents": [],
+  "derived_task_ids": [],
+  "derived_action_ids": [],
+  "extraction_result_ref": "privat.document_extraction:doc_01JBQ8Z4K7M3N9P2R5T6V8W0Z5",
+  "analysis_version": "extract@1.0.0+analyze@1.0.0+rules@1.0.0",
+  "created_at": "2026-08-29T08:02:05Z",
+  "updated_at": "2026-08-29T09:12:00Z",
+  "producer": {
+    "producer_type": "workflow",
+    "producer_id": "JV-P1-MAIN-document_intake-v1",
+    "producer_version": "1.0.0"
+  },
+  "trace": {
+    "trace_id": "tr-20260829-0103",
+    "workflow_name": "JV-P1-MAIN-document_intake-v1",
+    "workflow_version": "1.0.0"
+  }
+}

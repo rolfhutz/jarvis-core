@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://jarvis.local/schemas/tools/test.record_approved_action.output.json",
+  "title": "Ausgabe: Testaktion mit Freigabe",
+  "description": "Testnachweis im abgegrenzten Testbereich des Kontextschemas. Version 1.0.0, Phase 1.",
+  "type": "object",
+  "properties": {
+    "record_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "context_id": {
+      "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/context_id"
+    },
+    "action_id": {
+      "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/action_id"
+    },
+    "approval_id": {
+      "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/approval_id"
+    },
+    "recorded_at": {
+      "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/timestamp_utc"
+    },
+    "result_status": {
+      "type": "string",
+      "enum": [
+        "recorded",
+        "rejected_fingerprint_mismatch",
+        "rejected_approval_invalid",
+        "rejected_wrong_context"
+      ]
+    }
+  },
+  "required": [
+    "record_id",
+    "context_id",
+    "action_id",
+    "approval_id",
+    "recorded_at",
+    "result_status"
+  ],
+  "additionalProperties": false
+}

@@ -1,0 +1,22 @@
+{
+  "config_version": "1.0.0",
+  "contexts": {
+    "privat": {
+      "storage_adapter": "storage_gdrive",
+      "inbox_ref": "env:JV_PRIVAT_INBOX_FOLDER_ID",
+      "working_ref": "env:JV_PRIVAT_WORKING_FOLDER_ID",
+      "archive_root_ref": "env:JV_PRIVAT_ARCHIVE_ROOT_ID",
+      "database_schema": "jarvis_privat",
+      "database_credential_ref": "jv_privat_postgres"
+    },
+    "arbeitgeber_visolva": {
+      "storage_adapter": "storage_sharepoint",
+      "inbox_ref": "env:JV_VISOLVA_INBOX_FOLDER_ID",
+      "working_ref": "env:JV_VISOLVA_WORKING_FOLDER_ID",
+      "archive_root_ref": "env:JV_VISOLVA_ARCHIVE_ROOT_ID",
+      "database_schema": "jarvis_visolva",
+      "database_credential_ref": "jv_visolva_postgres",
+      "phase_1_mode": "synthetic_test_only"
+    }
+  }
+}

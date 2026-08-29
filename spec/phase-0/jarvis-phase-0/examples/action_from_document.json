@@ -1,0 +1,70 @@
+{
+  "schema_version": "1.0.0",
+  "action_id": "act_01JBQ8Z4K7M3N9P2R5T6V8W0Z7",
+  "context_id": "privat",
+  "goal": "Sonderkuendigungsrecht pruefen und bis 30.09.2026 entscheiden",
+  "action_type": "task.create",
+  "origin": {
+    "event_id": "evt_01JBQ8Z4K7M3N9P2R5T6V8W0XY",
+    "trigger": "event",
+    "source_refs": [
+      {
+        "object_type": "document",
+        "object_id": "doc_01JBQ8Z4K7M3N9P2R5T6V8W0Z3",
+        "context_id": "privat"
+      }
+    ]
+  },
+  "actor": "jarvis",
+  "target": {
+    "system_adapter_id": "tasks_internal",
+    "tool_id": "tasks_internal.create_task",
+    "tool_version": "1.0.0",
+    "target_object": {
+      "object_type": "task",
+      "context_id": "privat",
+      "system": "tasks_internal",
+      "external_id": "case:privat/versicherung/beitragsanpassung-2027"
+    },
+    "recipients": []
+  },
+  "inputs": {
+    "title": "Sonderkuendigungsrecht pruefen und bis 30.09.2026 entscheiden",
+    "due_at": "2026-09-23T12:00:00Z",
+    "priority": "high"
+  },
+  "missing_inputs": [],
+  "risk_class": "A",
+  "risk_rationale": "Interne Aufgabe ohne Aussenwirkung, jederzeit loeschbar.",
+  "risk_class_source": "tool_default",
+  "reversibility": "reversible",
+  "approval_status": "not_required",
+  "status": "planned",
+  "dry_run": false,
+  "priority": "high",
+  "due_at": "2026-09-23T12:00:00Z",
+  "idempotency_key": "0a5fec9d40eedf6e4c82faac67a849433156ee952234b29dfc32abe07143871a",
+  "idempotency_basis": {
+    "context_id": "privat",
+    "source_ref": "evt_01JBQ8Z4K7M3N9P2R5T6V8W0XY",
+    "action_type": "task.create",
+    "target_system": "tasks_internal",
+    "target_object_ref": "case:privat/versicherung/beitragsanpassung-2027"
+  },
+  "attempt_count": 0,
+  "max_attempts": 3,
+  "evidence_ids": [],
+  "error_ids": [],
+  "created_at": "2026-08-29T07:12:00Z",
+  "producer": {
+    "producer_type": "agent",
+    "producer_id": "action_planner",
+    "producer_version": "1.0.0"
+  },
+  "trace": {
+    "trace_id": "tr-20260829-0001",
+    "correlation_id": "co-20260829-0001",
+    "workflow_name": "JV-P0-CORE-event_ingest-v1",
+    "workflow_version": "1.0.0"
+  }
+}

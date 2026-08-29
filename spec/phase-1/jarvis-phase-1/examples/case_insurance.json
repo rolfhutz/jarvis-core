@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.0.0",
+  "case_id": "cse_01JBQ8Z4K7M3N9P2R5T6V8W1A1",
+  "case_number": "V-2026-0042",
+  "context_id": "privat",
+  "title": "Krankenversicherung Grundversicherung, Beitragsanpassung 2027",
+  "category_key": "gesundheit_krankenkasse",
+  "status": "open",
+  "identifiers": [
+    {
+      "identifier_type": "policy_number",
+      "value_normalized": "kv4711882",
+      "issuer": "Krankenversicherung",
+      "first_seen_document_id": "doc_01JBQ8Z4K7M3N9P2R5T6V8W0Z3"
+    }
+  ],
+  "parties": [
+    {
+      "object_type": "organization",
+      "context_id": "privat",
+      "system": "internal",
+      "external_id": "org_krankenversicherung",
+      "label": "Krankenversicherung"
+    }
+  ],
+  "document_ids": ["doc_01JBQ8Z4K7M3N9P2R5T6V8W0Z3"],
+  "open_task_ids": ["tsk_01JBQ8Z4K7M3N9P2R5T6V8W1B1"],
+  "next_deadline_at": "2026-09-30T21:59:59Z",
+  "opened_at": "2026-08-29T07:12:00Z",
+  "created_at": "2026-08-29T07:12:00Z",
+  "updated_at": "2026-08-29T07:25:00Z",
+  "producer": {"producer_type": "workflow", "producer_id": "JV-P1-SUB-case_match-v1", "producer_version": "1.0.0"},
+  "trace": {"trace_id": "tr-20260829-0101", "workflow_name": "JV-P1-MAIN-document_intake-v1", "workflow_version": "1.0.0"}
+}

@@ -1,0 +1,80 @@
+{
+  "schema_version": "1.0.0",
+  "action_id": "act_01JBQ8Z4K7M3N9P2R5T6V8W0ZE",
+  "context_id": "arbeitgeber_visolva",
+  "goal": "Standardnachricht zum Eingang der Rueckfrage senden",
+  "description": "Freigegebene Standardnachricht ueber den Messenger-Kanal.",
+  "action_type": "messaging.send_template",
+  "origin": {
+    "event_id": "evt_01JBQ8Z4K7M3N9P2R5T6V8W0Y2",
+    "trigger": "event",
+    "source_refs": [
+      {
+        "object_type": "email",
+        "object_id": "eml_01JBQ8Z4K7M3N9P2R5T6V8W0Z4",
+        "context_id": "arbeitgeber_visolva"
+      }
+    ]
+  },
+  "actor": "jarvis",
+  "target": {
+    "system_adapter_id": "messaging_superchat",
+    "tool_id": "messaging_superchat.send_template_message",
+    "tool_version": "1.0.0",
+    "target_object": {
+      "object_type": "conversation",
+      "context_id": "arbeitgeber_visolva",
+      "system": "messaging_superchat",
+      "external_id": "EXTERNAL_CONVERSATION_ID_PLACEHOLDER"
+    },
+    "recipients": [
+      {
+        "object_type": "person",
+        "context_id": "arbeitgeber_visolva",
+        "system": "crm_odoo",
+        "external_id": "EXTERNAL_PARTNER_ID_PLACEHOLDER",
+        "label": "Kundenkontakt"
+      }
+    ]
+  },
+  "inputs": {
+    "template_id": "eingangsbestaetigung_v1"
+  },
+  "missing_inputs": [],
+  "risk_class": "B",
+  "risk_rationale": "Standardisierte Nachricht an einen externen Empfaenger, nicht rueckholbar, aber inhaltlich vorab freigegeben.",
+  "risk_class_source": "tool_default",
+  "reversibility": "irreversible",
+  "approval_status": "not_required",
+  "status": "succeeded",
+  "dry_run": false,
+  "priority": "normal",
+  "idempotency_key": "037dac8c19c035067574e08675dcf629adee629b5cfd48dc3d8a5a5cd5057c23",
+  "idempotency_basis": {
+    "context_id": "arbeitgeber_visolva",
+    "source_ref": "evt_01JBQ8Z4K7M3N9P2R5T6V8W0Y2",
+    "action_type": "messaging.send_template",
+    "target_system": "messaging_superchat",
+    "target_object_ref": "conversation:EXTERNAL_CONVERSATION_ID_PLACEHOLDER"
+  },
+  "attempt_count": 1,
+  "max_attempts": 3,
+  "evidence_ids": [
+    "evd_01JBQ8Z4K7M3N9P2R5T6V8W0ZF"
+  ],
+  "error_ids": [],
+  "created_at": "2026-08-29T07:12:00Z",
+  "executed_at": "2026-08-29T07:31:02Z",
+  "verified_at": "2026-08-29T07:31:44Z",
+  "producer": {
+    "producer_type": "agent",
+    "producer_id": "executor",
+    "producer_version": "1.0.0"
+  },
+  "trace": {
+    "trace_id": "tr-20260829-0002",
+    "correlation_id": "co-20260829-0002",
+    "workflow_name": "JV-P0-CORE-event_ingest-v1",
+    "workflow_version": "1.0.0"
+  }
+}

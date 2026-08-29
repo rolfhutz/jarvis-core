@@ -1,0 +1,203 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://jarvis.local/schemas/document_analysis.schema.json",
+  "title": "JARVIS Document Analysis",
+  "description": "Strukturiertes Verstaendnis eines Dokuments. Ausgabevertrag des Werkzeugs llm_default.analyze_document. Enthaelt Vorschlaege, keine Entscheidungen: Risikoklassen und Freigaben werden ausschliesslich deterministisch aus dem Werkzeugregister und den Kontextregeln bestimmt. Version 1.1.0, Phase 1.",
+  "type": "object",
+  "properties": {
+    "schema_version": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/schema_version" },
+    "document_id": { "type": "string", "pattern": "^doc_[0-9A-HJKMNP-TV-Z]{26}$" },
+    "context_id": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/context_id" },
+    "analyzed_at": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/timestamp_utc" },
+    "model_role": { "type": "string", "const": "reasoning_model" },
+    "model_ref": { "type": "string" },
+    "prompt_version": { "type": "string" },
+
+    "summary_de": {
+      "type": "string",
+      "minLength": 10,
+      "maxLength": 1500,
+      "description": "Verstaendliche Zusammenfassung in deutscher Sprache. Keine Wertung, keine erfundenen Angaben."
+    },
+    "subject_de": { "type": "string", "minLength": 3, "maxLength": 200, "description": "Kurzbetreff, wird im Dateinamen verwendet." },
+
+    "obligations": {
+      "type": "array",
+      "description": "Was das Dokument von Rolf verlangt.",
+      "default": [],
+      "items": {
+        "type": "object",
+        "properties": {
+          "statement_de": { "type": "string", "minLength": 5, "maxLength": 500 },
+          "due_date": { "type": ["string", "null"] },
+          "due_date_source": { "type": "string", "enum": ["explicit", "derived", "unknown"] },
+          "consequence_de": { "type": "string", "maxLength": 500, "description": "Konkrete Folge des Nichtstuns." },
+          "evidence_snippet": { "type": "string", "minLength": 1, "maxLength": 500 },
+          "page": { "type": "integer", "minimum": 1 },
+          "confidence": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/confidence" }
+        },
+        "required": ["statement_de", "due_date_source", "consequence_de", "evidence_snippet", "page", "confidence"],
+        "additionalProperties": false
+      }
+    },
+
+    "opportunities": {
+      "type": "array",
+      "description": "Was das Dokument ermoeglicht, z. B. ein Sonderkuendigungsrecht oder eine Erstattung.",
+      "default": [],
+      "items": {
+        "type": "object",
+        "properties": {
+          "statement_de": { "type": "string", "minLength": 5, "maxLength": 500 },
+          "expires_at": { "type": ["string", "null"] },
+          "evidence_snippet": { "type": "string", "minLength": 1, "maxLength": 500 },
+          "page": { "type": "integer", "minimum": 1 },
+          "confidence": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/confidence" }
+        },
+        "required": ["statement_de", "evidence_snippet", "page", "confidence"],
+        "additionalProperties": false
+      }
+    },
+
+    "risks": {
+      "type": "array",
+      "default": [],
+      "items": {
+        "type": "object",
+        "properties": {
+          "statement_de": { "type": "string", "minLength": 5, "maxLength": 500 },
+          "severity": { "type": "string", "enum": ["low", "medium", "high"] },
+          "evidence_snippet": { "type": "string", "maxLength": 500 },
+          "page": { "type": "integer", "minimum": 1 }
+        },
+        "required": ["statement_de", "severity"],
+        "additionalProperties": false
+      }
+    },
+
+    "changes_vs_previous": {
+      "type": "array",
+      "description": "Abweichungen gegenueber frueheren Dokumenten desselben Vorgangs. Nur befuellt, wenn Vergleichsdokumente vorlagen.",
+      "default": [],
+      "items": {
+        "type": "object",
+        "properties": {
+          "field_key": { "type": "string" },
+          "previous_value": {
+            "type": ["string", "null"],
+            "description": "Kanonische Darstellung des frueheren Werts. Geldwerte als Zeichenfolge mit zwei Nachkommastellen, niemals als Gleitkommazahl."
+          },
+          "current_value": {
+            "type": ["string", "null"],
+            "description": "Kanonische Darstellung des aktuellen Werts."
+          },
+          "delta_absolute": {
+            "type": ["string", "null"],
+            "description": "Differenz als kanonische Zeichenfolge. Berechnung mit Decimal beziehungsweise NUMERIC."
+          },
+          "delta_percent": {
+            "type": ["string", "null"],
+            "description": "Prozentuale Abweichung als Zeichenfolge mit zwei Nachkommastellen."
+          },
+          "compared_document_id": { "type": "string", "pattern": "^doc_[0-9A-HJKMNP-TV-Z]{26}$" }
+        },
+        "required": ["field_key", "current_value", "compared_document_id"],
+        "additionalProperties": false
+      }
+    },
+
+    "missing_information": {
+      "type": "array",
+      "description": "Unterlagen oder Angaben, die fuer eine Entscheidung fehlen.",
+      "default": [],
+      "items": {
+        "type": "object",
+        "properties": {
+          "what_de": { "type": "string", "minLength": 3, "maxLength": 300 },
+          "why_needed_de": { "type": "string", "maxLength": 300 },
+          "searchable_in_archive": { "type": "boolean", "description": "Ob JARVIS im vorhandenen Bestand danach suchen kann." }
+        },
+        "required": ["what_de", "why_needed_de", "searchable_in_archive"],
+        "additionalProperties": false
+      }
+    },
+
+    "conflicts": {
+      "type": "array",
+      "description": "Widersprueche im Dokument selbst oder gegenueber vorhandenen Dokumenten. Loesen immer eine Klaerungsaufgabe aus, niemals eine stille Auswahl.",
+      "default": [],
+      "items": {
+        "type": "object",
+        "properties": {
+          "description_de": { "type": "string", "minLength": 5, "maxLength": 500 },
+          "conflicting_values": { "type": "array", "items": { "type": "string" }, "minItems": 2 },
+          "scope": { "type": "string", "enum": ["within_document", "across_documents"] },
+          "compared_document_id": { "type": "string", "pattern": "^doc_[0-9A-HJKMNP-TV-Z]{26}$" }
+        },
+        "required": ["description_de", "conflicting_values", "scope"],
+        "additionalProperties": false
+      }
+    },
+
+    "proposed_tasks": {
+      "type": "array",
+      "description": "Aufgabenvorschlaege. Ein Vorschlag ist noch keine Aufgabe; er wird deterministisch geprueft und erst dann als task-Objekt angelegt.",
+      "default": [],
+      "items": {
+        "type": "object",
+        "properties": {
+          "title_de": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 200,
+            "description": "Konkret und im Verbformat. Vage Formulierungen wie 'Dokument pruefen' sind unzulaessig."
+          },
+          "success_criterion_de": { "type": "string", "minLength": 10, "maxLength": 500 },
+          "proposed_actor": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/actor" },
+          "due_date": { "type": ["string", "null"] },
+          "priority": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/priority" },
+          "consequence_of_inaction_de": { "type": "string", "minLength": 5, "maxLength": 500 },
+          "required_inputs": { "type": "array", "items": { "type": "string" }, "default": [] },
+          "proposed_action_type": {
+            "type": ["string", "null"],
+            "description": "Vorschlag eines Aktionstyps aus dem Werkzeugregister. Nur ein Vorschlag; die Auswahl und die Risikoklasse werden deterministisch bestimmt."
+          },
+          "evidence_snippet": { "type": "string", "minLength": 1, "maxLength": 500 },
+          "page": { "type": "integer", "minimum": 1 },
+          "confidence": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/confidence" }
+        },
+        "required": [
+          "title_de", "success_criterion_de", "proposed_actor", "priority",
+          "consequence_of_inaction_de", "evidence_snippet", "page", "confidence"
+        ],
+        "additionalProperties": false
+      }
+    },
+
+    "uncertainties": {
+      "type": "array",
+      "description": "Was das Modell ausdruecklich nicht sicher weiss. Pflichtangabe statt stiller Vermutung.",
+      "default": [],
+      "items": {
+        "type": "object",
+        "properties": {
+          "topic_de": { "type": "string", "maxLength": 300 },
+          "blocks_action": { "type": "boolean" }
+        },
+        "required": ["topic_de", "blocks_action"],
+        "additionalProperties": false
+      }
+    },
+
+    "overall_confidence": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/confidence" },
+    "producer": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/producer" },
+    "trace": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/trace" }
+  },
+  "required": [
+    "schema_version", "document_id", "context_id", "analyzed_at", "model_role",
+    "model_ref", "prompt_version", "summary_de", "subject_de",
+    "obligations", "opportunities", "missing_information", "conflicts",
+    "proposed_tasks", "uncertainties", "overall_confidence", "producer", "trace"
+  ],
+  "additionalProperties": false
+}

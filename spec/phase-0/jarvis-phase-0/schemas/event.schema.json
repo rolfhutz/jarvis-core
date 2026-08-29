@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://jarvis.local/schemas/event.schema.json",
+  "title": "JARVIS Event",
+  "description": "Einheitlicher Ereignisumschlag. Jede Wahrnehmung von JARVIS wird in dieses Format ueberfuehrt, unabhaengig vom Quellsystem. Version 1.0.0.",
+  "type": "object",
+  "properties": {
+    "schema_version": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/schema_version" },
+    "event_id": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/event_id" },
+    "event_type": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*\\.[a-z][a-z0-9_]*$",
+      "description": "Englische Punktnotation, z. B. document.received. Deutsche Anzeigelabels stehen in der Uebersetzungstabelle der Spezifikation.",
+      "examples": [
+        "document.received", "document.classified", "document.duplicate_detected",
+        "email.received", "email.sent",
+        "calendar.event_upcoming", "deadline.due_soon",
+        "task.created", "task.overdue", "task.completed",
+        "crm.status_changed", "decision.recorded",
+        "action.planned", "action.approval_requested", "action.approved",
+        "action.rejected", "action.executed", "action.verified",
+        "action.failed", "action.escalated", "system.error"
+      ]
+    },
+    "event_time": {
+      "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/timestamp_utc",
+      "description": "Zeitpunkt, zu dem das Ereignis fachlich eingetreten ist."
+    },
+    "received_at": {
+      "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/timestamp_utc",
+      "description": "Zeitpunkt, zu dem JARVIS das Ereignis aufgenommen hat."
+    },
+    "context_id": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/context_id" },
+    "context_resolution": {
+      "type": "object",
+      "description": "Nachweis, wie der Kontext bestimmt wurde. Ohne aufgeloesten Kontext darf keine fachliche Folgeaktion entstehen.",
+      "properties": {
+        "method": { "type": "string", "enum": ["source_binding", "rule", "model_suggestion", "user_declared", "unresolved"] },
+        "rule_id": { "type": "string" },
+        "confidence": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/confidence" },
+        "confirmed_by_human": { "type": "boolean", "default": false }
+      },
+      "required": ["method"],
+      "additionalProperties": false
+    },
+    "source": {
+      "type": "object",
+      "properties": {
+        "adapter_id": { "type": "string" },
+        "channel": { "type": "string", "description": "z. B. inbox_folder, mail_label, webhook, scheduler, manual" },
+        "external_id": { "type": "string" },
+        "received_via": { "type": "string" }
+      },
+      "required": ["adapter_id"],
+      "additionalProperties": false
+    },
+    "subject": {
+      "$ref": "https://jarvis.local/schemas/object_ref.schema.json",
+      "description": "Hauptobjekt, auf das sich das Ereignis bezieht."
+    },
+    "related": {
+      "type": "array",
+      "items": { "$ref": "https://jarvis.local/schemas/object_ref.schema.json" },
+      "default": []
+    },
+    "severity": { "type": "string", "enum": ["info", "notice", "warning", "critical"], "default": "info" },
+    "idempotency_key": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/idempotency_key" },
+    "payload": {
+      "type": "object",
+      "description": "Ereignistypspezifische Nutzdaten. Kann fachliche Inhalte enthalten und wird deshalb ausschliesslich im Kontextschema gespeichert, niemals im gemeinsamen technischen Log.",
+      "additionalProperties": true
+    },
+    "field_evidence": {
+      "type": "array",
+      "items": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/text_evidence" },
+      "default": []
+    },
+    "producer": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/producer" },
+    "trace": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/trace" }
+  },
+  "required": [
+    "schema_version", "event_id", "event_type", "event_time", "received_at",
+    "context_id", "context_resolution", "source", "subject", "idempotency_key", "producer", "trace"
+  ],
+  "additionalProperties": false
+}

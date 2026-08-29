@@ -1,0 +1,374 @@
+{
+  "registry_version": "1.1.0",
+  "tools": [
+    {
+      "tool_id": "storage_gdrive.get_file",
+      "version": "1.0.0",
+      "display_name": "Datei lesen",
+      "purpose": "Originaldatei und ihre Metadaten aus dem kontextbezogenen Speicher lesen.",
+      "adapter_id": "storage_gdrive",
+      "operation": "read",
+      "allowed_contexts": ["privat", "arbeitgeber_visolva"],
+      "input_schema_ref": "schemas/tools/storage_gdrive.get_file.input.json",
+      "output_schema_ref": "schemas/tools/storage_gdrive.get_file.output.json",
+      "required_permissions": ["Datei lesen", "Metadaten lesen"],
+      "side_effects": "Keine. Reine Leseoperation.",
+      "external_effect": "none",
+      "risk_class_default": "A",
+      "reversibility": "reversible",
+      "undo_tool_id": null,
+      "idempotency": {
+        "key_fields": ["context_id", "source_ref", "action_type", "target_system", "target_object_ref"],
+        "strategy": "db_unique_constraint",
+        "native_support": false,
+        "extra_dedup": null
+      },
+      "evidence": {
+        "readback_supported": false,
+        "accepted_methods": ["provider_status"],
+        "required_types": ["provider_status"],
+        "verify_delay_seconds": 0,
+        "limitation": "Leseoperation ohne Zustandsaenderung. Der Nachweis belegt die erfolgreiche Antwort des Speicherdienstes einschliesslich Pruefsumme, nicht eine Veraenderung in der Welt.",
+        "deferred_check_after_hours": null
+      },
+      "retry_policy": {
+        "retryable_error_classes": ["transient_network", "rate_limited", "timeout"],
+        "max_attempts": 3,
+        "backoff": "exponential_1m_factor5_jitter"
+      },
+      "timeout_seconds": 120,
+      "rate_limit": null,
+      "dry_run_supported": true,
+      "status": "draft",
+      "owner": "rolf"
+    },
+    {
+      "tool_id": "ocr_default.analyze_document",
+      "version": "1.0.0",
+      "display_name": "Dokument technisch erfassen",
+      "purpose": "Volltext, Seitenstruktur, Tabellen und Feldkandidaten mit Konfidenz und Positionsbezug erfassen.",
+      "adapter_id": "ocr_default",
+      "operation": "read",
+      "allowed_contexts": ["privat", "arbeitgeber_visolva"],
+      "input_schema_ref": "schemas/tools/ocr_default.analyze_document.input.json",
+      "output_schema_ref": "schemas/tools/ocr_default.analyze_document.output.json",
+      "required_permissions": ["Dokument zur Analyse uebermitteln"],
+      "side_effects": "Das Dokument wird an einen externen Analysedienst uebermittelt. Es entsteht keine Veraenderung im Quellsystem.",
+      "external_effect": "none",
+      "risk_class_default": "A",
+      "reversibility": "reversible",
+      "undo_tool_id": null,
+      "idempotency": {
+        "key_fields": ["context_id", "source_ref", "action_type", "target_system", "target_object_ref"],
+        "strategy": "db_unique_constraint",
+        "native_support": false,
+        "extra_dedup": "content_hash"
+      },
+      "evidence": {
+        "readback_supported": false,
+        "accepted_methods": ["provider_status"],
+        "required_types": ["provider_status", "content_hash"],
+        "verify_delay_seconds": 0,
+        "limitation": "Der Nachweis belegt, dass der Dienst ein Ergebnis zum uebermittelten Inhaltshash geliefert hat. Er belegt nicht die inhaltliche Richtigkeit der Texterkennung; diese wird ueber Konfidenz- und Feldregeln bewertet.",
+        "deferred_check_after_hours": null
+      },
+      "retry_policy": {
+        "retryable_error_classes": ["transient_network", "rate_limited", "timeout", "dependency_unavailable"],
+        "max_attempts": 3,
+        "backoff": "exponential_1m_factor5_jitter"
+      },
+      "timeout_seconds": 300,
+      "rate_limit": "600/Stunde",
+      "dry_run_supported": false,
+      "status": "draft",
+      "owner": "rolf"
+    },
+    {
+      "tool_id": "llm_default.extract_fields",
+      "version": "1.0.0",
+      "display_name": "Felder auslesen",
+      "purpose": "Aus Volltext und OCR-Kandidaten die Pflicht- und Zusatzfelder mit Konfidenz und Textbeleg gewinnen.",
+      "adapter_id": "llm_default",
+      "operation": "read",
+      "allowed_contexts": ["privat", "arbeitgeber_visolva"],
+      "input_schema_ref": "schemas/tools/llm_default.extract_fields.input.json",
+      "output_schema_ref": "schemas/extraction_result.schema.json",
+      "required_permissions": ["Modellaufruf mit strukturierter Ausgabe"],
+      "side_effects": "Keine Veraenderung ausserhalb von JARVIS.",
+      "external_effect": "none",
+      "risk_class_default": "A",
+      "reversibility": "reversible",
+      "undo_tool_id": null,
+      "idempotency": {
+        "key_fields": ["context_id", "source_ref", "action_type", "target_system", "target_object_ref"],
+        "strategy": "db_unique_constraint",
+        "native_support": false,
+        "extra_dedup": null
+      },
+      "evidence": {
+        "readback_supported": false,
+        "accepted_methods": ["provider_status"],
+        "required_types": ["provider_status"],
+        "verify_delay_seconds": 0,
+        "limitation": "Der Nachweis belegt eine schemakonforme Modellantwort. Die fachliche Richtigkeit der Werte wird nicht belegt und ausschliesslich ueber Konfidenz-, Beleg- und Plausibilitaetsregeln bewertet.",
+        "deferred_check_after_hours": null
+      },
+      "retry_policy": {
+        "retryable_error_classes": ["transient_network", "rate_limited", "timeout", "validation_error"],
+        "max_attempts": 3,
+        "backoff": "exponential_1m_factor5_jitter"
+      },
+      "timeout_seconds": 180,
+      "rate_limit": null,
+      "dry_run_supported": false,
+      "status": "draft",
+      "owner": "rolf"
+    },
+    {
+      "tool_id": "llm_default.analyze_document",
+      "version": "1.0.0",
+      "display_name": "Dokument verstehen",
+      "purpose": "Sachverhalt, Verpflichtungen, Moeglichkeiten, Risiken, Widersprueche, fehlende Angaben und Aufgabenvorschlaege bestimmen.",
+      "adapter_id": "llm_default",
+      "operation": "read",
+      "allowed_contexts": ["privat", "arbeitgeber_visolva"],
+      "input_schema_ref": "schemas/tools/llm_default.analyze_document.input.json",
+      "output_schema_ref": "schemas/document_analysis.schema.json",
+      "required_permissions": ["Modellaufruf mit strukturierter Ausgabe"],
+      "side_effects": "Keine Veraenderung ausserhalb von JARVIS.",
+      "external_effect": "none",
+      "risk_class_default": "A",
+      "reversibility": "reversible",
+      "undo_tool_id": null,
+      "idempotency": {
+        "key_fields": ["context_id", "source_ref", "action_type", "target_system", "target_object_ref"],
+        "strategy": "db_unique_constraint",
+        "native_support": false,
+        "extra_dedup": null
+      },
+      "evidence": {
+        "readback_supported": false,
+        "accepted_methods": ["provider_status"],
+        "required_types": ["provider_status"],
+        "verify_delay_seconds": 0,
+        "limitation": "Der Nachweis belegt eine schemakonforme Modellantwort mit Textbelegen. Er belegt weder die Vollstaendigkeit der erkannten Verpflichtungen noch die Richtigkeit der Vorschlaege.",
+        "deferred_check_after_hours": null
+      },
+      "retry_policy": {
+        "retryable_error_classes": ["transient_network", "rate_limited", "timeout", "validation_error"],
+        "max_attempts": 3,
+        "backoff": "exponential_1m_factor5_jitter"
+      },
+      "timeout_seconds": 240,
+      "rate_limit": null,
+      "dry_run_supported": false,
+      "status": "draft",
+      "owner": "rolf"
+    },
+    {
+      "tool_id": "docstore_internal.upsert_document",
+      "version": "1.0.0",
+      "display_name": "Dokumentregister schreiben",
+      "purpose": "Dokumentdatensatz im Kontextschema anlegen oder fortschreiben.",
+      "adapter_id": "docstore_internal",
+      "operation": "write",
+      "allowed_contexts": ["privat", "arbeitgeber_visolva"],
+      "input_schema_ref": "schemas/document.schema.json",
+      "output_schema_ref": "schemas/document.schema.json",
+      "required_permissions": ["Schreibrecht im Kontextschema"],
+      "side_effects": "Ein Dokumentdatensatz entsteht oder aendert seinen Zustand.",
+      "external_effect": "internal",
+      "risk_class_default": "A",
+      "reversibility": "reversible",
+      "undo_tool_id": null,
+      "idempotency": {
+        "key_fields": ["context_id", "source_ref", "action_type", "target_system", "target_object_ref"],
+        "strategy": "db_unique_constraint",
+        "native_support": true,
+        "extra_dedup": "content_hash"
+      },
+      "evidence": {
+        "readback_supported": true,
+        "accepted_methods": ["readback"],
+        "required_types": ["state_readback"],
+        "verify_delay_seconds": 0,
+        "limitation": null,
+        "deferred_check_after_hours": null
+      },
+      "retry_policy": {
+        "retryable_error_classes": ["transient_network", "timeout"],
+        "max_attempts": 3,
+        "backoff": "exponential_1m_factor5_jitter"
+      },
+      "timeout_seconds": 30,
+      "rate_limit": null,
+      "dry_run_supported": true,
+      "status": "draft",
+      "owner": "rolf"
+    },
+    {
+      "tool_id": "casestore_internal.upsert_case",
+      "version": "1.0.0",
+      "display_name": "Vorgang anlegen oder fortschreiben",
+      "purpose": "Vorgang mit Vorgangsnummer, Kennungen und Dokumentzuordnung im Kontextschema fuehren.",
+      "adapter_id": "casestore_internal",
+      "operation": "write",
+      "allowed_contexts": ["privat", "arbeitgeber_visolva"],
+      "input_schema_ref": "schemas/case.schema.json",
+      "output_schema_ref": "schemas/case.schema.json",
+      "required_permissions": ["Schreibrecht im Kontextschema"],
+      "side_effects": "Ein Vorgang entsteht oder erhaelt ein weiteres Dokument.",
+      "external_effect": "internal",
+      "risk_class_default": "A",
+      "reversibility": "reversible",
+      "undo_tool_id": null,
+      "idempotency": {
+        "key_fields": ["context_id", "source_ref", "action_type", "target_system", "target_object_ref"],
+        "strategy": "db_unique_constraint",
+        "native_support": true,
+        "extra_dedup": null
+      },
+      "evidence": {
+        "readback_supported": true,
+        "accepted_methods": ["readback"],
+        "required_types": ["state_readback"],
+        "verify_delay_seconds": 0,
+        "limitation": null,
+        "deferred_check_after_hours": null
+      },
+      "retry_policy": {
+        "retryable_error_classes": ["transient_network", "timeout"],
+        "max_attempts": 3,
+        "backoff": "exponential_1m_factor5_jitter"
+      },
+      "timeout_seconds": 30,
+      "rate_limit": null,
+      "dry_run_supported": true,
+      "status": "draft",
+      "owner": "rolf"
+    },
+    {
+      "tool_id": "drafts_internal.create_draft",
+      "version": "1.0.0",
+      "display_name": "Entwurf erstellen",
+      "purpose": "Antwort-, Rueckfrage- oder Kuendigungsentwurf als Datei im Kontextspeicher ablegen. Kein Versand.",
+      "adapter_id": "drafts_internal",
+      "operation": "write",
+      "allowed_contexts": ["privat", "arbeitgeber_visolva"],
+      "input_schema_ref": "schemas/tools/drafts_internal.create_draft.input.json",
+      "output_schema_ref": "schemas/tools/drafts_internal.create_draft.output.json",
+      "required_permissions": ["Schreibrecht im Entwurfsordner des Kontexts"],
+      "side_effects": "Eine Entwurfsdatei entsteht im Kontextspeicher. Sie verlaesst das System nicht.",
+      "external_effect": "internal",
+      "risk_class_default": "A",
+      "reversibility": "reversible",
+      "undo_tool_id": "drafts_internal.delete_draft",
+      "idempotency": {
+        "key_fields": ["context_id", "source_ref", "action_type", "target_system", "target_object_ref"],
+        "strategy": "db_unique_constraint",
+        "native_support": false,
+        "extra_dedup": "content_fingerprint"
+      },
+      "evidence": {
+        "readback_supported": true,
+        "accepted_methods": ["readback"],
+        "required_types": ["file_ref"],
+        "verify_delay_seconds": 5,
+        "limitation": null,
+        "deferred_check_after_hours": null
+      },
+      "retry_policy": {
+        "retryable_error_classes": ["transient_network", "rate_limited", "timeout"],
+        "max_attempts": 3,
+        "backoff": "exponential_1m_factor5_jitter"
+      },
+      "timeout_seconds": 60,
+      "rate_limit": null,
+      "dry_run_supported": true,
+      "status": "draft",
+      "owner": "rolf"
+    },
+    {
+      "tool_id": "report_internal.write_daily_report",
+      "version": "1.0.0",
+      "display_name": "Tagesbericht schreiben",
+      "purpose": "Abgeleitete Tagesuebersicht als Datei im Kontextspeicher erzeugen.",
+      "adapter_id": "report_internal",
+      "operation": "write",
+      "allowed_contexts": ["privat", "arbeitgeber_visolva"],
+      "input_schema_ref": "schemas/tools/report_internal.write_daily_report.input.json",
+      "output_schema_ref": "schemas/tools/report_internal.write_daily_report.output.json",
+      "required_permissions": ["Schreibrecht im Berichtsordner des Kontexts"],
+      "side_effects": "Eine Berichtsdatei entsteht oder wird ersetzt. Der Bericht ist eine abgeleitete Ansicht und niemals fuehrend.",
+      "external_effect": "internal",
+      "risk_class_default": "A",
+      "reversibility": "reversible",
+      "undo_tool_id": null,
+      "idempotency": {
+        "key_fields": ["context_id", "source_ref", "action_type", "target_system", "target_object_ref"],
+        "strategy": "db_unique_constraint",
+        "native_support": false,
+        "extra_dedup": null
+      },
+      "evidence": {
+        "readback_supported": true,
+        "accepted_methods": ["readback"],
+        "required_types": ["file_ref"],
+        "verify_delay_seconds": 5,
+        "limitation": null,
+        "deferred_check_after_hours": null
+      },
+      "retry_policy": {
+        "retryable_error_classes": ["transient_network", "rate_limited", "timeout"],
+        "max_attempts": 3,
+        "backoff": "exponential_1m_factor5_jitter"
+      },
+      "timeout_seconds": 60,
+      "rate_limit": null,
+      "dry_run_supported": true,
+      "status": "draft",
+      "owner": "rolf"
+    },
+    {
+      "tool_id": "test.record_approved_action",
+      "version": "1.0.0",
+      "display_name": "Testaktion mit Freigabe",
+      "purpose": "Ausschliesslich zum Nachweis des zweistufigen Klasse-C-Freigabewegs. Schreibt nach gueltiger Freigabe einen Testnachweis in einen abgegrenzten Testbereich des Kontextschemas.",
+      "adapter_id": "test_internal",
+      "operation": "write",
+      "allowed_contexts": ["privat", "arbeitgeber_visolva"],
+      "input_schema_ref": "schemas/tools/test.record_approved_action.input.json",
+      "output_schema_ref": "schemas/tools/test.record_approved_action.output.json",
+      "required_permissions": ["Schreibrecht in der Testtabelle des Kontextschemas"],
+      "side_effects": "Ein Testdatensatz mit Aktions-ID, Freigabe-ID, Kontext, Zeitstempel und Ergebnisstatus entsteht. Keine Veraenderung an produktiven Dokumenten, keine externe Kommunikation.",
+      "external_effect": "internal",
+      "risk_class_default": "C",
+      "reversibility": "reversible",
+      "undo_tool_id": null,
+      "idempotency": {
+        "key_fields": ["context_id", "source_ref", "action_type", "target_system", "target_object_ref"],
+        "strategy": "db_unique_constraint",
+        "native_support": true,
+        "extra_dedup": "content_fingerprint"
+      },
+      "evidence": {
+        "readback_supported": true,
+        "accepted_methods": ["readback"],
+        "required_types": ["state_readback"],
+        "verify_delay_seconds": 0,
+        "limitation": null,
+        "deferred_check_after_hours": null
+      },
+      "retry_policy": {
+        "retryable_error_classes": ["transient_network", "timeout"],
+        "max_attempts": 3,
+        "backoff": "exponential_1m_factor5_jitter"
+      },
+      "timeout_seconds": 30,
+      "rate_limit": null,
+      "dry_run_supported": true,
+      "status": "draft",
+      "owner": "rolf"
+    }
+  ]
+}

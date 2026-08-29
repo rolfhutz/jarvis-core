@@ -1,0 +1,59 @@
+{
+  "schema_version": "1.0.0",
+  "event_id": "evt_01JBQ8Z4K7M3N9P2R5T6V8W0XY",
+  "event_type": "document.received",
+  "event_time": "2026-08-29T06:58:12Z",
+  "received_at": "2026-08-29T07:12:00Z",
+  "context_id": "privat",
+  "context_resolution": {
+    "method": "source_binding",
+    "rule_id": "ctx_rule_privat_inbox",
+    "confidence": 1.0,
+    "confirmed_by_human": false
+  },
+  "source": {
+    "adapter_id": "storage_gdrive",
+    "channel": "inbox_folder",
+    "external_id": "EXTERNAL_FILE_ID_PLACEHOLDER",
+    "received_via": "polling"
+  },
+  "subject": {
+    "object_type": "document",
+    "object_id": "doc_01JBQ8Z4K7M3N9P2R5T6V8W0Z3",
+    "context_id": "privat",
+    "system": "storage_gdrive",
+    "external_id": "EXTERNAL_FILE_ID_PLACEHOLDER",
+    "label": "Beitragsanpassung Krankenversicherung 2027",
+    "content_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "related": [],
+  "severity": "notice",
+  "idempotency_key": "ce20fbc5b237ee0ff86b0309a5d3aaf5081835e72fa6244f05a2394b30d22dda",
+  "payload": {
+    "document_type": "Beitragsanpassung",
+    "sender_label": "Krankenversicherung",
+    "document_date": "2026-08-25",
+    "deadline": "2026-09-30",
+    "summary_de": "Ankuendigung einer Beitragserhoehung ab 2027 mit Sonderkuendigungsrecht bis 30.09.2026."
+  },
+  "field_evidence": [
+    {
+      "field": "deadline",
+      "value": "2026-09-30",
+      "confidence": 0.94,
+      "snippet": "Sonderkuendigungsrecht bis zum 30.09.2026",
+      "locator": "page=1"
+    }
+  ],
+  "producer": {
+    "producer_type": "agent",
+    "producer_id": "event_normalizer",
+    "producer_version": "1.0.0"
+  },
+  "trace": {
+    "trace_id": "tr-20260829-0001",
+    "correlation_id": "co-20260829-0001",
+    "workflow_name": "JV-P0-CORE-event_ingest-v1",
+    "workflow_version": "1.0.0"
+  }
+}

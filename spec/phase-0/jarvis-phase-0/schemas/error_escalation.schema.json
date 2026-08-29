@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://jarvis.local/schemas/error_escalation.schema.json",
+  "title": "JARVIS Error and Escalation",
+  "description": "Einheitlicher Fehlerdatensatz mit Retry- und Eskalationsentscheidung. Version 1.0.0.",
+  "type": "object",
+  "properties": {
+    "schema_version": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/schema_version" },
+    "error_id": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/error_id" },
+    "context_id": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/context_id" },
+    "action_id": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/action_id" },
+    "event_id": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/event_id" },
+
+    "occurred_at": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/timestamp_utc" },
+    "error_class": {
+      "type": "string",
+      "enum": [
+        "transient_network", "rate_limited", "timeout", "auth_failed",
+        "permission_denied", "validation_error", "not_found", "conflict",
+        "unknown_state", "business_rule_violation", "dependency_unavailable",
+        "context_missing", "approval_invalid", "internal_error"
+      ]
+    },
+    "error_code": { "type": "string", "description": "Technischer Code des Zielsystems, ohne fachliche Inhalte." },
+    "message_safe": {
+      "type": "string",
+      "maxLength": 500,
+      "description": "Bereinigte Fehlermeldung ohne Zugangsdaten, Token oder fachliche Inhalte. Nur dieses Feld darf in gemeinsame technische Protokolle gelangen."
+    },
+    "message_detail": {
+      "type": "string",
+      "maxLength": 5000,
+      "description": "Ausfuehrliche Fehlermeldung. Kann fachliche Inhalte enthalten und wird ausschliesslich im Kontextschema gespeichert."
+    },
+    "adapter_id": { "type": "string" },
+    "tool_id": { "type": "string" },
+
+    "retryable": { "type": "boolean" },
+    "attempt": { "type": "integer", "minimum": 1 },
+    "max_attempts": { "type": "integer", "minimum": 1 },
+    "next_attempt_at": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/timestamp_utc" },
+    "reconciliation": {
+      "type": "object",
+      "description": "Pflicht vor jedem Wiederholungsversuch: Pruefung, ob die Aktion moeglicherweise bereits erfolgreich war.",
+      "properties": {
+        "performed": { "type": "boolean" },
+        "method": { "type": "string", "enum": ["readback", "idempotency_lookup", "external_search", "none"] },
+        "result": { "type": "string", "enum": ["already_succeeded", "not_executed", "inconclusive", "not_performed"] },
+        "checked_at": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/timestamp_utc" }
+      },
+      "required": ["performed", "result"],
+      "additionalProperties": false
+    },
+
+    "escalation_level": {
+      "type": "string",
+      "enum": ["L0_retry", "L1_exception_list", "L2_notify", "L3_halt"],
+      "description": "L0: automatisch wiederholen. L1: in die Ausnahmeliste. L2: Rolf aktiv benachrichtigen. L3: Prozesszweig anhalten."
+    },
+    "escalated_at": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/timestamp_utc" },
+    "escalation_target": { "type": "string" },
+    "resolution": {
+      "type": "object",
+      "properties": {
+        "status": { "type": "string", "enum": ["open", "retrying", "resolved_auto", "resolved_manual", "abandoned"] },
+        "resolved_at": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/timestamp_utc" },
+        "note": { "type": "string", "maxLength": 2000 }
+      },
+      "required": ["status"],
+      "additionalProperties": false
+    },
+    "producer": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/producer" },
+    "trace": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/trace" }
+  },
+  "required": [
+    "schema_version", "error_id", "context_id", "occurred_at", "error_class",
+    "message_safe", "retryable", "attempt", "escalation_level", "resolution", "producer", "trace"
+  ],
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "description": "Ein Wiederholungsversuch setzt einen dokumentierten Statusabgleich voraus.",
+      "if": { "properties": { "escalation_level": { "const": "L0_retry" } }, "required": ["escalation_level"] },
+      "then": { "required": ["reconciliation", "next_attempt_at"] }
+    },
+    {
+      "description": "Unklarer Ausfuehrungsstatus darf nicht blind wiederholt werden.",
+      "if": { "properties": { "error_class": { "const": "unknown_state" } }, "required": ["error_class"] },
+      "then": { "properties": { "retryable": { "const": false } } }
+    }
+  ]
+}

@@ -1,0 +1,133 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://jarvis.local/schemas/context.schema.json",
+  "title": "JARVIS Context",
+  "description": "Verbindliche Definition eines JARVIS-Kontexts. Version 1.0.0. Ohne gueltigen Kontext darf keine fachliche Aktion ausgefuehrt werden.",
+  "type": "object",
+  "properties": {
+    "schema_version": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/schema_version" },
+    "context_id": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/context_id" },
+    "display_name": { "type": "string", "minLength": 1, "maxLength": 120 },
+    "context_kind": {
+      "type": "string",
+      "enum": ["private", "employer", "holding", "project", "test"],
+      "description": "Art des Kontexts. Steuert Vorbelegungen, nicht die Berechtigungen selbst."
+    },
+    "status": { "type": "string", "enum": ["active", "readonly", "archived"] },
+    "timezone_display": { "type": "string", "default": "Europe/Zurich" },
+    "persistence": {
+      "type": "object",
+      "properties": {
+        "db_schema": { "type": "string", "pattern": "^jarvis_[a-z0-9_]{2,40}$" },
+        "credential_ref": {
+          "type": "string",
+          "description": "Name der n8n-Credential. Enthaelt niemals Zugangsdaten selbst."
+        }
+      },
+      "required": ["db_schema", "credential_ref"],
+      "additionalProperties": false
+    },
+    "adapters": {
+      "type": "object",
+      "description": "Zuordnung von Adaptern je Fachbereich. Werte sind Adapter-IDs aus dem Werkzeugregister.",
+      "properties": {
+        "storage": { "$ref": "#/$defs/adapter_binding" },
+        "mail": { "$ref": "#/$defs/adapter_binding" },
+        "calendar": { "$ref": "#/$defs/adapter_binding" },
+        "tasks": { "$ref": "#/$defs/adapter_binding" },
+        "crm": { "$ref": "#/$defs/adapter_binding" },
+        "messaging": { "$ref": "#/$defs/adapter_binding" },
+        "ocr": { "$ref": "#/$defs/adapter_binding" },
+        "llm": { "$ref": "#/$defs/adapter_binding" },
+        "approval": { "$ref": "#/$defs/adapter_binding" },
+        "notification": { "$ref": "#/$defs/adapter_binding" }
+      },
+      "additionalProperties": { "$ref": "#/$defs/adapter_binding" }
+    },
+    "policy": {
+      "type": "object",
+      "properties": {
+        "allowed_action_classes": {
+          "type": "array",
+          "items": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/risk_class" },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "risk_class_overrides": {
+          "type": "array",
+          "description": "Kontextspezifische Hochstufung. Eine Herabstufung ist unzulaessig und wird bei der Validierung abgewiesen.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "tool_id": { "type": "string" },
+              "action_type": { "type": "string" },
+              "min_risk_class": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/risk_class" },
+              "reason": { "type": "string" }
+            },
+            "required": ["min_risk_class", "reason"],
+            "anyOf": [{ "required": ["tool_id"] }, { "required": ["action_type"] }],
+            "additionalProperties": false
+          }
+        },
+        "approval": {
+          "type": "object",
+          "properties": {
+            "channel_adapter": { "type": "string" },
+            "recipient_ref": {
+              "type": "string",
+              "description": "Verweis auf einen Empfaengereintrag in den Umgebungsvariablen, keine Klartextadresse."
+            },
+            "ttl_hours_default": { "type": "integer", "minimum": 1, "maximum": 336, "default": 72 },
+            "require_second_step_confirmation": { "type": "boolean", "default": true }
+          },
+          "required": ["channel_adapter", "recipient_ref", "ttl_hours_default"],
+          "additionalProperties": false
+        },
+        "cross_context_read_allowed": {
+          "type": "boolean",
+          "default": false,
+          "description": "Kontextuebergreifendes Lesen nur auf ausdrueckliche Anweisung von Rolf und nur als Analyse, nie als Schreibvorgang."
+        },
+        "max_autonomous_risk_class": {
+          "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/risk_class",
+          "default": "B"
+        }
+      },
+      "required": ["allowed_action_classes", "approval", "max_autonomous_risk_class"],
+      "additionalProperties": false
+    },
+    "retention": {
+      "type": "object",
+      "properties": {
+        "session_memory_days": { "type": "integer", "minimum": 1, "default": 30 },
+        "tech_log_days": { "type": "integer", "minimum": 1, "default": 90 },
+        "fach_log_days": {
+          "type": "integer",
+          "minimum": 365,
+          "description": "Fachprotokolle sind append-only und werden nicht routinemaessig geloescht."
+        }
+      },
+      "additionalProperties": false
+    },
+    "valid_from": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/timestamp_utc" },
+    "valid_to": { "$ref": "https://jarvis.local/schemas/common.schema.json#/$defs/timestamp_utc" }
+  },
+  "required": ["schema_version", "context_id", "display_name", "context_kind", "status", "persistence", "adapters", "policy"],
+  "additionalProperties": false,
+  "$defs": {
+    "adapter_binding": {
+      "type": "object",
+      "properties": {
+        "adapter_id": { "type": "string", "pattern": "^[a-z][a-z0-9_]{2,63}$" },
+        "credential_ref": { "type": "string" },
+        "config_ref": {
+          "type": "string",
+          "description": "Verweis auf einen Eintrag der Kontextkonfiguration, z. B. env:JV_PRIVAT_INBOX_FOLDER_ID."
+        },
+        "enabled": { "type": "boolean", "default": true }
+      },
+      "required": ["adapter_id"],
+      "additionalProperties": false
+    }
+  }
+}
