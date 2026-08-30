@@ -1,0 +1,169 @@
+{
+  "name": "JV-CORE-SUB-error_handler-v1",
+  "nodes": [
+    {
+      "id": "98bc0752-790e-4e73-ab8b-aaa4b38e0c40",
+      "name": "Aufruf durch Elternworkflow",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0],
+      "parameters": {
+        "inputSource": "workflowInputs",
+        "workflowInputs": {
+          "values": [
+            { "name": "context_id", "type": "string" },
+            { "name": "error_id", "type": "string" },
+            { "name": "action_id", "type": "string" },
+            { "name": "event_id", "type": "string" },
+            { "name": "status_code", "type": "number" },
+            { "name": "error_message_raw", "type": "string" },
+            { "name": "attempt", "type": "number" },
+            { "name": "max_attempts", "type": "number" },
+            { "name": "trace_id", "type": "string" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "0c778179-c3c8-4d2e-bbfc-76431b3867b8",
+      "name": "Fehler klassifizieren und bereinigen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 0],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "const MUSTER = [\n  [/(?:)\\b(api[_-]?key|apikey|token|secret|password|passwort|pwd|authorization|bearer|credential|client[_-]?secret)\\b\\s*[:=]?\\s*\\S+/gi, \"[entfernt]\"],\n  [/eyJ[A-Za-z0-9_-]{5,}\\.[A-Za-z0-9_-]{5,}\\.[A-Za-z0-9_-]{5,}/g, \"[entfernt]\"],\n  [/(token|key|secret|password)=[^&\\s]+/gi, \"[entfernt]\"],\n  [/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}/g, \"[entfernt]\"],\n  [/postgres(?:ql)?:\\/\\/[^\\s]+/gi, \"[entfernt]\"]\n];\nconst TRANSIENT = [408, 425, 429, 500, 502, 503, 504];\nconst KONTEXTE = [\"privat\", \"arbeitgeber_visolva\"];\nconst ergebnis = [];\n\nfor (const item of $input.all()) {\n  const kontext = item.json.context_id;\n  if (KONTEXTE.indexOf(kontext) === -1) {\n    throw new Error(\"error_handler_invalid_input: context_id nicht im Register\");\n  }\n  if (!item.json.error_id) {\n    throw new Error(\"error_handler_invalid_input: error_id fehlt\");\n  }\n\n  let text = String(item.json.error_message_raw || \"\");\n  const rohNiedrig = text.toLowerCase();\n  for (const paar of MUSTER) {\n    text = text.replace(paar[0], paar[1]);\n  }\n  if (text.length > 500) {\n    text = text.slice(0, 497) + \"...\";\n  }\n\n  const code = item.json.status_code === undefined ? null : item.json.status_code;\n  const versuch = item.json.attempt || 1;\n  const maximal = item.json.max_attempts || 3;\n\n  let klasse = \"permanent\";\n  if (rohNiedrig.indexOf(\"append_only_violation\") !== -1 ||\n      rohNiedrig.indexOf(\"permission denied\") !== -1 ||\n      code === 401 || code === 403) {\n    klasse = \"security\";\n  } else if (rohNiedrig.indexOf(\"_chk\") !== -1 ||\n             rohNiedrig.indexOf(\"violates check constraint\") !== -1 ||\n             rohNiedrig.indexOf(\"schema\") !== -1 ||\n             rohNiedrig.indexOf(\"contract\") !== -1) {\n    klasse = \"contract\";\n  } else if (code !== null && TRANSIENT.indexOf(code) !== -1) {\n    klasse = \"transient\";\n  }\n\n  const wiederholbar = klasse === \"transient\" && versuch < maximal;\n  let stufe = \"log_only\";\n  if (klasse === \"security\") { stufe = \"halt_and_notify\"; }\n  else if (klasse === \"contract\") { stufe = \"notify\"; }\n  else if (klasse === \"permanent\") { stufe = \"notify\"; }\n  else if (klasse === \"transient\" && !wiederholbar) { stufe = \"notify\"; }\n\n  ergebnis.push({ json: {\n    context_id: kontext,\n    error_id: item.json.error_id,\n    action_id: item.json.action_id || null,\n    event_id: item.json.event_id || null,\n    error_class: klasse,\n    escalation_level: stufe,\n    retry_allowed: wiederholbar,\n    next_attempt_delay_s: wiederholbar ? 30 * Math.pow(2, versuch - 1) : null,\n    attempt: versuch,\n    resolution_status: wiederholbar ? \"retry_scheduled\" : \"open\",\n    message_safe: text,\n    body_json: JSON.stringify({ status_code: code, attempt: versuch, max_attempts: maximal }),\n    trace_id: item.json.trace_id || null\n  } });\n}\nreturn ergebnis;"
+      }
+    },
+    {
+      "id": "762371bd-3512-44ba-85e1-3c7bb7aed7e5",
+      "name": "Kontext waehlen",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [440, 0],
+      "parameters": {
+        "mode": "rules",
+        "rules": {
+          "values": [
+            {
+              "outputKey": "privat",
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.context_id }}",
+                    "operator": { "type": "string", "operation": "equals" },
+                    "rightValue": "privat"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "outputKey": "arbeitgeber_visolva",
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.context_id }}",
+                    "operator": { "type": "string", "operation": "equals" },
+                    "rightValue": "arbeitgeber_visolva"
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "31d899b2-8408-4c98-b9fd-1a8586cc72ac",
+      "name": "error_event jarvis_privat",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [660, -100],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO jarvis_privat.error_event (error_id, action_id, event_id, error_class, escalation_level, attempt, occurred_at, resolution_status, body) VALUES ($1, $2, $3, $4, $5, $6, now(), $7, $8::jsonb) RETURNING error_id",
+        "options": {
+          "queryReplacement": "={{ $json.error_id }},{{ $json.action_id }},{{ $json.event_id }},{{ $json.error_class }},{{ $json.escalation_level }},{{ $json.attempt }},{{ $json.resolution_status }},{{ $json.body_json }}"
+        }
+      }
+    },
+    {
+      "id": "42bb3cfa-0199-4bb0-8b76-e22c90fe2b73",
+      "name": "Eskalationsentscheidung zurueckgeben",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [880, 0],
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": true,
+        "assignments": {
+          "assignments": [
+            { "id": "a1", "name": "status", "value": "error_recorded", "type": "string" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "34814469-10a0-41d9-a533-9a7682032609",
+      "name": "error_event jarvis_visolva",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [660, 100],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO jarvis_visolva.error_event (error_id, action_id, event_id, error_class, escalation_level, attempt, occurred_at, resolution_status, body) VALUES ($1, $2, $3, $4, $5, $6, now(), $7, $8::jsonb) RETURNING error_id",
+        "options": {
+          "queryReplacement": "={{ $json.error_id }},{{ $json.action_id }},{{ $json.event_id }},{{ $json.error_class }},{{ $json.escalation_level }},{{ $json.attempt }},{{ $json.resolution_status }},{{ $json.body_json }}"
+        }
+      }
+    },
+    {
+      "id": "649dbc1c-4a77-465f-8d7a-b6ecdb41e8fb",
+      "name": "Benoetigte Credentials",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [620, -320],
+      "parameters": {
+        "content": "## Credential-Bedarf\n\nBeide Postgres-Nodes brauchen je ein eigenes Credential vom Typ Postgres:\n\n- error_event jarvis_privat  ->  jv_privat_postgres  (Rolle jv_privat_user)\n- error_event jarvis_visolva ->  jv_visolva_postgres (Rolle jv_visolva_user)\n\nBeide Datenbankrollen existieren, sind aber NOLOGIN und ohne Kennwort.\n\nVor der Aktivierung:\n1. Anmelderecht und Kennwort ausserhalb des Repositoriums setzen\n2. Credential in n8n unter genau diesem Namen anlegen\n3. Credential am jeweiligen Node zuordnen\n\nDer Meldungstext wird vor dem Schreiben bereinigt. Zugangsdaten, Adressen und Verbindungszeichenfolgen werden entfernt.",
+        "height": 400,
+        "width": 480,
+        "color": 3
+      }
+    }
+  ],
+  "connections": {
+    "Aufruf durch Elternworkflow": {
+      "main": [[{ "node": "Fehler klassifizieren und bereinigen", "type": "main", "index": 0 }]]
+    },
+    "Fehler klassifizieren und bereinigen": {
+      "main": [[{ "node": "Kontext waehlen", "type": "main", "index": 0 }]]
+    },
+    "Kontext waehlen": {
+      "main": [
+        [{ "node": "error_event jarvis_privat", "type": "main", "index": 0 }],
+        [{ "node": "error_event jarvis_visolva", "type": "main", "index": 0 }]
+      ]
+    },
+    "error_event jarvis_privat": {
+      "main": [[{ "node": "Eskalationsentscheidung zurueckgeben", "type": "main", "index": 0 }]]
+    },
+    "error_event jarvis_visolva": {
+      "main": [[{ "node": "Eskalationsentscheidung zurueckgeben", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": { "executionOrder": "v1" },
+  "meta": {
+    "jarvis_source_workflow_id": "HOTikshdbkz6dk9q",
+    "jarvis_phase": "1.0",
+    "jarvis_spec_phase_0": "1.1.0",
+    "jarvis_spec_phase_1": "4.0.2",
+    "jarvis_exported_at": "2026-08-30",
+    "jarvis_required_credentials": ["jv_privat_postgres", "jv_visolva_postgres"]
+  }
+}

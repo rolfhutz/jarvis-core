@@ -1,0 +1,103 @@
+{
+  "name": "JV-CORE-SUB-context_resolve-v1",
+  "nodes": [
+    {
+      "id": "975a18f7-96fc-4ef6-b702-b76f57fe331b",
+      "name": "Aufruf durch Elternworkflow",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0],
+      "parameters": {
+        "inputSource": "workflowInputs",
+        "workflowInputs": {
+          "values": [
+            { "name": "source_binding", "type": "string" },
+            { "name": "context_id_hint", "type": "string" },
+            { "name": "trace_id", "type": "string" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "0f4328e7-cae3-4dbc-aa5d-49a2f856da43",
+      "name": "Kontext deterministisch aufloesen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 0],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "const BINDUNGEN = {\n  privat_drive_inbox: \"privat\",\n  privat_mail: \"privat\",\n  privat_manual_upload: \"privat\",\n  visolva_sharepoint_inbox: \"arbeitgeber_visolva\",\n  visolva_mail: \"arbeitgeber_visolva\",\n  visolva_manual_upload: \"arbeitgeber_visolva\"\n};\nconst REGISTER = [\"privat\", \"arbeitgeber_visolva\"];\nconst SCHEMA = { privat: \"jarvis_privat\", arbeitgeber_visolva: \"jarvis_visolva\" };\nconst CREDENTIAL = { privat: \"jv_privat_postgres\", arbeitgeber_visolva: \"jv_visolva_postgres\" };\nconst ergebnis = [];\nfor (const item of $input.all()) {\n  const bindung = item.json.source_binding;\n  const hinweis = item.json.context_id_hint;\n  const aufgeloest = Object.prototype.hasOwnProperty.call(BINDUNGEN, bindung) ? BINDUNGEN[bindung] : null;\n  let ok = true;\n  let grund = \"\";\n  if (!bindung) { ok = false; grund = \"source_binding fehlt\"; }\n  else if (aufgeloest === null) { ok = false; grund = \"source_binding nicht registriert: \" + bindung; }\n  else if (REGISTER.indexOf(aufgeloest) === -1) { ok = false; grund = \"Kontext nicht im Register: \" + aufgeloest; }\n  else if (hinweis && hinweis !== aufgeloest) { ok = false; grund = \"context_id_hint widerspricht der Bindung\"; }\n  ergebnis.push({ json: {\n    resolved: ok,\n    context_id: ok ? aufgeloest : null,\n    db_schema: ok ? SCHEMA[aufgeloest] : null,\n    credential_ref: ok ? CREDENTIAL[aufgeloest] : null,\n    resolution_method: \"source_binding\",\n    source_binding: bindung || null,\n    reason: grund,\n    trace_id: item.json.trace_id || null\n  } });\n}\nreturn ergebnis;"
+      }
+    },
+    {
+      "id": "a4065b3d-bd62-496b-9e00-a1c088e77066",
+      "name": "Kontext eindeutig?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [440, 0],
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.resolved }}",
+              "operator": { "type": "boolean", "operation": "true", "singleValue": true }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "f8c5f071-4039-4050-be0f-7a166c6a161d",
+      "name": "Kontext zurueckgeben",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [660, -80],
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": true,
+        "assignments": {
+          "assignments": [
+            { "id": "a1", "name": "status", "value": "resolved", "type": "string" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "8059bded-08fe-4a93-a99e-1288ca364a25",
+      "name": "Kontext nicht aufloesbar",
+      "type": "n8n-nodes-base.stopAndError",
+      "typeVersion": 1,
+      "position": [660, 80],
+      "parameters": {
+        "errorType": "errorMessage",
+        "errorMessage": "=context_unresolved: {{ $json.reason }}"
+      }
+    }
+  ],
+  "connections": {
+    "Aufruf durch Elternworkflow": {
+      "main": [[{ "node": "Kontext deterministisch aufloesen", "type": "main", "index": 0 }]]
+    },
+    "Kontext deterministisch aufloesen": {
+      "main": [[{ "node": "Kontext eindeutig?", "type": "main", "index": 0 }]]
+    },
+    "Kontext eindeutig?": {
+      "main": [
+        [{ "node": "Kontext zurueckgeben", "type": "main", "index": 0 }],
+        [{ "node": "Kontext nicht aufloesbar", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": { "executionOrder": "v1" },
+  "meta": {
+    "jarvis_source_workflow_id": "5IyWf1dH3huijkKG",
+    "jarvis_phase": "1.0",
+    "jarvis_spec_phase_0": "1.1.0",
+    "jarvis_spec_phase_1": "4.0.2",
+    "jarvis_exported_at": "2026-08-30",
+    "jarvis_required_credentials": []
+  }
+}
