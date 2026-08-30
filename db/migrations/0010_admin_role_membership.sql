@@ -1,0 +1,37 @@
+-- =====================================================================
+-- JARVIS Phase 1.0 - Migration 0010
+-- Annahmerecht des Administrators auf die Kontextrollen
+--
+-- Grund: nachgewiesener Umgebungsunterschied, kein Wunsch.
+--
+-- Auf einer Instanz, auf der die Verwaltungsrolle Superuser ist, kann sie
+-- jede Rolle mit SET ROLE annehmen. Auf Supabase ist die Rolle `postgres`
+-- KEIN Superuser, sondern eine Rolle mit CREATEROLE. Seit PostgreSQL 16
+-- ist die Mitgliedschaft in drei Rechte aufgeteilt: ADMIN, INHERIT und
+-- SET. Beim Anlegen einer Rolle durch eine CREATEROLE-Rolle entsteht die
+-- Mitgliedschaft mit
+--     admin_option = true, inherit_option = false, set_option = false
+-- Der Administrator darf die Rolle also verwalten, aber nicht annehmen.
+--
+-- Praktisch beobachtet nach Migration 0001 auf PostgreSQL 17.6:
+--     SET ROLE jv_privat_user;
+--     ERROR 42501: permission denied to set role "jv_privat_user"
+--
+-- Folge ohne diese Migration: Die Abnahmekriterien 1.0-A1 bis 1.0-A4 sind
+-- nicht pruefbar, weil niemand den Kontextbenutzer annehmen kann. Schlimmer
+-- noch, eine Pruefung nur auf den Fehlercode 42501 wuerde diesen Fehler
+-- faelschlich als bestandene Kontexttrennung werten.
+--
+-- Was diese Migration NICHT tut:
+-- - Sie vergibt kein Anmelderecht und kein Kennwort.
+-- - Sie gibt der Rolle postgres keine Rechte, die sie nicht ohnehin haette:
+--   postgres ist Eigentuemer aller drei Schemata.
+-- - inherit_option bleibt false. Die Rechte des Kontextbenutzers wirken
+--   ausschliesslich nach einem ausdruecklichen SET ROLE, nie beilaeufig.
+--
+-- Die Kontexttrennung bleibt davon unberuehrt: Sie trennt jv_privat_user
+-- von jv_visolva_user, nicht den Eigentuemer von seinen eigenen Schemata.
+-- =====================================================================
+
+GRANT jv_privat_user  TO CURRENT_USER WITH SET TRUE, INHERIT FALSE;
+GRANT jv_visolva_user TO CURRENT_USER WITH SET TRUE, INHERIT FALSE;

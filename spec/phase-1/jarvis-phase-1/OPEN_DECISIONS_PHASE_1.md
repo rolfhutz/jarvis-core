@@ -1,22 +1,22 @@
 # JARVIS Phase 1 — Offene Entscheidungen
 
-**Version 1.2 - 29. August 2026**
+**Version 1.3 - 30. August 2026**
 
 Keine dieser Entscheidungen blockiert die Freigabe der Spezifikation. Die Spalte „Spätestens" nennt den Zeitpunkt, ab dem die Umsetzung ohne die Entscheidung stehenbleibt.
 
-| Nr. | Gegenstand | Spätestens |
-|---|---|---|
-| P1-O1 | PostgreSQL-Anbieter | vor Schritt 1.0 |
-| P1-O2 | Freigabeadapter und HTTPS-Erreichbarkeit | vor Schritt 1.3 |
-| P1-O3 | OCR-Dienst | Ende Schritt 1.1 |
-| P1-O4 | Modellauswahl je Rolle | Ende Schritt 1.2 |
-| P1-O5 | Eingangskanäle für Scan und Smartphone | vor Schritt 1.1 |
-| P1-O6 | Kategorienliste und Ordner-Mapping | vor Schritt 1.2 |
-| P1-O7 | Git-Repository | vor Schritt 1.0 |
-| P1-O8 | Aufbewahrungsfristen | vor Pilotbeginn |
-| P1-O9 | Umgang mit dem Altbestand | nach dem Phase-1-Gate |
-| P1-O10 | Umgang mit Dokumenten ohne Handlungsbedarf | vor Schritt 1.3 |
-| P1-O11 | Weitere Normalisierungsregeln für andere Sprachräume und für nicht monetäre Dezimalwerte | bei Bedarf, nicht blockierend |
+| Nr. | Gegenstand | Spätestens | Stand |
+|---|---|---|---|
+| P1-O1 | PostgreSQL-Anbieter | vor Schritt 1.0 | **entschieden: Supabase Free** |
+| P1-O2 | Freigabeadapter und HTTPS-Erreichbarkeit | vor Schritt 1.3 | offen |
+| P1-O3 | OCR-Dienst | Ende Schritt 1.1 | offen |
+| P1-O4 | Modellauswahl je Rolle | Ende Schritt 1.2 | offen |
+| P1-O5 | Eingangskanäle für Scan und Smartphone | vor Schritt 1.1 | offen |
+| P1-O6 | Kategorienliste und Ordner-Mapping | vor Schritt 1.2 | offen |
+| P1-O7 | Git-Repository | vor Schritt 1.0 | **entschieden: GitHub `rolfhutz/jarvis-core`** |
+| P1-O8 | Aufbewahrungsfristen | vor Pilotbeginn | offen |
+| P1-O9 | Umgang mit dem Altbestand | nach dem Phase-1-Gate | offen |
+| P1-O10 | Umgang mit Dokumenten ohne Handlungsbedarf | vor Schritt 1.3 | offen |
+| P1-O11 | Weitere Normalisierungsregeln für andere Sprachräume und für nicht monetäre Dezimalwerte | bei Bedarf, nicht blockierend | offen |
 
 ---
 
@@ -24,11 +24,13 @@ Keine dieser Entscheidungen blockiert die Freigabe der Spezifikation. Die Spalte
 
 **Verbindlich bereits entschieden:** verwaltetes PostgreSQL, anbieterunabhängige Architektur, Sicherung, Wiederherstellung und Export müssen möglich sein.
 
-**Offen:** der konkrete Anbieter.
+**Entschieden am 30. August 2026: Supabase Free.** Für Phase 1.0 und den ersten Pilot, wie in [`docs/decisions/ADR-001_STORAGE_AND_POSTGRES.md`](../../../docs/decisions/ADR-001_STORAGE_AND_POSTGRES.md) festgehalten.
 
-**Empfehlung:** Ein verwalteter Anbieter mit Rechenzentrum in der Schweiz oder der EU, täglicher Sicherung und Wiederherstellung auf einen Zeitpunkt. Entscheidend ist nicht der Name, sondern ein einmal tatsächlich durchgeführter Wiederherstellungstest vor Pilotbeginn. Keine Anbietererweiterungen verwenden, damit ein Wechsel ein Dump-und-Restore bleibt.
+**Begründung:** Der Anbieter ist für diesen Schritt nachrangig, weil die Architektur ihn austauschbar hält. Die Migrationen unter `db/migrations/` verwenden ausschliesslich Standard-PostgreSQL 16 und keine Anbietererweiterung. Ein Wechsel bleibt damit ein Dump-und-Restore.
 
-**Spätestens:** vor Schritt 1.0. Ohne Instanz beginnt nichts.
+**Weiterhin offen und vor Pilotbeginn zu erbringen:** ein tatsächlich durchgeführter Wiederherstellungstest. Ausserdem ist zu prüfen, ob der Standort des Free-Angebots für den produktiven Betrieb genügt; für synthetische Testdaten in Phase 1.0 ist er es.
+
+**Spätestens:** vor Schritt 1.0. Ohne Instanz beginnt nichts. — erfüllt.
 
 ---
 
@@ -94,11 +96,11 @@ Falls ein Gerät nur an einen einzigen Zielordner schreiben kann und beide Konte
 
 **Aus Phase 0 bereits freigegeben:** privates Repository unter einem von Rolf kontrollierten Konto, unabhängig vom Arbeitgeberkonto, Anbieter austauschbar, keine Zugangsdaten und keine fachlichen Dokumentinhalte im Repository.
 
-**Offen für Phase 1:** die konkrete Einrichtung.
+**Entschieden am 30. August 2026: GitHub, privates Repository `rolfhutz/jarvis-core`.** Unter einem von Rolf kontrollierten Konto, unabhängig vom Arbeitgeberkonto.
 
-**Empfehlung:** Ein Repository für alle Phasen mit Ordnern `spec/`, `schemas/`, `registry/`, `config/`, `n8n/`, `prompts/`, `tools/`. Prompts werden versioniert wie Code, weil eine Prompt-Änderung dieselbe Wirkung hat wie eine Codeänderung.
+**Umgesetzt:** Ein Repository für alle Phasen mit den Ordnern `spec/`, `docs/decisions/`, `config/templates/`, `db/migrations/`, `n8n/`, `prompts/`, `tests/` und `tools/`. Prompts werden versioniert wie Code, weil eine Prompt-Änderung dieselbe Wirkung hat wie eine Codeänderung. Die `.gitignore` schliesst Zugangsdaten, Schlüsseldateien, Sicherungen, Dokumentinhalte und n8n-Anmeldeinformationen aus.
 
-**Spätestens:** vor Schritt 1.0, damit ab dem ersten Workflow exportiert wird.
+**Spätestens:** vor Schritt 1.0, damit ab dem ersten Workflow exportiert wird. — erfüllt.
 
 ---
 
