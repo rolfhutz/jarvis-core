@@ -1,0 +1,107 @@
+{
+  "name": "JV-CORE-SUB-tool_invoke-v1",
+  "nodes": [
+    {
+      "id": "d2e31498-dea9-4774-bb69-d4b74d4832c6",
+      "name": "Aufruf durch Elternworkflow",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0],
+      "parameters": {
+        "inputSource": "workflowInputs",
+        "workflowInputs": {
+          "values": [
+            { "name": "context_id", "type": "string" },
+            { "name": "tool_id", "type": "string" },
+            { "name": "tool_version", "type": "string" },
+            { "name": "risk_class", "type": "string" },
+            { "name": "approval_id", "type": "string" },
+            { "name": "approval_status", "type": "string" },
+            { "name": "payload", "type": "object" },
+            { "name": "trace_id", "type": "string" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "17995ed5-e4d6-4987-981f-9986bcc399ee",
+      "name": "Vertragstor pruefen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 0],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "const REGISTER = {\n  storage_gdrive: { version: \"1.0.0\", release_state: \"draft\", readback_supported: true },\n  storage_sharepoint: { version: \"1.0.0\", release_state: \"draft\", readback_supported: true },\n  ocr_default: { version: \"1.0.0\", release_state: \"draft\", readback_supported: false },\n  llm_default: { version: \"1.0.0\", release_state: \"draft\", readback_supported: false },\n  drafts_internal: { version: \"1.0.0\", release_state: \"draft\", readback_supported: true },\n  report_internal: { version: \"1.0.0\", release_state: \"draft\", readback_supported: true },\n  test: { version: \"1.0.0\", release_state: \"draft\", readback_supported: true }\n};\nconst KONTEXTE = [\"privat\", \"arbeitgeber_visolva\"];\nconst ergebnis = [];\nfor (const item of $input.all()) {\n  const kontext = item.json.context_id;\n  const werkzeug = item.json.tool_id;\n  const version = item.json.tool_version;\n  const klasse = item.json.risk_class;\n  let freigegeben = false;\n  let grund = \"\";\n  let code = \"\";\n\n  const eintrag = Object.prototype.hasOwnProperty.call(REGISTER, werkzeug) ? REGISTER[werkzeug] : null;\n\n  if (KONTEXTE.indexOf(kontext) === -1) { code = \"invalid_context\"; grund = \"context_id nicht im Register\"; }\n  else if (eintrag === null) { code = \"tool_not_registered\"; grund = \"Werkzeug nicht registriert: \" + String(werkzeug); }\n  else if (eintrag.version !== version) { code = \"tool_version_mismatch\"; grund = \"Vertragsversion weicht ab, erwartet \" + eintrag.version; }\n  else if ([\"A\", \"B\", \"C\"].indexOf(klasse) === -1) { code = \"risk_class_missing\"; grund = \"risk_class fehlt oder ist unzulaessig\"; }\n  else if (klasse === \"C\" && (!item.json.approval_id || item.json.approval_status !== \"approved\")) {\n    code = \"approval_missing\";\n    grund = \"Klasse C ohne gueltige Freigabe\";\n  }\n  else if (eintrag.release_state !== \"approved\") {\n    code = \"tool_not_released\";\n    grund = \"Werkzeug steht auf \" + eintrag.release_state + \". Freigabe erfolgt erst nach dem praktischen Nachweis des zugehoerigen Subworkflows.\";\n  }\n  else { freigegeben = true; }\n\n  ergebnis.push({ json: {\n    invocation_allowed: freigegeben,\n    gate_code: freigegeben ? \"allowed\" : code,\n    reason: grund,\n    tool_id: werkzeug || null,\n    tool_version: version || null,\n    readback_supported: eintrag ? eintrag.readback_supported : null,\n    risk_class: klasse || null,\n    context_id: kontext || null,\n    trace_id: item.json.trace_id || null\n  } });\n}\nreturn ergebnis;"
+      }
+    },
+    {
+      "id": "669affa7-dc12-479a-8cb8-40309847c50e",
+      "name": "Aufruf zulaessig?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [440, 0],
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.invocation_allowed }}",
+              "operator": { "type": "boolean", "operation": "true", "singleValue": true }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "03c03df1-dedf-4c95-9279-6e703a4aa89a",
+      "name": "Adapteraufruf Platzhalter",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [660, -80],
+      "parameters": {},
+      "notes": "Hier wird ab Phase 1.1 der freigegebene Adapter aufgerufen. In Phase 1.0 unerreichbar, weil kein Werkzeug auf approved steht."
+    },
+    {
+      "id": "be9bf85f-ac5b-49be-a0ff-294c61334c82",
+      "name": "Aufruf abgewiesen",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [660, 80],
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": true,
+        "assignments": {
+          "assignments": [
+            { "id": "a1", "name": "status", "value": "rejected", "type": "string" },
+            { "id": "a2", "name": "rejected_at", "value": "={{ $now.toISO() }}", "type": "string" }
+          ]
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Aufruf durch Elternworkflow": {
+      "main": [[{ "node": "Vertragstor pruefen", "type": "main", "index": 0 }]]
+    },
+    "Vertragstor pruefen": {
+      "main": [[{ "node": "Aufruf zulaessig?", "type": "main", "index": 0 }]]
+    },
+    "Aufruf zulaessig?": {
+      "main": [
+        [{ "node": "Adapteraufruf Platzhalter", "type": "main", "index": 0 }],
+        [{ "node": "Aufruf abgewiesen", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": { "executionOrder": "v1" },
+  "meta": {
+    "jarvis_source_workflow_id": "ELs6LnRIWKCv04yc",
+    "jarvis_phase": "1.0",
+    "jarvis_spec_phase_0": "1.1.0",
+    "jarvis_spec_phase_1": "4.0.2",
+    "jarvis_exported_at": "2026-08-30",
+    "jarvis_required_credentials": []
+  }
+}

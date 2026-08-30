@@ -1,0 +1,164 @@
+{
+  "name": "JV-CORE-SUB-idempotency_guard-v1",
+  "nodes": [
+    {
+      "id": "10c29b31-60aa-4855-8428-406d4dfdd97e",
+      "name": "Aufruf durch Elternworkflow",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0],
+      "parameters": {
+        "inputSource": "workflowInputs",
+        "workflowInputs": {
+          "values": [
+            { "name": "context_id", "type": "string" },
+            { "name": "action_id", "type": "string" },
+            { "name": "idempotency_key", "type": "string" },
+            { "name": "claimed_by", "type": "string" },
+            { "name": "ttl_minutes", "type": "number" },
+            { "name": "trace_id", "type": "string" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "eb3ce6f5-609c-4358-915c-720e6b7ecd5e",
+      "name": "Eingabe pruefen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 0],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "const KONTEXTE = [\"privat\", \"arbeitgeber_visolva\"];\nconst ergebnis = [];\nfor (const item of $input.all()) {\n  const kontext = item.json.context_id;\n  const schluessel = String(item.json.idempotency_key || \"\");\n  let grund = \"\";\n  if (KONTEXTE.indexOf(kontext) === -1) { grund = \"context_id nicht im Register\"; }\n  else if (!/^[a-f0-9]{64}$/.test(schluessel)) { grund = \"idempotency_key ist kein SHA-256-Hex\"; }\n  else if (!item.json.action_id) { grund = \"action_id fehlt\"; }\n  else if (!item.json.claimed_by) { grund = \"claimed_by fehlt\"; }\n  if (grund) {\n    throw new Error(\"idempotency_guard_invalid_input: \" + grund);\n  }\n  ergebnis.push({ json: {\n    context_id: kontext,\n    action_id: item.json.action_id,\n    idempotency_key: schluessel,\n    claimed_by: item.json.claimed_by,\n    ttl_minutes: item.json.ttl_minutes || 5,\n    trace_id: item.json.trace_id || null\n  } });\n}\nreturn ergebnis;"
+      }
+    },
+    {
+      "id": "6d918a3f-8815-4d47-a76d-afe8816ec55e",
+      "name": "Kontext waehlen",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [440, 0],
+      "parameters": {
+        "mode": "rules",
+        "rules": {
+          "values": [
+            {
+              "outputKey": "privat",
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.context_id }}",
+                    "operator": { "type": "string", "operation": "equals" },
+                    "rightValue": "privat"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "outputKey": "arbeitgeber_visolva",
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.context_id }}",
+                    "operator": { "type": "string", "operation": "equals" },
+                    "rightValue": "arbeitgeber_visolva"
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "eb8a3124-8844-420a-b7cf-f0ef9e532a9b",
+      "name": "Sperre beanspruchen jarvis_privat",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [660, -100],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO jarvis_privat.action_lock (idempotency_key, action_id, claimed_by, expires_at) VALUES ($1, $2, $3, now() + ($4 || ' minutes')::interval) ON CONFLICT DO NOTHING RETURNING idempotency_key",
+        "options": {
+          "queryReplacement": "={{ $json.idempotency_key }},{{ $json.action_id }},{{ $json.claimed_by }},{{ $json.ttl_minutes }}"
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "id": "e96027a5-3ae7-4941-8988-7e13b83523af",
+      "name": "Sperrergebnis auswerten",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [880, 0],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "const ergebnis = [];\nfor (const item of $input.all()) {\n  const erhalten = Boolean(item.json && item.json.idempotency_key);\n  ergebnis.push({ json: {\n    lock_granted: erhalten,\n    duplicate: !erhalten,\n    decision: erhalten ? \"proceed\" : \"skip_duplicate\",\n    idempotency_key: item.json.idempotency_key || null\n  } });\n}\nreturn ergebnis;"
+      }
+    },
+    {
+      "id": "0b985b4a-df15-447a-bb74-a3939eb44280",
+      "name": "Sperre beanspruchen jarvis_visolva",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [660, 100],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO jarvis_visolva.action_lock (idempotency_key, action_id, claimed_by, expires_at) VALUES ($1, $2, $3, now() + ($4 || ' minutes')::interval) ON CONFLICT DO NOTHING RETURNING idempotency_key",
+        "options": {
+          "queryReplacement": "={{ $json.idempotency_key }},{{ $json.action_id }},{{ $json.claimed_by }},{{ $json.ttl_minutes }}"
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "id": "71c2940f-8725-4db6-9662-391dd80b7b05",
+      "name": "Benoetigte Credentials",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [620, -320],
+      "parameters": {
+        "content": "## Credential-Bedarf\n\nBeide Postgres-Nodes brauchen je ein eigenes Credential vom Typ Postgres:\n\n- Sperre beanspruchen jarvis_privat  ->  jv_privat_postgres  (Rolle jv_privat_user)\n- Sperre beanspruchen jarvis_visolva ->  jv_visolva_postgres (Rolle jv_visolva_user)\n\nBeide Datenbankrollen existieren, sind aber NOLOGIN und ohne Kennwort.\n\nVor der Aktivierung:\n1. Anmelderecht und Kennwort ausserhalb des Repositoriums setzen\n2. Credential in n8n unter genau diesem Namen anlegen\n3. Credential am jeweiligen Node zuordnen\n\nKein Kennwort gehoert in das Repository.",
+        "height": 380,
+        "width": 480,
+        "color": 3
+      }
+    }
+  ],
+  "connections": {
+    "Aufruf durch Elternworkflow": {
+      "main": [[{ "node": "Eingabe pruefen", "type": "main", "index": 0 }]]
+    },
+    "Eingabe pruefen": {
+      "main": [[{ "node": "Kontext waehlen", "type": "main", "index": 0 }]]
+    },
+    "Kontext waehlen": {
+      "main": [
+        [{ "node": "Sperre beanspruchen jarvis_privat", "type": "main", "index": 0 }],
+        [{ "node": "Sperre beanspruchen jarvis_visolva", "type": "main", "index": 0 }]
+      ]
+    },
+    "Sperre beanspruchen jarvis_privat": {
+      "main": [[{ "node": "Sperrergebnis auswerten", "type": "main", "index": 0 }]]
+    },
+    "Sperre beanspruchen jarvis_visolva": {
+      "main": [[{ "node": "Sperrergebnis auswerten", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": { "executionOrder": "v1" },
+  "meta": {
+    "jarvis_source_workflow_id": "bpC5dlK2Ez0sVhUj",
+    "jarvis_phase": "1.0",
+    "jarvis_spec_phase_0": "1.1.0",
+    "jarvis_spec_phase_1": "4.0.2",
+    "jarvis_exported_at": "2026-08-30",
+    "jarvis_required_credentials": ["jv_privat_postgres", "jv_visolva_postgres"]
+  }
+}

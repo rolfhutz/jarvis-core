@@ -1,0 +1,70 @@
+{
+  "name": "JV-CORE-SUB-action_classify-v1",
+  "nodes": [
+    {
+      "id": "e98e74fa-31ac-4612-aa6f-aef7dac35b97",
+      "name": "Aufruf durch Elternworkflow",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0],
+      "parameters": {
+        "inputSource": "workflowInputs",
+        "workflowInputs": {
+          "values": [
+            { "name": "context_id", "type": "string" },
+            { "name": "action_type", "type": "string" },
+            { "name": "tool_id", "type": "string" },
+            { "name": "external_effect", "type": "boolean" },
+            { "name": "trace_id", "type": "string" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "f8c23cce-bc9e-43b6-923c-00a22bcfe59c",
+      "name": "Risikoklasse deterministisch bestimmen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 0],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "const BASIS = {\n  \"document.read\": \"A\",\n  \"document.analyze\": \"A\",\n  \"document.file\": \"B\",\n  \"document.move\": \"B\",\n  \"task.create\": \"B\",\n  \"task.update\": \"B\",\n  \"crm.update_record\": \"B\",\n  \"draft.create\": \"B\",\n  \"report.write\": \"B\",\n  \"mail.send\": \"C\",\n  \"message.send\": \"C\",\n  \"test.record_approved_action\": \"C\"\n};\nconst OVERRIDES = {\n  arbeitgeber_visolva: { \"mail.send\": \"C\", \"crm.update_record\": \"B\" }\n};\nconst RANG = { A: 1, B: 2, C: 3 };\nconst KONTEXTE = [\"privat\", \"arbeitgeber_visolva\"];\n\nconst ergebnis = [];\nfor (const item of $input.all()) {\n  const kontext = item.json.context_id;\n  const art = item.json.action_type;\n  if (KONTEXTE.indexOf(kontext) === -1) {\n    throw new Error(\"action_classify_invalid_input: context_id nicht im Register\");\n  }\n  if (!art) {\n    throw new Error(\"action_classify_invalid_input: action_type fehlt\");\n  }\n\n  const bekannt = Object.prototype.hasOwnProperty.call(BASIS, art);\n  const ausRegister = bekannt ? BASIS[art] : \"C\";\n  const quelle = bekannt ? \"tool_registry\" : \"unknown_action_type_fail_closed\";\n\n  const kontextRegeln = Object.prototype.hasOwnProperty.call(OVERRIDES, kontext) ? OVERRIDES[kontext] : {};\n  const ausOverride = Object.prototype.hasOwnProperty.call(kontextRegeln, art) ? kontextRegeln[art] : null;\n\n  let klasse = ausRegister;\n  let herkunft = quelle;\n  if (ausOverride && RANG[ausOverride] > RANG[klasse]) {\n    klasse = ausOverride;\n    herkunft = \"context_override\";\n  }\n  if (item.json.external_effect === true && RANG[\"C\"] > RANG[klasse]) {\n    klasse = \"C\";\n    herkunft = \"external_effect\";\n  }\n\n  ergebnis.push({ json: {\n    risk_class: klasse,\n    risk_class_source: herkunft,\n    approval_required: klasse === \"C\",\n    max_autonomous_class: \"B\",\n    action_type: art,\n    tool_id: item.json.tool_id || null,\n    context_id: kontext,\n    trace_id: item.json.trace_id || null\n  } });\n}\nreturn ergebnis;"
+      }
+    },
+    {
+      "id": "e7da2c8c-e6a1-4dbb-b0ee-4895244bc50f",
+      "name": "Einstufung zurueckgeben",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [440, 0],
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": true,
+        "assignments": {
+          "assignments": [
+            { "id": "a1", "name": "status", "value": "classified", "type": "string" },
+            { "id": "a2", "name": "classified_at", "value": "={{ $now.toISO() }}", "type": "string" }
+          ]
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Aufruf durch Elternworkflow": {
+      "main": [[{ "node": "Risikoklasse deterministisch bestimmen", "type": "main", "index": 0 }]]
+    },
+    "Risikoklasse deterministisch bestimmen": {
+      "main": [[{ "node": "Einstufung zurueckgeben", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": { "executionOrder": "v1" },
+  "meta": {
+    "jarvis_source_workflow_id": "tWVy6kRzwFMw4lmJ",
+    "jarvis_phase": "1.0",
+    "jarvis_spec_phase_0": "1.1.0",
+    "jarvis_spec_phase_1": "4.0.2",
+    "jarvis_exported_at": "2026-08-30",
+    "jarvis_required_credentials": []
+  }
+}

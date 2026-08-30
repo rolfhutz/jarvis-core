@@ -1,0 +1,173 @@
+{
+  "name": "JV-CORE-SUB-tech_log_write-v1",
+  "nodes": [
+    {
+      "id": "4013711b-de38-4209-8f51-f4cce26871a4",
+      "name": "Aufruf durch Elternworkflow",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0],
+      "parameters": {
+        "inputSource": "workflowInputs",
+        "workflowInputs": {
+          "values": [
+            { "name": "context_id", "type": "string" },
+            { "name": "trace_id", "type": "string" },
+            { "name": "run_id", "type": "string" },
+            { "name": "workflow_name", "type": "string" },
+            { "name": "node_name", "type": "string" },
+            { "name": "object_kind", "type": "string" },
+            { "name": "object_id", "type": "string" },
+            { "name": "tool_id", "type": "string" },
+            { "name": "adapter_id", "type": "string" },
+            { "name": "status_code", "type": "number" },
+            { "name": "error_class", "type": "string" },
+            { "name": "message_raw", "type": "string" },
+            { "name": "duration_ms", "type": "number" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "3062704e-50ce-43fd-93ea-1a0cf5749c20",
+      "name": "message_safe bereinigen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 0],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "const MUSTER = [\n  [/(?:)\\b(api[_-]?key|apikey|token|secret|password|passwort|pwd|authorization|bearer|credential|client[_-]?secret)\\b\\s*[:=]?\\s*\\S+/gi, \"[entfernt]\"],\n  [/eyJ[A-Za-z0-9_-]{5,}\\.[A-Za-z0-9_-]{5,}\\.[A-Za-z0-9_-]{5,}/g, \"[entfernt]\"],\n  [/(token|key|secret|password)=[^&\\s]+/gi, \"[entfernt]\"],\n  [/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}/g, \"[entfernt]\"],\n  [/postgres(?:ql)?:\\/\\/[^\\s]+/gi, \"[entfernt]\"],\n  [/\\+?\\d[\\d\\s()\\/-]{7,}\\d/g, \"[entfernt]\"]\n];\nconst KONTEXTE = [\"privat\", \"arbeitgeber_visolva\"];\nconst ergebnis = [];\n\nfor (const item of $input.all()) {\n  const kontext = item.json.context_id;\n  if (KONTEXTE.indexOf(kontext) === -1) {\n    throw new Error(\"tech_log_write_invalid_input: context_id nicht im Register\");\n  }\n  if (!item.json.trace_id) {\n    throw new Error(\"tech_log_write_invalid_input: trace_id fehlt\");\n  }\n  if (!item.json.workflow_name) {\n    throw new Error(\"tech_log_write_invalid_input: workflow_name fehlt\");\n  }\n\n  let text = String(item.json.message_raw || \"\");\n  for (const paar of MUSTER) {\n    text = text.replace(paar[0], paar[1]);\n  }\n  if (text.length > 500) {\n    text = text.slice(0, 497) + \"...\";\n  }\n\n  ergebnis.push({ json: {\n    context_id: kontext,\n    trace_id: item.json.trace_id,\n    run_id: item.json.run_id || null,\n    workflow_name: item.json.workflow_name,\n    node_name: item.json.node_name || null,\n    object_kind: item.json.object_kind || null,\n    object_id: item.json.object_id || null,\n    tool_id: item.json.tool_id || null,\n    adapter_id: item.json.adapter_id || null,\n    status_code: item.json.status_code === undefined ? null : item.json.status_code,\n    error_class: item.json.error_class || null,\n    message_safe: text,\n    duration_ms: item.json.duration_ms === undefined ? null : item.json.duration_ms\n  } });\n}\nreturn ergebnis;"
+      }
+    },
+    {
+      "id": "cfc8c058-3a2e-4e55-a447-6b39e9ed7e3d",
+      "name": "Kontext waehlen",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [440, 0],
+      "parameters": {
+        "mode": "rules",
+        "rules": {
+          "values": [
+            {
+              "outputKey": "privat",
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.context_id }}",
+                    "operator": { "type": "string", "operation": "equals" },
+                    "rightValue": "privat"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "outputKey": "arbeitgeber_visolva",
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.context_id }}",
+                    "operator": { "type": "string", "operation": "equals" },
+                    "rightValue": "arbeitgeber_visolva"
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "84d89cb4-a776-4585-b439-f3553179f110",
+      "name": "tech_event schreiben als jv_privat_user",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [660, -100],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO jarvis_ops.tech_event (trace_id, run_id, workflow_name, node_name, context_id, object_kind, object_id, tool_id, adapter_id, status_code, error_class, message_safe, duration_ms) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING tech_event_id",
+        "options": {
+          "queryReplacement": "={{ $json.trace_id }},{{ $json.run_id }},{{ $json.workflow_name }},{{ $json.node_name }},{{ $json.context_id }},{{ $json.object_kind }},{{ $json.object_id }},{{ $json.tool_id }},{{ $json.adapter_id }},{{ $json.status_code }},{{ $json.error_class }},{{ $json.message_safe }},{{ $json.duration_ms }}"
+        }
+      }
+    },
+    {
+      "id": "356b6c21-d084-401a-bbd5-043b380c0509",
+      "name": "Technikeintrag bestaetigen",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [880, 0],
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": true,
+        "assignments": {
+          "assignments": [
+            { "id": "a1", "name": "status", "value": "tech_logged", "type": "string" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "5dd3a60a-9b00-4fff-b21b-1becd76386c1",
+      "name": "tech_event schreiben als jv_visolva_user",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [660, 100],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO jarvis_ops.tech_event (trace_id, run_id, workflow_name, node_name, context_id, object_kind, object_id, tool_id, adapter_id, status_code, error_class, message_safe, duration_ms) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING tech_event_id",
+        "options": {
+          "queryReplacement": "={{ $json.trace_id }},{{ $json.run_id }},{{ $json.workflow_name }},{{ $json.node_name }},{{ $json.context_id }},{{ $json.object_kind }},{{ $json.object_id }},{{ $json.tool_id }},{{ $json.adapter_id }},{{ $json.status_code }},{{ $json.error_class }},{{ $json.message_safe }},{{ $json.duration_ms }}"
+        }
+      }
+    },
+    {
+      "id": "d324beec-80ee-40a4-8116-03a954859734",
+      "name": "Benoetigte Credentials",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [620, -320],
+      "parameters": {
+        "content": "## Credential-Bedarf\n\nBeide Postgres-Nodes schreiben nach jarvis_ops.tech_event, jeweils unter der Rolle des eigenen Kontexts:\n\n- tech_event schreiben als jv_privat_user  ->  jv_privat_postgres\n- tech_event schreiben als jv_visolva_user ->  jv_visolva_postgres\n\nBeide Datenbankrollen existieren, sind aber NOLOGIN und ohne Kennwort.\n\nVor der Aktivierung:\n1. Anmelderecht und Kennwort ausserhalb des Repositoriums setzen\n2. Credential in n8n unter genau diesem Namen anlegen\n3. Credential am jeweiligen Node zuordnen\n\nIn tech_event gehoeren keine Fachinhalte. message_safe wird vorher bereinigt und auf 500 Zeichen gekuerzt.",
+        "height": 400,
+        "width": 480,
+        "color": 3
+      }
+    }
+  ],
+  "connections": {
+    "Aufruf durch Elternworkflow": {
+      "main": [[{ "node": "message_safe bereinigen", "type": "main", "index": 0 }]]
+    },
+    "message_safe bereinigen": {
+      "main": [[{ "node": "Kontext waehlen", "type": "main", "index": 0 }]]
+    },
+    "Kontext waehlen": {
+      "main": [
+        [{ "node": "tech_event schreiben als jv_privat_user", "type": "main", "index": 0 }],
+        [{ "node": "tech_event schreiben als jv_visolva_user", "type": "main", "index": 0 }]
+      ]
+    },
+    "tech_event schreiben als jv_privat_user": {
+      "main": [[{ "node": "Technikeintrag bestaetigen", "type": "main", "index": 0 }]]
+    },
+    "tech_event schreiben als jv_visolva_user": {
+      "main": [[{ "node": "Technikeintrag bestaetigen", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": { "executionOrder": "v1" },
+  "meta": {
+    "jarvis_source_workflow_id": "Bp7m62faVmLZ6VdB",
+    "jarvis_phase": "1.0",
+    "jarvis_spec_phase_0": "1.1.0",
+    "jarvis_spec_phase_1": "4.0.2",
+    "jarvis_exported_at": "2026-08-30",
+    "jarvis_required_credentials": ["jv_privat_postgres", "jv_visolva_postgres"]
+  }
+}

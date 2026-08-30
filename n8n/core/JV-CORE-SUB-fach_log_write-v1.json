@@ -1,0 +1,170 @@
+{
+  "name": "JV-CORE-SUB-fach_log_write-v1",
+  "nodes": [
+    {
+      "id": "ca9e9572-0e94-442d-9a10-b5d366c99585",
+      "name": "Aufruf durch Elternworkflow",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0],
+      "parameters": {
+        "inputSource": "workflowInputs",
+        "workflowInputs": {
+          "values": [
+            { "name": "context_id", "type": "string" },
+            { "name": "entry_kind", "type": "string" },
+            { "name": "actor", "type": "string" },
+            { "name": "summary_de", "type": "string" },
+            { "name": "action_id", "type": "string" },
+            { "name": "task_id", "type": "string" },
+            { "name": "event_id", "type": "string" },
+            { "name": "corrects_log_id", "type": "number" },
+            { "name": "body", "type": "object" },
+            { "name": "trace_id", "type": "string" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "bb7b9c20-9347-4d78-884f-cd9c25a257bc",
+      "name": "Protokolleintrag pruefen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 0],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "const KONTEXTE = [\"privat\", \"arbeitgeber_visolva\"];\nconst AKTEURE = [\"jarvis\", \"rolf\", \"mitarbeiter\", \"externer\"];\nconst ergebnis = [];\nfor (const item of $input.all()) {\n  const kontext = item.json.context_id;\n  if (KONTEXTE.indexOf(kontext) === -1) {\n    throw new Error(\"fach_log_write_invalid_input: context_id nicht im Register\");\n  }\n  if (!item.json.entry_kind) {\n    throw new Error(\"fach_log_write_invalid_input: entry_kind fehlt\");\n  }\n  if (AKTEURE.indexOf(item.json.actor) === -1) {\n    throw new Error(\"fach_log_write_invalid_input: actor unzulaessig\");\n  }\n  const zusammenfassung = String(item.json.summary_de || \"\");\n  if (zusammenfassung.length < 3) {\n    throw new Error(\"fach_log_write_invalid_input: summary_de fehlt oder ist zu kurz\");\n  }\n  ergebnis.push({ json: {\n    context_id: kontext,\n    entry_kind: item.json.entry_kind,\n    actor: item.json.actor,\n    summary_de: zusammenfassung,\n    action_id: item.json.action_id || null,\n    task_id: item.json.task_id || null,\n    event_id: item.json.event_id || null,\n    corrects_log_id: item.json.corrects_log_id || null,\n    body_json: JSON.stringify(item.json.body || {}),\n    trace_id: item.json.trace_id || null\n  } });\n}\nreturn ergebnis;"
+      }
+    },
+    {
+      "id": "2bd9650a-0e0d-4a4f-864d-dde1e03b41a3",
+      "name": "Kontext waehlen",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [440, 0],
+      "parameters": {
+        "mode": "rules",
+        "rules": {
+          "values": [
+            {
+              "outputKey": "privat",
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.context_id }}",
+                    "operator": { "type": "string", "operation": "equals" },
+                    "rightValue": "privat"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "outputKey": "arbeitgeber_visolva",
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.context_id }}",
+                    "operator": { "type": "string", "operation": "equals" },
+                    "rightValue": "arbeitgeber_visolva"
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "65064a83-fb30-49d9-a3d3-bdd77d871f2f",
+      "name": "Fachprotokoll jarvis_privat",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [660, -100],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO jarvis_privat.action_log (entry_kind, actor, summary_de, action_id, task_id, event_id, corrects_log_id, body) VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb) RETURNING log_id, logged_at",
+        "options": {
+          "queryReplacement": "={{ $json.entry_kind }},{{ $json.actor }},{{ $json.summary_de }},{{ $json.action_id }},{{ $json.task_id }},{{ $json.event_id }},{{ $json.corrects_log_id }},{{ $json.body_json }}"
+        }
+      }
+    },
+    {
+      "id": "922ad469-ab57-4b62-be42-6d35ee235f1e",
+      "name": "Eintrag bestaetigen",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [880, 0],
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": true,
+        "assignments": {
+          "assignments": [
+            { "id": "a1", "name": "status", "value": "logged", "type": "string" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "959865fb-9952-4fd9-9040-6db93af4fa02",
+      "name": "Fachprotokoll jarvis_visolva",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [660, 100],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO jarvis_visolva.action_log (entry_kind, actor, summary_de, action_id, task_id, event_id, corrects_log_id, body) VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb) RETURNING log_id, logged_at",
+        "options": {
+          "queryReplacement": "={{ $json.entry_kind }},{{ $json.actor }},{{ $json.summary_de }},{{ $json.action_id }},{{ $json.task_id }},{{ $json.event_id }},{{ $json.corrects_log_id }},{{ $json.body_json }}"
+        }
+      }
+    },
+    {
+      "id": "d7788f49-ada8-43ce-b9cd-2adab2981d06",
+      "name": "Benoetigte Credentials",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [620, -320],
+      "parameters": {
+        "content": "## Credential-Bedarf\n\nBeide Postgres-Nodes brauchen je ein eigenes Credential vom Typ Postgres:\n\n- Fachprotokoll jarvis_privat  ->  jv_privat_postgres  (Rolle jv_privat_user)\n- Fachprotokoll jarvis_visolva ->  jv_visolva_postgres (Rolle jv_visolva_user)\n\nBeide Datenbankrollen existieren, sind aber NOLOGIN und ohne Kennwort.\n\nVor der Aktivierung:\n1. Anmelderecht und Kennwort ausserhalb des Repositoriums setzen\n2. Credential in n8n unter genau diesem Namen anlegen\n3. Credential am jeweiligen Node zuordnen\n\nDas Fachprotokoll ist append-only: die Rolle hat SELECT und INSERT, aber kein UPDATE und kein DELETE.",
+        "height": 400,
+        "width": 480,
+        "color": 3
+      }
+    }
+  ],
+  "connections": {
+    "Aufruf durch Elternworkflow": {
+      "main": [[{ "node": "Protokolleintrag pruefen", "type": "main", "index": 0 }]]
+    },
+    "Protokolleintrag pruefen": {
+      "main": [[{ "node": "Kontext waehlen", "type": "main", "index": 0 }]]
+    },
+    "Kontext waehlen": {
+      "main": [
+        [{ "node": "Fachprotokoll jarvis_privat", "type": "main", "index": 0 }],
+        [{ "node": "Fachprotokoll jarvis_visolva", "type": "main", "index": 0 }]
+      ]
+    },
+    "Fachprotokoll jarvis_privat": {
+      "main": [[{ "node": "Eintrag bestaetigen", "type": "main", "index": 0 }]]
+    },
+    "Fachprotokoll jarvis_visolva": {
+      "main": [[{ "node": "Eintrag bestaetigen", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": { "executionOrder": "v1" },
+  "meta": {
+    "jarvis_source_workflow_id": "8ur7Lc15KEF0Y8M1",
+    "jarvis_phase": "1.0",
+    "jarvis_spec_phase_0": "1.1.0",
+    "jarvis_spec_phase_1": "4.0.2",
+    "jarvis_exported_at": "2026-08-30",
+    "jarvis_required_credentials": ["jv_privat_postgres", "jv_visolva_postgres"]
+  }
+}
