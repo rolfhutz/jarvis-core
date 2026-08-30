@@ -1,0 +1,61 @@
+JARVIS Phase 1.0 - Readback der Datenbankstruktur
+Zeitpunkt (UTC): 2026-08-30T10:07:29+00:00
+Server:          PostgreSQL 16.13 (Ubuntu 16.13-0ubuntu0.24.04.1)
+
+1. Schemata
+  [ok ] Schema jarvis_ops
+  [ok ] Schema jarvis_privat
+  [ok ] Schema jarvis_visolva
+
+2. Tabellen
+  [ok ] jarvis_ops: 5 erwartete Tabellen vorhanden  -> 5 Tabellen insgesamt
+  [ok ] jarvis_privat: 17 erwartete Tabellen vorhanden  -> 17 Tabellen insgesamt
+  [ok ] jarvis_privat: document_index ist abgeloest
+  [ok ] jarvis_visolva: 17 erwartete Tabellen vorhanden  -> 17 Tabellen insgesamt
+  [ok ] jarvis_visolva: document_index ist abgeloest
+
+3. Rollen
+  [ok ] Rolle jv_privat_user existiert
+  [ok ] Rolle jv_privat_user ohne Anmelderecht  -> NOLOGIN
+  [ok ] Rolle jv_visolva_user existiert
+  [ok ] Rolle jv_visolva_user ohne Anmelderecht  -> NOLOGIN
+
+4. Pruefbedingungen der Kontexttrennung
+  [ok ] jarvis_privat: Kontextbedingung auf 16 Tabellen  -> 16 Bedingungen
+  [ok ] jarvis_visolva: Kontextbedingung auf 16 Tabellen  -> 16 Bedingungen
+
+5. Trigger
+  [ok ] jarvis_privat.action_log_deny_update
+  [ok ] jarvis_privat.action_log_deny_delete
+  [ok ] jarvis_privat.action_log_deny_truncate
+  [ok ] jarvis_visolva.action_log_deny_update
+  [ok ] jarvis_visolva.action_log_deny_delete
+  [ok ] jarvis_visolva.action_log_deny_truncate
+  [ok ] jarvis_ops.workflow_run_guard
+  [ok ] jarvis_ops.workflow_run_deny_delete
+  [ok ] jarvis_ops.tech_event_deny_update
+  [ok ] jarvis_ops.tech_event_deny_delete
+
+6. Eindeutigkeitsindizes
+  [ok ] jarvis_privat.action_idempotency_uq
+  [ok ] jarvis_privat.event_idempotency_uq
+  [ok ] jarvis_privat.task_idempotency_uq
+  [ok ] jarvis_privat.document_content_hash_uq
+  [ok ] jarvis_privat.case_number_uq
+  [ok ] jarvis_privat.case_identifier_value_uq
+  [ok ] jarvis_visolva.action_idempotency_uq
+  [ok ] jarvis_visolva.event_idempotency_uq
+  [ok ] jarvis_visolva.task_idempotency_uq
+  [ok ] jarvis_visolva.document_content_hash_uq
+  [ok ] jarvis_visolva.case_number_uq
+  [ok ] jarvis_visolva.case_identifier_value_uq
+
+7. Kontextregister
+  [ok ] Zwei Kontexte registriert  -> 2 Eintraege
+           arbeitgeber_visolva|jarvis_visolva|jv_visolva_user|active
+           privat|jarvis_privat|jv_privat_user|active
+  [ok ] Eintraege stimmen mit der Kontextkonfiguration ueberein
+  [ok ] Vertragsversionen registriert  -> spec_phase_0 1.1.0, spec_phase_1 4.0.2
+
+Ergebnis: fehlgeschlagene Pruefungen: 0
+Gesamtergebnis: READBACK VOLLSTAENDIG

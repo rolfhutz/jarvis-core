@@ -1,0 +1,54 @@
+JARVIS Phase 1.0 - Abnahme der Datenbank
+Zeitpunkt (UTC): 2026-08-30T10:07:28+00:00
+Server:          version
+
+  [ok ] 1.0-A1    Schreibversuch in fremdes Kontextschema scheitert
+           -> ERROR:  42501: permission denied for schema jarvis_visolva
+  [ok ] 1.0-A1b   Lesezugriff auf fremdes Fachprotokoll scheitert
+           -> ERROR:  42501: permission denied for schema jarvis_visolva
+  [ok ] 1.0-A2    Datensatz mit fremder context_id wird abgewiesen
+           -> ERROR:  23514: new row for relation "action_log" violates check constraint "log_context_chk"
+  [ok ] 1.0-A2b   Aktion mit fremder context_id wird abgewiesen
+           -> ERROR:  23514: new row for relation "action" violates check constraint "action_context_chk"
+  [ok ] 1.0-A3a   UPDATE auf action_log scheitert als Kontextbenutzer
+           -> ERROR:  42501: permission denied for table action_log
+  [ok ] 1.0-A3b   UPDATE auf action_log scheitert auch als Eigentuemer (Trigger)
+           -> ERROR:  42501: append_only_violation: UPDATE auf jarvis_privat.action_log ist unzulaessig. Korrekturen erfolge
+  [ok ] 1.0-A3c   DELETE auf action_log scheitert als Kontextbenutzer
+           -> ERROR:  42501: permission denied for table action_log
+  [ok ] 1.0-A3d   DELETE auf action_log scheitert auch als Eigentuemer (Trigger)
+           -> ERROR:  42501: append_only_violation: DELETE auf jarvis_privat.action_log ist unzulaessig. Korrekturen erfolge
+  [ok ] 1.0-A3e   TRUNCATE auf action_log scheitert (Trigger)
+           -> ERROR:  42501: append_only_violation: TRUNCATE auf jarvis_privat.action_log ist unzulaessig. Korrekturen erfol
+  [ok ] 1.0-A4    INSERT in action_log gelingt, Sequenzrecht greift
+           -> log_id  --------       4 (1 row)
+  [ok ] 1.0-A5    Workflow-Lauf kann gestartet und abgeschlossen werden
+           -> status    -----------  succeeded (1 row)
+  [ok ] 1.0-A5b   Abgeschlossener Lauf kann nicht erneut veraendert werden
+           -> ERROR:  42501: run_already_final: Lauf run_phase10_abnahme_0001 ist bereits abgeschlossen und darf nicht verae
+  [ok ] 1.0-A6    Derselbe Idempotenzschluessel erzeugt keine zweite Aktion
+           -> ERROR:  23505: duplicate key value violates unique constraint "action_idempotency_uq"
+  [ok ] 1.0-A6b   Nach dem Doppelversuch existiert genau eine Aktion
+           -> count  -------      1 (1 row)
+  [ok ] 1.0-A7    Sperre kann nur einmal beansprucht werden
+           -> idempotency_key                           ------------------------------------------------------------------  
+  [ok ] 1.0-A7b   Zweiter Anspruch auf dieselbe Sperre erhaelt keine Zeile
+           -> idempotency_key  ----------------- (0 rows)
+  [ok ] 1.0-P1a   Vorgangsnummer wird fortlaufend und je Jahr vergeben
+           -> ?column?          -------------------------  V-2026-0001 V-2026-0002 (1 row)
+  [ok ] 1.0-P1b   Dokument und Vorgang lassen sich anlegen
+           -> document_id            --------------------------------  doc_01JQ8ZKPT4N7VXWA2E5GHM3BCD (1 row)
+  [ok ] 1.0-P1c   Gleicher content_hash wird als harte Dublette abgewiesen
+           -> ERROR:  23505: duplicate key value violates unique constraint "document_content_hash_uq"
+  [ok ] 1.0-P1d   Dublette ohne Verweis auf das Original wird abgewiesen
+           -> ERROR:  23514: new row for relation "document" violates check constraint "document_duplicate_requires_original
+  [ok ] 1.0-P1e   Dieselbe Kennung kann nicht zwei Vorgaengen gehoeren
+           -> ERROR:  23505: duplicate key value violates unique constraint "case_identifier_value_uq"
+  [ok ] 1.0-P1f   Abgeschlossener Vorgang ohne Abschlusszeitpunkt wird abgewiesen
+           -> ERROR:  23514: new row for relation "case" violates check constraint "case_closed_requires_timestamp"
+  [ok ] 1.0-P1g   Kein DELETE auf dem Dokumentregister
+           -> ERROR:  42501: permission denied for table document
+
+Pruefungen: 23, davon fehlgeschlagen: 0
+1.0-A8 (Export und Wiederherstellung) steht aus: setzt die n8n-Subworkflows voraus.
+Gesamtergebnis: ALLE PRUEFUNGEN BESTANDEN
