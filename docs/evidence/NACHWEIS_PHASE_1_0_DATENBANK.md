@@ -2,7 +2,7 @@
 
 **Datum:** 30. August 2026
 **Umfang:** Schritt 1.0 aus `SPEC_PHASE_1_DOKUMENTENASSISTENT_v4.0.2.md`, Abschnitt 7, soweit er die Datenbank betrifft.
-**Grundlage:** `db/migrations/0001` bis `0009`
+**Grundlage:** `db/migrations/0001` bis `0009` (`0010` kam beim Supabase-Lauf hinzu, siehe Abschnitt 1)
 
 ---
 
@@ -10,7 +10,9 @@
 
 Die Migrationen und alle praktischen Prüfungen dieses Nachweises liefen gegen **PostgreSQL 16.13**, eine leere lokale Instanz, die eigens für diesen Lauf aufgesetzt und danach verworfen wurde.
 
-**Der Lauf gegen die Supabase-Instanz steht aus.** Der Konnektor `Supabase JARVIS` war während der Umsetzung nicht verbunden, `apply_migration` stand nicht zur Verfügung. Alles, was ohne die Instanz möglich war, wurde vollständig erbracht; die Ausführung im Zielprojekt und der dortige Readback sind nachzuholen. Solange das offen ist, gilt für Supabase **kein** Nachweis, auch wenn die Migrationen lokal fehlerfrei laufen.
+**Nachgetragen am 30. August 2026:** Der Lauf gegen die Supabase-Instanz ist inzwischen erfolgt und in [`PHASE_1_0_SUPABASE_2026-08-30.md`](PHASE_1_0_SUPABASE_2026-08-30.md) protokolliert — zehn Migrationen, 23 Abnahme- und 39 Readback-Prüfungen, alle bestanden. Zum Zeitpunkt dieses Dokuments war der Konnektor `Supabase JARVIS` nicht verbunden und `apply_migration` nicht verfügbar; das Folgeprotokoll ist deshalb massgeblich für alles, was die Zielinstanz betrifft.
+
+Dort steht auch der einzige Befund, der lokal nicht auftreten konnte: Auf Supabase ist die Rolle `postgres` kein Superuser und darf die Kontextrollen ohne ausdrückliches `SET`-Recht nicht annehmen. Das machte Migration `0010_admin_role_membership.sql` nötig.
 
 Die Aussagekraft des lokalen Laufs ist hoch, aber nicht vollständig: Die Migrationen verwenden ausschliesslich Standard-PostgreSQL 16 ohne Anbietererweiterung, weshalb ein abweichendes Verhalten nur dort zu erwarten wäre, wo Supabase Rechte einschränkt — beim Anlegen der Rollen in `0001` und bei den `REVOKE`-Anweisungen in `0007` und `0008`.
 
@@ -93,9 +95,9 @@ Beide betrafen die Tests, nicht das Schema, und sind behoben:
 
 ## 5. Readback
 
-Protokoll: [`PHASE_1_0_READBACK_2026-08-30.log`](PHASE_1_0_READBACK_2026-08-30.log), erzeugt von `tests/db/readback_phase_1_0.py`. **44 Prüfungen, alle bestanden.**
+Protokoll: [`PHASE_1_0_READBACK_2026-08-30.log`](PHASE_1_0_READBACK_2026-08-30.log), erzeugt von `tests/db/readback_phase_1_0.py`. **39 Prüfungen, alle bestanden.**
 
-Zurückgelesen und gegen die Spezifikation abgeglichen wurden: drei Schemata, 39 Tabellen, zwei Rollen samt Anmelderecht, 32 Kontextbedingungen (16 je Kontextschema), zehn Trigger, zwölf Eindeutigkeitsindizes sowie die Einträge in `context_registry` und `contract_version`.
+Zurückgelesen und gegen die Spezifikation abgeglichen wurden: drei Schemata, alle erwarteten Tabellen, zwei Rollen samt Anmelderecht, 32 Kontextbedingungen (16 je Kontextschema), zehn Trigger, zwölf Eindeutigkeitsindizes sowie die Einträge in `context_registry` und `contract_version`.
 
 Der Readback fragt den Systemkatalog ab und verlässt sich nicht auf die Rückmeldung der Migration — Entscheidung D3 sinngemäss auf die Datenbank angewandt.
 
@@ -116,7 +118,7 @@ An fachlichen Schemas und Vertragsregeln wurde nichts geändert. Ein Supabase-Ko
 
 Das Gate bleibt **offen**. Es fehlen:
 
-1. **Ausführung der Migrationen im Supabase-Projekt** und Wiederholung von Abnahme und Readback dort.
+1. ~~Ausführung der Migrationen im Supabase-Projekt~~ — am 30. August 2026 erledigt, siehe [`PHASE_1_0_SUPABASE_2026-08-30.md`](PHASE_1_0_SUPABASE_2026-08-30.md).
 2. **Die neun Kern-Subworkflows** aus Abschnitt 7.1 Punkt 7: `context_resolve`, `id_generate`, `idempotency_guard`, `action_classify`, `tool_invoke`, `evidence_verify`, `fach_log_write`, `tech_log_write`, `error_handler`.
 3. **Kriterium 1.0-A8**, Export und Wiederherstellung der Workflows in eine leere Instanz.
 4. **Freigabe der Werkzeuge** von `draft` auf `approved`. Bewusst noch nicht erfolgt: Ein Werkzeug wird erst freigegeben, wenn der zugehörige Subworkflow praktisch existiert.

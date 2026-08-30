@@ -20,6 +20,7 @@ sondern aus Abhaengigkeiten:
 | `0007_grants_and_isolation_privat.sql` | Rechte, Entzug auf `jarvis_visolva` | 0004, 0006 |
 | `0008_grants_and_isolation_visolva.sql` | Rechte, Entzug auf `jarvis_privat` | 0003, 0005 |
 | `0009_context_registry_seed.sql` | Kontextregister und Vertragsversionen | 0002 |
+| `0010_admin_role_membership.sql` | `SET`-Recht des Administrators auf die Kontextrollen | 0001 |
 
 Die Rechtevergabe steht bewusst am Ende: `REVOKE ALL ON ALL TABLES IN SCHEMA`
 wirkt nur auf Tabellen, die zu diesem Zeitpunkt bereits vorhanden sind. Wuerde
@@ -55,7 +56,11 @@ for f in db/migrations/00*.sql; do
 done
 ```
 
-Wiederholbarkeit: `0001` und `0009` sind ohne Weiteres erneut ausfuehrbar.
+`0010` wird auf Instanzen gebraucht, deren Verwaltungsrolle kein Superuser ist
+(Supabase). Ohne sie kann niemand die Kontextrollen annehmen und die Abnahme
+1.0-A1 bis 1.0-A4 ist nicht pruefbar. Begruendung im Kopf der Datei.
+
+Wiederholbarkeit: `0001`, `0009` und `0010` sind ohne Weiteres erneut ausfuehrbar.
 `0002` bis `0008` legen Objekte an und scheitern beim zweiten Lauf gegen
 dieselbe Instanz — beabsichtigt, weil ein stiller zweiter Lauf gefaehrlicher
 waere als ein Fehler.
