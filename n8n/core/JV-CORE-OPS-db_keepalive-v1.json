@@ -1,0 +1,78 @@
+{
+  "id": "DTRoxZvPQ5BPhM4o",
+  "name": "JV-CORE-OPS-db_keepalive-v1",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 5
+            }
+          ]
+        }
+      },
+      "id": "c564b975-2e2a-4c43-a7d5-0c84be0a5fd5",
+      "name": "Taeglich 05:00 UTC",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT count(*)::int AS registrierte_kontexte, now() AS geprueft_um FROM jarvis_ops.context_registry WHERE status = 'active'",
+        "options": {}
+      },
+      "id": "28e560c8-1835-4e01-ba25-587c466bbc08",
+      "name": "Datenbank anpingen",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        224,
+        0
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "postgres": {
+          "id": "oCkj27EiMe96vXvU",
+          "name": "jv_privat_postgres"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Taeglich 05:00 UTC": {
+      "main": [
+        [
+          {
+            "node": "Datenbank anpingen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "jarvis_source_workflow_id": "DTRoxZvPQ5BPhM4o",
+    "jarvis_phase": "1.0",
+    "jarvis_spec_phase_0": "1.1.0",
+    "jarvis_spec_phase_1": "4.0.2",
+    "jarvis_exported_at": "2026-09-10",
+    "jarvis_required_credentials": [
+      {
+        "id": "oCkj27EiMe96vXvU",
+        "name": "jv_privat_postgres"
+      }
+    ]
+  }
+}
