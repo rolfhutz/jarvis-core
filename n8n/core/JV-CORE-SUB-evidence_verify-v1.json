@@ -72,7 +72,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        1104,
+        1776,
         0
       ]
     },
@@ -96,7 +96,7 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.5,
       "position": [
-        1328,
+        2000,
         -80
       ]
     },
@@ -126,7 +126,7 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.5,
       "position": [
-        1328,
+        2000,
         80
       ]
     },
@@ -205,7 +205,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT (r.tool_id IS NOT NULL) AS found, r.readback_supported, r.accepted_methods, r.evidence_limitation FROM (SELECT 1) AS eins LEFT JOIN jarvis_ops.tool_registry r ON r.tool_id = $1 AND r.version = $2",
+        "query": "SELECT (r.tool_id IS NOT NULL) AS found, r.definition->'evidence'->'required_types'->>0 AS evidence_type, r.readback_supported, r.accepted_methods, r.evidence_limitation FROM (SELECT 1) AS eins LEFT JOIN jarvis_ops.tool_registry r ON r.tool_id = $1 AND r.version = $2",
         "options": {
           "queryReplacement": "={{ $json.contract_tool_id }},{{ $json.contract_version }}"
         }
@@ -228,7 +228,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT (r.tool_id IS NOT NULL) AS found, r.readback_supported, r.accepted_methods, r.evidence_limitation FROM (SELECT 1) AS eins LEFT JOIN jarvis_ops.tool_registry r ON r.tool_id = $1 AND r.version = $2",
+        "query": "SELECT (r.tool_id IS NOT NULL) AS found, r.definition->'evidence'->'required_types'->>0 AS evidence_type, r.readback_supported, r.accepted_methods, r.evidence_limitation FROM (SELECT 1) AS eins LEFT JOIN jarvis_ops.tool_registry r ON r.tool_id = $1 AND r.version = $2",
         "options": {
           "queryReplacement": "={{ $json.contract_tool_id }},{{ $json.contract_version }}"
         }
@@ -250,7 +250,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Entscheidung D3: Die Nachweisstrategie kommt ausschliesslich aus jarvis_ops.tool_registry.\n// Angaben des Aufrufers zur Readback-Faehigkeit werden nicht beruecksichtigt.\nconst e = $('Eingabe pruefen').first().json;\nconst r = $input.first().json;\nconst beobachtet = e.observed || {};\nconst erwartet = e.expected || {};\nlet code = \"\";\nlet grund = \"\";\nlet bestanden = false;\nif (r.found !== true) {\n  code = \"contract_unknown\"; grund = \"Werkzeugvertrag \" + e.contract_tool_id + \"@\" + e.contract_version + \" ist nicht im Register\";\n} else if (r.readback_supported === true && e.verification_method !== \"readback\") {\n  code = \"readback_required\"; grund = \"Readback ist laut Register moeglich und damit verpflichtend (D3)\";\n} else if ((r.accepted_methods || []).indexOf(e.verification_method) === -1) {\n  code = \"method_not_accepted\"; grund = \"Methode \" + e.verification_method + \" ist im Vertrag nicht zugelassen\";\n} else {\n  const schluessel = Object.keys(erwartet);\n  let abweichung = \"\";\n  for (const k of schluessel) {\n    if (JSON.stringify(beobachtet[k]) !== JSON.stringify(erwartet[k])) { abweichung = k; break; }\n  }\n  if (schluessel.length === 0) {\n    code = \"expected_empty\"; grund = \"Ohne erwarteten Zielzustand ist kein Abgleich moeglich\";\n  } else if (abweichung) {\n    code = \"mismatch\"; grund = \"Feld \" + abweichung + \" weicht vom erwarteten Zustand ab\";\n  } else {\n    code = \"verified\"; bestanden = true;\n  }\n}\nconst ergebnis = bestanden ? \"verified\" : \"failed\";\nreturn [{ json: {\n  verification_passed: bestanden,\n  verification_result: ergebnis,\n  gate_code: code,\n  reason: grund,\n  verification: {\n    method: e.verification_method,\n    result: ergebnis,\n    contract_ref: {\n      tool_id: e.contract_tool_id,\n      version: e.contract_version,\n      readback_supported: r.found === true ? r.readback_supported : null\n    },\n    limitation: (r.found === true && r.readback_supported === false) ? r.evidence_limitation : null\n  },\n  action_id: e.action_id,\n  context_id: e.context_id,\n  observed_at: new Date().toISOString(),\n  trace_id: e.trace_id\n} }];"
+        "jsCode": "// Entscheidung D3: Die Nachweisstrategie kommt ausschliesslich aus jarvis_ops.tool_registry.\n// Angaben des Aufrufers zur Readback-Faehigkeit werden nicht beruecksichtigt.\nconst e = $('Eingabe pruefen').first().json;\nconst r = $input.first().json;\nconst beobachtet = e.observed || {};\nconst erwartet = e.expected || {};\nlet code = \"\";\nlet grund = \"\";\nlet bestanden = false;\nif (r.found !== true) {\n  code = \"contract_unknown\"; grund = \"Werkzeugvertrag \" + e.contract_tool_id + \"@\" + e.contract_version + \" ist nicht im Register\";\n} else if (r.readback_supported === true && e.verification_method !== \"readback\") {\n  code = \"readback_required\"; grund = \"Readback ist laut Register moeglich und damit verpflichtend (D3)\";\n} else if ((r.accepted_methods || []).indexOf(e.verification_method) === -1) {\n  code = \"method_not_accepted\"; grund = \"Methode \" + e.verification_method + \" ist im Vertrag nicht zugelassen\";\n} else {\n  const schluessel = Object.keys(erwartet);\n  let abweichung = \"\";\n  for (const k of schluessel) {\n    if (JSON.stringify(beobachtet[k]) !== JSON.stringify(erwartet[k])) { abweichung = k; break; }\n  }\n  if (schluessel.length === 0) {\n    code = \"expected_empty\"; grund = \"Ohne erwarteten Zielzustand ist kein Abgleich moeglich\";\n  } else if (abweichung) {\n    code = \"mismatch\"; grund = \"Feld \" + abweichung + \" weicht vom erwarteten Zustand ab\";\n  } else {\n    code = \"verified\"; bestanden = true;\n  }\n}\nconst ergebnis = bestanden ? \"verified\" : \"failed\";\n// Entscheidung E-2 (10.09.2026): Jeder echte Abgleich (verified oder mismatch) wird als Zeile in\n// <kontext>.evidence abgelegt. Vertragsverstoesse des Aufrufers erzeugen keinen Nachweisdatensatz.\nconst crypto = require(\"crypto\");\nconst ALPHABET = \"0123456789ABCDEFGHJKMNPQRSTVWXYZ\";\nfunction ulid(zeitMs) {\n  let zeit = \"\";\n  let rest = zeitMs;\n  for (let i = 0; i < 10; i++) { zeit = ALPHABET[rest % 32] + zeit; rest = Math.floor(rest / 32); }\n  const roh = crypto.randomBytes(16);\n  let zufall = \"\";\n  for (let i = 0; i < 16; i++) { zufall = zufall + ALPHABET[roh[i] % 32]; }\n  return zeit + zufall;\n}\nconst beobachtetAm = new Date().toISOString();\nconst ablegen = (code === \"verified\" || code === \"mismatch\");\nlet zeileB64 = null;\nlet geplanteId = null;\nif (ablegen) {\n  geplanteId = \"evd_\" + ulid(Date.now());\n  const zeile = {\n    evidence_id: geplanteId,\n    action_id: e.action_id,\n    evidence_type: r.evidence_type,\n    verification_method: e.verification_method,\n    verification_result: bestanden ? \"confirmed\" : \"not_confirmed\",\n    contract_tool_id: e.contract_tool_id,\n    contract_version: e.contract_version,\n    readback_supported: r.readback_supported === true,\n    observed_at: beobachtetAm,\n    body: { gate_code: code, reason: grund, observed: beobachtet, expected: erwartet, limitation: (r.readback_supported === false) ? (r.evidence_limitation || null) : null, trace_id: e.trace_id }\n  };\n  zeileB64 = Buffer.from(JSON.stringify(zeile), \"utf8\").toString(\"base64\");\n}\nreturn [{ json: {\n  verification_passed: bestanden,\n  verification_result: ergebnis,\n  gate_code: code,\n  reason: grund,\n  verification: {\n    method: e.verification_method,\n    result: ergebnis,\n    contract_ref: {\n      tool_id: e.contract_tool_id,\n      version: e.contract_version,\n      readback_supported: r.found === true ? r.readback_supported : null\n    },\n    limitation: (r.found === true && r.readback_supported === false) ? r.evidence_limitation : null\n  },\n  action_id: e.action_id,\n  context_id: e.context_id,\n  observed_at: beobachtetAm,\n  store_route: ablegen ? e.context_id : \"none\",\n  evidence_row_b64: zeileB64,\n  evidence_id_planned: geplanteId,\n  evidence_id: null,\n  evidence_stored: false,\n  trace_id: e.trace_id\n} }];"
       },
       "id": "030b7570-a05d-4406-9c6b-0a19af936eb9",
       "name": "Nachweis nach D3 pruefen",
@@ -259,6 +259,166 @@
       "position": [
         880,
         0
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.store_route }}",
+                    "operator": {
+                      "operation": "equals",
+                      "type": "string"
+                    },
+                    "rightValue": "privat"
+                  }
+                ],
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                }
+              },
+              "renameOutput": true,
+              "outputKey": "privat"
+            },
+            {
+              "conditions": {
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.store_route }}",
+                    "operator": {
+                      "operation": "equals",
+                      "type": "string"
+                    },
+                    "rightValue": "arbeitgeber_visolva"
+                  }
+                ],
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                }
+              },
+              "renameOutput": true,
+              "outputKey": "arbeitgeber_visolva"
+            },
+            {
+              "conditions": {
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.store_route }}",
+                    "operator": {
+                      "operation": "equals",
+                      "type": "string"
+                    },
+                    "rightValue": "none"
+                  }
+                ],
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                }
+              },
+              "renameOutput": true,
+              "outputKey": "none"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "c22e6b29-e5c1-4f44-b2ac-423227fff53c",
+      "name": "Ablage waehlen",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        1104,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO jarvis_privat.evidence (evidence_id, action_id, evidence_type, verification_method, verification_result, contract_tool_id, contract_version, readback_supported, observed_at, body)\nSELECT r.evidence_id, r.action_id, r.evidence_type, r.verification_method, r.verification_result, r.contract_tool_id, r.contract_version, r.readback_supported, r.observed_at, r.body\nFROM jsonb_to_record(convert_from(decode($1, 'base64'), 'UTF8')::jsonb)\nAS r(evidence_id text, action_id text, evidence_type text, verification_method text, verification_result text, contract_tool_id text, contract_version text, readback_supported boolean, observed_at timestamptz, body jsonb)\nRETURNING evidence_id",
+        "options": {
+          "queryReplacement": "={{ $json.evidence_row_b64 }}"
+        }
+      },
+      "id": "bb58ffa6-8527-47a9-8c55-acb73a7fef3d",
+      "name": "Nachweis speichern jarvis_privat",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        1328,
+        -160
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "oCkj27EiMe96vXvU",
+          "name": "jv_privat_postgres"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO jarvis_visolva.evidence (evidence_id, action_id, evidence_type, verification_method, verification_result, contract_tool_id, contract_version, readback_supported, observed_at, body)\nSELECT r.evidence_id, r.action_id, r.evidence_type, r.verification_method, r.verification_result, r.contract_tool_id, r.contract_version, r.readback_supported, r.observed_at, r.body\nFROM jsonb_to_record(convert_from(decode($1, 'base64'), 'UTF8')::jsonb)\nAS r(evidence_id text, action_id text, evidence_type text, verification_method text, verification_result text, contract_tool_id text, contract_version text, readback_supported boolean, observed_at timestamptz, body jsonb)\nRETURNING evidence_id",
+        "options": {
+          "queryReplacement": "={{ $json.evidence_row_b64 }}"
+        }
+      },
+      "id": "3ae8ccad-4f00-4c2f-aed4-b5520c5eb4d1",
+      "name": "Nachweis speichern jarvis_visolva",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        1328,
+        0
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "7BblU6FbDds3EZBb",
+          "name": "jv_visolva_postgres"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $('Nachweis nach D3 pruefen').first().json;\nconst s = $input.first().json;\nconst aus = Object.assign({}, d, { evidence_id: s.evidence_id, evidence_stored: true });\ndelete aus.evidence_row_b64;\nreturn [{ json: aus }];"
+      },
+      "id": "398fadbc-3787-41df-990f-3940b12acd15",
+      "name": "Ablage bestaetigen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1552,
+        -160
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Ein Nachweis, der nicht gespeichert werden konnte, gilt nicht als erbracht.\nconst d = $('Nachweis nach D3 pruefen').first().json;\nconst f = $input.first().json;\nconst roh = JSON.stringify(f.error || f).slice(0, 500);\nconst aus = Object.assign({}, d, { verification_passed: false, verification_result: 'failed', gate_code: 'evidence_store_failed', reason: 'Nachweis konnte nicht gespeichert werden: ' + roh, evidence_id: null, evidence_stored: false });\naus.verification = Object.assign({}, d.verification, { result: 'failed' });\ndelete aus.evidence_row_b64;\nreturn [{ json: aus }];"
+      },
+      "id": "7915c4f4-77f8-43db-8d87-0ac4ec1c71bd",
+      "name": "Ablage fehlgeschlagen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1552,
+        80
       ]
     }
   ],
@@ -344,6 +504,89 @@
       ]
     },
     "Nachweis nach D3 pruefen": {
+      "main": [
+        [
+          {
+            "node": "Ablage waehlen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ablage waehlen": {
+      "main": [
+        [
+          {
+            "node": "Nachweis speichern jarvis_privat",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Nachweis speichern jarvis_visolva",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Nachweis bestanden?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Nachweis speichern jarvis_privat": {
+      "main": [
+        [
+          {
+            "node": "Ablage bestaetigen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ablage fehlgeschlagen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Nachweis speichern jarvis_visolva": {
+      "main": [
+        [
+          {
+            "node": "Ablage bestaetigen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ablage fehlgeschlagen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ablage bestaetigen": {
+      "main": [
+        [
+          {
+            "node": "Nachweis bestanden?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ablage fehlgeschlagen": {
       "main": [
         [
           {

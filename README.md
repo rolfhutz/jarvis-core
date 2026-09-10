@@ -5,7 +5,7 @@ Persoenliches, arbeitgeberunabhaengiges Repository fuer den schrittweisen Aufbau
 ## Verbindlicher Stand (10.09.2026)
 
 - Phase 0: Spezifikation 1.1.0 freigegeben; Gate am 31.08.2026 geschlossen (A-3/A-4 aus n8n nachgewiesen).
-- Phase 1: Spezifikation 4.0.2 freigegeben; Schritt 1.0 in Umsetzung, offen ist nur noch 1.0.8.
+- Phase 1: Spezifikation 4.0.2 freigegeben; Schritt 1.0 umgesetzt einschliesslich 1.0.8 (drei interne Werkzeuge freigegeben). Phase-1.0-Gate vorbereitet, Freigabe durch Rolf ausstehend.
 - PostgreSQL: Supabase Free fuer Phase 1.0 und den ersten Pilot, Keep-Alive produktiv.
 - Dokumentablage privat: Google Drive, Eingang ueber Drive-Eingangsordner.
 - Dokumentablage `arbeitgeber_visolva`: SharePoint, in Phase 1 nur synthetische Testdokumente.
@@ -30,10 +30,9 @@ tools/             Hilfsskripte
 
 ## Naechster Schritt
 
-Schritt 1.0.8: interne Adapter fuer `docstore_internal.upsert_document`,
-`casestore_internal.upsert_case` und `tasks_internal.create_task` bauen, mit
-Readback nachweisen und im Register freigeben. Danach Phase-1.0-Gate.
-Stand und Uebergabe: `docs/handover/HANDOVER_PHASE_1_0_2026-09-10.md`.
+Gate-Freigabe Phase 1.0 durch Rolf auf Grundlage von
+`docs/evidence/PHASE_1_0_GATE_2026-09-10.md`, danach Schritt 1.1.
+Stand und Uebergabe: `docs/handover/HANDOVER_PHASE_1_0_GATE_2026-09-10.md`.
 
 ## Verbindliche Regeln
 

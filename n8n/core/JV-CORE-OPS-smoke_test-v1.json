@@ -293,7 +293,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const L = $('Lauf vorbereiten').first().json;\nconst f = (id, inp, expect) => ({ json: Object.assign({ case_id: id, expect: expect }, inp, { trace_id: L.trace_id }) });\nconst t = (id, ctx, tid, ver, rc, aid, ast, code) => f(id, { context_id: ctx, tool_id: tid, tool_version: ver, risk_class: rc, approval_id: aid, approval_status: ast, payload: { smoke: true } }, { fields: { invocation_allowed: false, gate_code: code } });\nreturn [\n t('T01', 'privat', 'tasks_internal.create_task', '1.0.0', 'A', '', '', 'tool_not_released'),\n t('T02', 'privat', 'unbekannt.werkzeug', '1.0.0', 'A', '', '', 'tool_not_registered'),\n t('T03', 'privat', 'tasks_internal.create_task', '9.9.9', 'A', '', '', 'tool_version_mismatch'),\n t('T04', 'arbeitgeber_visolva', 'storage_gdrive.move_file', '1.0.0', 'A', '', '', 'context_not_allowed'),\n t('T05', 'privat', 'mail_default.send_message', '1.0.0', 'A', '', '', 'risk_class_downgrade'),\n t('T06', 'privat', 'test.record_approved_action', '1.0.0', 'C', '', '', 'approval_missing'),\n t('T07', 'privat', 'test.record_approved_action', '1.0.0', 'C', 'apr_smoke', 'approved', 'tool_not_released')\n];"
+        "jsCode": "const L = $('Lauf vorbereiten').first().json;\nconst f = (id, inp, expect) => ({ json: Object.assign({ case_id: id, expect: expect }, inp, { trace_id: L.trace_id }) });\nconst t = (id, ctx, tid, ver, rc, aid, ast, code) => f(id, { context_id: ctx, tool_id: tid, tool_version: ver, risk_class: rc, approval_id: aid, approval_status: ast, payload: { smoke: true } }, { fields: { invocation_allowed: false, gate_code: code } });\nreturn [\n t('T01', 'privat', 'drafts_internal.create_draft', '1.0.0', 'A', '', '', 'tool_not_released'),\n t('T02', 'privat', 'unbekannt.werkzeug', '1.0.0', 'A', '', '', 'tool_not_registered'),\n t('T03', 'privat', 'tasks_internal.create_task', '9.9.9', 'A', '', '', 'tool_version_mismatch'),\n t('T04', 'arbeitgeber_visolva', 'storage_gdrive.move_file', '1.0.0', 'A', '', '', 'context_not_allowed'),\n t('T05', 'privat', 'mail_default.send_message', '1.0.0', 'A', '', '', 'risk_class_downgrade'),\n t('T06', 'privat', 'test.record_approved_action', '1.0.0', 'C', '', '', 'approval_missing'),\n t('T07', 'privat', 'test.record_approved_action', '1.0.0', 'C', 'apr_smoke', 'approved', 'tool_not_released')\n];"
       },
       "id": "0abb909f-260d-44f3-b6d9-ca362d89a61a",
       "name": "Faelle Vertragstor",
@@ -418,14 +418,14 @@
     },
     {
       "parameters": {
-        "jsCode": "const L = $('Lauf vorbereiten').first().json;\nconst f = (id, inp, expect) => ({ json: Object.assign({ case_id: id, expect: expect }, inp, { trace_id: L.trace_id }) });\nconst e = (id, tid, m, obs, exp, want) => f(id, { context_id: 'privat', action_id: 'act_smoke_' + L.ts, contract_tool_id: tid, contract_version: '1.0.0', verification_method: m, observed: obs, expected: exp }, want);\nconst ok = { status: 'open', title: 'Test, mit Komma' };\nreturn [\n e('E01', 'tasks_internal.create_task', 'readback', ok, ok, { fields: { verification_passed: true, gate_code: 'verified' }, limitation: 'absent' }),\n e('E02', 'tasks_internal.create_task', 'provider_status', ok, ok, { fields: { verification_passed: false, gate_code: 'readback_required' } }),\n e('E03', 'storage_gdrive.get_file', 'provider_status', { sha: 'abc' }, { sha: 'abc' }, { fields: { verification_passed: true, gate_code: 'verified' }, limitation: 'present' }),\n e('E04', 'storage_gdrive.get_file', 'readback', { sha: 'abc' }, { sha: 'abc' }, { fields: { verification_passed: false, gate_code: 'method_not_accepted' } }),\n e('E05', 'unbekannt.vertrag', 'readback', ok, ok, { fields: { verification_passed: false, gate_code: 'contract_unknown' } }),\n e('E06', 'tasks_internal.create_task', 'readback', { status: 'done' }, { status: 'open' }, { fields: { verification_passed: false, gate_code: 'mismatch' } }),\n e('E07', 'tasks_internal.create_task', 'readback', ok, {}, { fields: { verification_passed: false, gate_code: 'expected_empty' } })\n];"
+        "jsCode": "const L = $('Lauf vorbereiten').first().json;\nconst f = (id, inp, expect) => ({ json: Object.assign({ case_id: id, expect: expect }, inp, { trace_id: L.trace_id }) });\nconst e = (id, tid, m, obs, exp, want) => f(id, { context_id: 'privat', action_id: $('Testaktion jarvis_privat').first().json.action_id, contract_tool_id: tid, contract_version: '1.0.0', verification_method: m, observed: obs, expected: exp }, want);\nconst ok = { status: 'open', title: 'Test, mit Komma' };\nreturn [\n e('E01', 'tasks_internal.create_task', 'readback', ok, ok, { fields: { verification_passed: true, gate_code: 'verified', evidence_stored: true }, limitation: 'absent' }),\n e('E02', 'tasks_internal.create_task', 'provider_status', ok, ok, { fields: { verification_passed: false, gate_code: 'readback_required', evidence_stored: false } }),\n e('E03', 'storage_gdrive.get_file', 'provider_status', { sha: 'abc' }, { sha: 'abc' }, { fields: { verification_passed: true, gate_code: 'verified' }, limitation: 'present' }),\n e('E04', 'storage_gdrive.get_file', 'readback', { sha: 'abc' }, { sha: 'abc' }, { fields: { verification_passed: false, gate_code: 'method_not_accepted' } }),\n e('E05', 'unbekannt.vertrag', 'readback', ok, ok, { fields: { verification_passed: false, gate_code: 'contract_unknown' } }),\n e('E06', 'tasks_internal.create_task', 'readback', { status: 'done' }, { status: 'open' }, { fields: { verification_passed: false, gate_code: 'mismatch', evidence_stored: true } }),\n e('E07', 'tasks_internal.create_task', 'readback', ok, {}, { fields: { verification_passed: false, gate_code: 'expected_empty' } })\n];"
       },
       "id": "db2f1524-d519-4d9e-90b5-bdbca692b6c6",
       "name": "Faelle Nachweis",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2240,
+        2688,
         0
       ]
     },
@@ -536,7 +536,7 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.3,
       "position": [
-        2464,
+        2912,
         0
       ],
       "onError": "continueRegularOutput"
@@ -554,7 +554,7 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.7,
       "position": [
-        2688,
+        2240,
         0
       ],
       "executeOnce": true,
@@ -578,7 +578,7 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.7,
       "position": [
-        2912,
+        2464,
         0
       ],
       "executeOnce": true,
@@ -1152,7 +1152,7 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.7,
       "position": [
-        4928,
+        9408,
         0
       ],
       "executeOnce": true,
@@ -1176,7 +1176,7 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.7,
       "position": [
-        5152,
+        9632,
         0
       ],
       "executeOnce": true,
@@ -1189,17 +1189,1078 @@
     },
     {
       "parameters": {
-        "jsCode": "const L = $('Lauf vorbereiten').first().json;\nconst gruppen = [['Faelle Kontext','Ruf context_resolve'],['Faelle Kennung','Ruf id_generate'],['Faelle Klasse','Ruf action_classify'],['Faelle Vertragstor','Ruf tool_invoke'],['Faelle Nachweis','Ruf evidence_verify'],['Faelle Sperre','Ruf idempotency_guard'],['Faelle Fachprotokoll','Ruf fach_log_write'],['Faelle Technikprotokoll','Ruf tech_log_write'],['Faelle Fehler','Ruf error_handler']];\nconst erg = []; const byId = {}; const paare = {};\nfor (const g of gruppen) {\n  let fs, rs;\n  try { fs = $(g[0]).all(); rs = $(g[1]).all(); } catch (x) { erg.push({ case_id: g[1], pass: false, detail: 'nicht ausgefuehrt: ' + x.message }); continue; }\n  if (fs.length !== rs.length) erg.push({ case_id: g[1], pass: false, detail: 'Faelle ' + fs.length + ' ungleich Ergebnisse ' + rs.length });\n  for (let i = 0; i < fs.length; i++) {\n    const c = fs[i].json; const j = rs[i] ? rs[i].json : {}; const ex = c.expect || {};\n    byId[c.case_id] = j;\n    const txt = JSON.stringify(j); const istFehler = j && j.error !== undefined;\n    let pass = true; let d = '';\n    if (ex.error) { pass = istFehler && txt.indexOf(ex.error) !== -1; d = pass ? 'erwartet abgewiesen' : 'Abweisung fehlt: ' + txt.slice(0, 300); }\n    else if (istFehler) { pass = false; d = 'unerwarteter Fehler: ' + txt.slice(0, 300); }\n    else {\n      const fl = ex.fields || {};\n      for (const k of Object.keys(fl)) { if (JSON.stringify(j[k]) !== JSON.stringify(fl[k])) { pass = false; d += k + '=' + JSON.stringify(j[k]) + ' erwartet ' + JSON.stringify(fl[k]) + '; '; } }\n      const mt = ex.match || {};\n      for (const k of Object.keys(mt)) { if (!new RegExp(mt[k]).test(String(j[k]))) { pass = false; d += k + ' passt nicht zum Muster; '; } }\n      if (ex.same_key_as && (!byId[ex.same_key_as] || j.idempotency_key !== byId[ex.same_key_as].idempotency_key)) { pass = false; d += 'Schluessel nicht deterministisch; '; }\n      if (ex.limitation === 'present' && !(j.verification && j.verification.limitation)) { pass = false; d += 'limitation fehlt; '; }\n      if (ex.limitation === 'absent' && j.verification && j.verification.limitation) { pass = false; d += 'limitation unerwartet; '; }\n      if (ex.pair) { paare[ex.pair] = (paare[ex.pair] || []).concat([j.decision]); }\n      if (!d) d = 'ok';\n    }\n    erg.push({ case_id: c.case_id, pass: pass, detail: d });\n  }\n}\nfor (const p of Object.keys(paare)) { const s = paare[p].slice().sort().join(','); erg.push({ case_id: p + '-parallel', pass: s === 'proceed,skip_duplicate', detail: 'Entscheidungen: ' + s }); }\nconst summary = 'trc_smoke Lauf ' + L.run_id + ': Test, mit Kommas, und Umlauten äöü';\nfor (const x of [['privat', 'Readback jarvis_privat'], ['visolva', 'Readback jarvis_visolva']]) {\n  let r; try { r = $(x[1]).first().json; } catch (e) { erg.push({ case_id: 'RB-' + x[0], pass: false, detail: 'Readback nicht ausgefuehrt' }); continue; }\n  const fach = r.fach || []; const tech = r.tech || []; const err = r.err || [];\n  erg.push({ case_id: 'RB-' + x[0] + '-fachprotokoll', pass: fach.length === 1 && fach[0].summary_de === summary && fach[0].b === 'x, y', detail: JSON.stringify(fach).slice(0, 300) });\n  const ms = tech[0] ? String(tech[0].message_safe) : '';\n  erg.push({ case_id: 'RB-' + x[0] + '-technikprotokoll', pass: tech.length === 1 && ms.indexOf('SMOKE_FAKE_123') === -1 && ms.indexOf('test@example.com') === -1 && ms.indexOf('Smoke-Test, mit Komma') === 0, detail: JSON.stringify(tech).slice(0, 300) });\n  erg.push({ case_id: 'RB-' + x[0] + '-fehlerereignis', pass: err.length === 1, detail: JSON.stringify(err).slice(0, 300) });\n  erg.push({ case_id: 'RB-' + x[0] + '-sperren', pass: r.locks === 1, detail: 'Sperren je Aktion=' + r.locks });\n}\nconst fehl = erg.filter(e => !e.pass);\nreturn [{ json: { gesamtergebnis: fehl.length === 0 ? 'BESTANDEN' : 'NICHT BESTANDEN', lauf: L.run_id, trace_id: L.trace_id, bestanden: erg.length - fehl.length, gesamt: erg.length, nicht_bestanden: fehl, pruefungen: erg } }];"
+        "jsCode": "const L = $('Lauf vorbereiten').first().json;\nconst gruppen = [['Faelle Kontext','Ruf context_resolve'],['Faelle Kennung','Ruf id_generate'],['Faelle Klasse','Ruf action_classify'],['Faelle Vertragstor','Ruf tool_invoke'],['Faelle Nachweis','Ruf evidence_verify'],['Faelle Sperre','Ruf idempotency_guard'],['Faelle Fachprotokoll','Ruf fach_log_write'],['Faelle Technikprotokoll','Ruf tech_log_write'],['Faelle Fehler','Ruf error_handler'],['Faelle Klasse Werkzeuge','Ruf action_classify W'],['Faelle Sperre Werkzeuge','Ruf idempotency_guard W'],['Faelle ADP casestore','Ruf ADP casestore'],['Faelle ADP docstore','Ruf ADP docstore'],['Faelle ADP tasks','Ruf ADP tasks'],['Faelle Nachweis Werkzeuge','Ruf evidence_verify W'],['Faelle Werkzeugaufruf','Ruf tool_invoke W'],['Faelle Fachprotokoll Werkzeuge','Ruf fach_log_write W']];\nconst erg = []; const byId = {}; const paare = {};\nfor (const g of gruppen) {\n  let fs, rs;\n  try { fs = $(g[0]).all(); rs = $(g[1]).all(); } catch (x) { erg.push({ case_id: g[1], pass: false, detail: 'nicht ausgefuehrt: ' + x.message }); continue; }\n  if (fs.length !== rs.length) erg.push({ case_id: g[1], pass: false, detail: 'Faelle ' + fs.length + ' ungleich Ergebnisse ' + rs.length });\n  for (let i = 0; i < fs.length; i++) {\n    const c = fs[i].json; const j = rs[i] ? rs[i].json : {}; const ex = c.expect || {};\n    byId[c.case_id] = j;\n    const txt = JSON.stringify(j); const istFehler = j && j.error !== undefined;\n    let pass = true; let d = '';\n    if (ex.error) { pass = istFehler && txt.indexOf(ex.error) !== -1; d = pass ? 'erwartet abgewiesen' : 'Abweisung fehlt: ' + txt.slice(0, 300); }\n    else if (istFehler) { pass = false; d = 'unerwarteter Fehler: ' + txt.slice(0, 300); }\n    else {\n      const fl = ex.fields || {};\n      for (const k of Object.keys(fl)) { if (JSON.stringify(j[k]) !== JSON.stringify(fl[k])) { pass = false; d += k + '=' + JSON.stringify(j[k]) + ' erwartet ' + JSON.stringify(fl[k]) + '; '; } }\n      const mt = ex.match || {};\n      for (const k of Object.keys(mt)) { if (!new RegExp(mt[k]).test(String(j[k]))) { pass = false; d += k + ' passt nicht zum Muster; '; } }\n      if (ex.same_key_as && (!byId[ex.same_key_as] || j.idempotency_key !== byId[ex.same_key_as].idempotency_key)) { pass = false; d += 'Schluessel nicht deterministisch; '; }\n      if (ex.limitation === 'present' && !(j.verification && j.verification.limitation)) { pass = false; d += 'limitation fehlt; '; }\n      if (ex.limitation === 'absent' && j.verification && j.verification.limitation) { pass = false; d += 'limitation unerwartet; '; }\n      if (ex.pair) { paare[ex.pair] = (paare[ex.pair] || []).concat([j.decision]); }\n      if (!d) d = 'ok';\n    }\n    erg.push({ case_id: c.case_id, pass: pass, detail: d });\n  }\n}\nfor (const p of Object.keys(paare)) { const s = paare[p].slice().sort().join(','); erg.push({ case_id: p + '-parallel', pass: s === 'proceed,skip_duplicate', detail: 'Entscheidungen: ' + s }); }\nconst summary = 'trc_smoke Lauf ' + L.run_id + ': Test, mit Kommas, und Umlauten äöü';\nfor (const x of [['privat', 'Readback jarvis_privat'], ['visolva', 'Readback jarvis_visolva']]) {\n  let r; try { r = $(x[1]).first().json; } catch (e) { erg.push({ case_id: 'RB-' + x[0], pass: false, detail: 'Readback nicht ausgefuehrt' }); continue; }\n  const fach = r.fach || []; const tech = r.tech || []; const err = r.err || [];\n  erg.push({ case_id: 'RB-' + x[0] + '-fachprotokoll', pass: fach.length === 1 && fach[0].summary_de === summary && fach[0].b === 'x, y', detail: JSON.stringify(fach).slice(0, 300) });\n  const ms = tech[0] ? String(tech[0].message_safe) : '';\n  erg.push({ case_id: 'RB-' + x[0] + '-technikprotokoll', pass: tech.length === 1 && ms.indexOf('SMOKE_FAKE_123') === -1 && ms.indexOf('test@example.com') === -1 && ms.indexOf('Smoke-Test, mit Komma') === 0, detail: JSON.stringify(tech).slice(0, 300) });\n  erg.push({ case_id: 'RB-' + x[0] + '-fehlerereignis', pass: err.length === 1, detail: JSON.stringify(err).slice(0, 300) });\n  erg.push({ case_id: 'RB-' + x[0] + '-sperren', pass: r.locks === 1, detail: 'Sperren je Aktion=' + r.locks });\n}\nfor (const x of [['privat', 'Readback Werkzeuge jarvis_privat', 1], ['visolva', 'Readback Werkzeuge jarvis_visolva', 0]]) {\n  let r; try { r = $(x[1]).first().json; } catch (e) { erg.push({ case_id: 'RBW-' + x[0], pass: false, detail: 'Readback Werkzeuge nicht ausgefuehrt' }); continue; }\n  const n = r.nachweise || {};\n  erg.push({ case_id: 'RBW-' + x[0] + '-einmalig', pass: r.faelle === 1 && r.dokumente === 1 && r.aufgaben === 1, detail: 'faelle=' + r.faelle + ' dokumente=' + r.dokumente + ' aufgaben=' + r.aufgaben });\n  erg.push({ case_id: 'RBW-' + x[0] + '-verknuepft', pass: r.verknuepft === 1, detail: 'verknuepft=' + r.verknuepft });\n  erg.push({ case_id: 'RBW-' + x[0] + '-nachweise', pass: n.confirmed === 3 && (n.not_confirmed || 0) === x[2], detail: JSON.stringify(n) });\n  erg.push({ case_id: 'RBW-' + x[0] + '-fachprotokoll', pass: r.fach === 1, detail: 'fach=' + r.fach });\n}\nconst fehl = erg.filter(e => !e.pass);\nreturn [{ json: { gesamtergebnis: fehl.length === 0 ? 'BESTANDEN' : 'NICHT BESTANDEN', lauf: L.run_id, trace_id: L.trace_id, bestanden: erg.length - fehl.length, gesamt: erg.length, nicht_bestanden: fehl, pruefungen: erg } }];"
       },
       "id": "3152abe3-fb7c-4810-8e26-17f1ad217f52",
       "name": "Auswertung",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        5376,
+        10304,
         0
       ],
       "executeOnce": true
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT json_object_agg(tool_id, status) AS stand FROM jarvis_ops.tool_registry WHERE version = '1.0.0' AND tool_id IN ('casestore_internal.upsert_case', 'docstore_internal.upsert_document', 'tasks_internal.create_task')",
+        "options": {}
+      },
+      "id": "719b61f2-2190-4f3b-8a4a-f755c513da06",
+      "name": "Registerstand lesen",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        4928,
+        304
+      ],
+      "executeOnce": true,
+      "credentials": {
+        "postgres": {
+          "id": "oCkj27EiMe96vXvU",
+          "name": "jv_privat_postgres"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH ins AS (\n  INSERT INTO jarvis_privat.action (action_id, schema_version, action_type, tool_id, tool_version, risk_class, risk_class_source, status, priority, idempotency_key, body)\n  SELECT 'act_smoke_' || $1 || '_p_' || v.k, '1.0.0', 'smoke.tool_release', v.t, '1.0.0', 'A', 'tool_default', 'planned', 'low',\n         encode(sha256(convert_to('smk_' || $1 || '_privat_' || v.k, 'UTF8')), 'hex'), jsonb_build_object('zweck', 'Smoke-Test Werkzeugfreigabe 1.0.8')\n  FROM (VALUES ('cse', 'casestore_internal.upsert_case'), ('doc', 'docstore_internal.upsert_document'), ('tsk', 'tasks_internal.create_task')) AS v(k, t)\n  RETURNING tool_id, action_id, idempotency_key\n)\nSELECT json_object_agg(tool_id, json_build_object('action_id', action_id, 'idempotency_key', idempotency_key)) AS aktionen FROM ins",
+        "options": {
+          "queryReplacement": "={{ $('Lauf vorbereiten').first().json.ts }}"
+        }
+      },
+      "id": "c0776db0-e6dc-4e3d-b21c-e644ef022e64",
+      "name": "Werkzeugaktionen jarvis_privat",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        5152,
+        304
+      ],
+      "executeOnce": true,
+      "credentials": {
+        "postgres": {
+          "id": "oCkj27EiMe96vXvU",
+          "name": "jv_privat_postgres"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH ins AS (\n  INSERT INTO jarvis_visolva.action (action_id, schema_version, action_type, tool_id, tool_version, risk_class, risk_class_source, status, priority, idempotency_key, body)\n  SELECT 'act_smoke_' || $1 || '_v_' || v.k, '1.0.0', 'smoke.tool_release', v.t, '1.0.0', 'A', 'tool_default', 'planned', 'low',\n         encode(sha256(convert_to('smk_' || $1 || '_visolva_' || v.k, 'UTF8')), 'hex'), jsonb_build_object('zweck', 'Smoke-Test Werkzeugfreigabe 1.0.8')\n  FROM (VALUES ('cse', 'casestore_internal.upsert_case'), ('doc', 'docstore_internal.upsert_document'), ('tsk', 'tasks_internal.create_task')) AS v(k, t)\n  RETURNING tool_id, action_id, idempotency_key\n)\nSELECT json_object_agg(tool_id, json_build_object('action_id', action_id, 'idempotency_key', idempotency_key)) AS aktionen FROM ins",
+        "options": {
+          "queryReplacement": "={{ $('Lauf vorbereiten').first().json.ts }}"
+        }
+      },
+      "id": "80f5ed66-b889-4cd9-bf57-b808bf8b6f51",
+      "name": "Werkzeugaktionen jarvis_visolva",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        5376,
+        304
+      ],
+      "executeOnce": true,
+      "credentials": {
+        "postgres": {
+          "id": "7BblU6FbDds3EZBb",
+          "name": "jv_visolva_postgres"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const crypto = require('crypto');\nconst L = $('Lauf vorbereiten').first().json;\nconst ALPHABET = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';\nfunction ulid() {\n  let z = ''; let r = Date.now();\n  for (let i = 0; i < 10; i++) { z = ALPHABET[r % 32] + z; r = Math.floor(r / 32); }\n  const b = crypto.randomBytes(16); let s = '';\n  for (let i = 0; i < 16; i++) { s = s + ALPHABET[b[i] % 32]; }\n  return z + s;\n}\nconst sha = (t) => crypto.createHash('sha256').update(t, 'utf8').digest('hex');\nconst jetzt = new Date().toISOString().replace(/[.][0-9]{3}Z$/, 'Z');\nconst producer = { producer_type: 'workflow', producer_id: 'JV-CORE-OPS-smoke_test-v1', producer_version: '1.0.8' };\nconst trace = { trace_id: L.trace_id };\nconst daten = {};\nfor (const ctx of ['privat', 'arbeitgeber_visolva']) {\n  const k = ctx === 'privat' ? 'p' : 'v';\n  const caseId = 'cse_' + ulid();\n  const fall = { schema_version: '1.0.0', case_id: caseId, context_id: ctx, title: 'trc_smoke Vorgang ' + L.run_id + ', mit Komma, äöü', category_key: 'smoke_test', status: 'open', opened_at: jetzt,\n    identifiers: [{ identifier_type: 'reference_number', value_normalized: 'SMK-' + L.ts + '-' + k }], created_at: jetzt, producer: producer, trace: trace };\n  const dok = { schema_version: '1.0.0', document_id: 'doc_' + ulid(), context_id: ctx, status: 'received',\n    intake: { channel: 'manual_upload', adapter_id: 'smoke_test', source_external_id: 'smk_' + L.ts + '_' + k + ', synthetisch', original_filename: 'Smoke Test äöü.pdf', received_at: jetzt, source_event_id: 'evt_smoke_' + L.ts + '_' + k },\n    file: { mime_type: 'application/pdf', size_bytes: 1024, page_count: 1, content_hash: 'sha256:' + sha('smk|' + L.run_id + '|' + ctx) },\n    review: { required: false }, processing_stage: { last_completed: 'intake' }, case_ref: { case_id: caseId, match_method: 'created_new' }, created_at: jetzt, producer: producer, trace: trace };\n  const aufgabe = { schema_version: '1.0.0', task_id: 'tsk_' + ulid(), context_id: ctx, title: 'trc_smoke Aufgabe ' + L.run_id + ', mit Komma, äöü', success_criterion: 'Readback bestaetigt die Anlage, ohne Dublette',\n    actor: 'jarvis', origin: { source_refs: [] }, status: 'open', priority: 'low', idempotency_key: sha('smk_task|' + L.run_id + '|' + ctx), created_at: jetzt, producer: producer, trace: trace };\n  daten[ctx] = { fall: fall, dok: dok, aufgabe: aufgabe, zweite_dokument_id: 'doc_' + ulid(), zweite_aufgaben_id: 'tsk_' + ulid() };\n}\nreturn [{ json: daten }];"
+      },
+      "id": "1e266f68-bf01-4c53-9425-eb7d9bd2fa1d",
+      "name": "Testdaten Werkzeuge",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5600,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const L = $('Lauf vorbereiten').first().json;\nconst f = (id, inp, expect) => ({ json: Object.assign({ case_id: id, expect: expect }, inp, { trace_id: L.trace_id }) });\nconst W = [['cse', 'casestore_internal.upsert_case', 'case.upsert'], ['doc', 'docstore_internal.upsert_document', 'document.upsert'], ['tsk', 'tasks_internal.create_task', 'task.create']];\nconst aus = [];\nfor (const ctx of ['privat', 'arbeitgeber_visolva']) {\n  for (const w of W) {\n    aus.push(f('WK-' + (ctx === 'privat' ? 'p' : 'v') + '-' + w[0], { context_id: ctx, action_type: w[2], tool_id: w[1], tool_version: '1.0.0', manual_escalation: '' },\n      { fields: { risk_class: 'A', risk_class_source: 'tool_default', registered: true, context_allowed: true } }));\n  }\n}\nreturn aus;"
+      },
+      "id": "ac10c00b-8c3d-4e09-9b55-8aa9f7275ad3",
+      "name": "Faelle Klasse Werkzeuge",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5824,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "tWVy6kRzwFMw4lmJ"
+        },
+        "workflowInputs": {
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false,
+          "mappingMode": "defineBelow",
+          "matchingColumns": [],
+          "schema": [
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "context_id",
+              "id": "context_id",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "action_type",
+              "id": "action_type",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "tool_id",
+              "id": "tool_id",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "tool_version",
+              "id": "tool_version",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "manual_escalation",
+              "id": "manual_escalation",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "trace_id",
+              "id": "trace_id",
+              "required": false,
+              "type": "string"
+            }
+          ],
+          "value": {
+            "action_type": "={{ $json.action_type }}",
+            "context_id": "={{ $json.context_id }}",
+            "manual_escalation": "={{ $json.manual_escalation }}",
+            "tool_id": "={{ $json.tool_id }}",
+            "tool_version": "={{ $json.tool_version }}",
+            "trace_id": "={{ $json.trace_id }}"
+          }
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "471da582-13df-4976-a003-ee87fd9f755e",
+      "name": "Ruf action_classify W",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        6048,
+        304
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const L = $('Lauf vorbereiten').first().json;\nconst f = (id, inp, expect) => ({ json: Object.assign({ case_id: id, expect: expect }, inp, { trace_id: L.trace_id }) });\nconst A = { privat: $('Werkzeugaktionen jarvis_privat').first().json.aktionen, arbeitgeber_visolva: $('Werkzeugaktionen jarvis_visolva').first().json.aktionen };\nconst D = $('Testdaten Werkzeuge').first().json;\nconst kurz = (ctx) => ctx === 'privat' ? 'p' : 'v';\nconst aus = [];\nfor (const ctx of ['privat', 'arbeitgeber_visolva']) {\n  for (const tid of Object.keys(A[ctx]).sort()) {\n    const a = A[ctx][tid];\n    aus.push(f('WS-' + kurz(ctx) + '-' + tid.split('.')[0], { context_id: ctx, action_id: a.action_id, idempotency_key: a.idempotency_key, claimed_by: 'smoke_werkzeugfreigabe', ttl_minutes: 30 },\n      { fields: { decision: 'proceed', lock_granted: true } }));\n  }\n}\nreturn aus;"
+      },
+      "id": "ee935ec7-c25d-4bef-9473-e9c1bcec90e8",
+      "name": "Faelle Sperre Werkzeuge",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        6272,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "bpC5dlK2Ez0sVhUj"
+        },
+        "workflowInputs": {
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false,
+          "mappingMode": "defineBelow",
+          "matchingColumns": [],
+          "schema": [
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "context_id",
+              "id": "context_id",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "action_id",
+              "id": "action_id",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "idempotency_key",
+              "id": "idempotency_key",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "claimed_by",
+              "id": "claimed_by",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "ttl_minutes",
+              "id": "ttl_minutes",
+              "required": false,
+              "type": "number"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "trace_id",
+              "id": "trace_id",
+              "required": false,
+              "type": "string"
+            }
+          ],
+          "value": {
+            "action_id": "={{ $json.action_id }}",
+            "claimed_by": "={{ $json.claimed_by }}",
+            "context_id": "={{ $json.context_id }}",
+            "idempotency_key": "={{ $json.idempotency_key }}",
+            "trace_id": "={{ $json.trace_id }}",
+            "ttl_minutes": "={{ $json.ttl_minutes }}"
+          }
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "34f9e445-38da-49bd-8964-3ac488a73f11",
+      "name": "Ruf idempotency_guard W",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        6496,
+        304
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const L = $('Lauf vorbereiten').first().json;\nconst f = (id, inp, expect) => ({ json: Object.assign({ case_id: id, expect: expect }, inp, { trace_id: L.trace_id }) });\nconst A = { privat: $('Werkzeugaktionen jarvis_privat').first().json.aktionen, arbeitgeber_visolva: $('Werkzeugaktionen jarvis_visolva').first().json.aktionen };\nconst D = $('Testdaten Werkzeuge').first().json;\nconst kurz = (ctx) => ctx === 'privat' ? 'p' : 'v';\nconst T = 'casestore_internal.upsert_case';\nconst aus = [];\nfor (const ctx of ['privat', 'arbeitgeber_visolva']) {\n  const a = A[ctx][T].action_id;\n  aus.push(f('WA-' + kurz(ctx) + '-cse-neu', { context_id: ctx, action_id: a, tool_id: T, payload: D[ctx].fall, dry_run: false }, { fields: { status: 'ok', write_outcome: 'created' } }));\n  aus.push(f('WA-' + kurz(ctx) + '-cse-wdh', { context_id: ctx, action_id: a, tool_id: T, payload: D[ctx].fall, dry_run: false }, { fields: { status: 'ok', write_outcome: 'unchanged' } }));\n}\naus.push(f('WA-p-cse-probelauf', { context_id: 'privat', action_id: A.privat[T].action_id, tool_id: T, payload: D.privat.fall, dry_run: true }, { fields: { status: 'dry_run', write_outcome: 'none' } }));\nconst ohneTitel = Object.assign({}, D.privat.fall); delete ohneTitel.title;\naus.push(f('WA-p-cse-ungueltig', { context_id: 'privat', action_id: A.privat[T].action_id, tool_id: T, payload: ohneTitel, dry_run: false }, { error: 'title fehlt' }));\nreturn aus;"
+      },
+      "id": "84afdc54-d355-445f-bb00-1ba02a7f7d3e",
+      "name": "Faelle ADP casestore",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        6720,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "V1fuepKIR20OwgZp"
+        },
+        "workflowInputs": {
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false,
+          "mappingMode": "defineBelow",
+          "matchingColumns": [],
+          "schema": [
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "context_id",
+              "id": "context_id",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "action_id",
+              "id": "action_id",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "tool_id",
+              "id": "tool_id",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "payload",
+              "id": "payload",
+              "required": false,
+              "type": "object"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "dry_run",
+              "id": "dry_run",
+              "required": false,
+              "type": "boolean"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "trace_id",
+              "id": "trace_id",
+              "required": false,
+              "type": "string"
+            }
+          ],
+          "value": {
+            "action_id": "={{ $json.action_id }}",
+            "context_id": "={{ $json.context_id }}",
+            "dry_run": "={{ $json.dry_run }}",
+            "payload": "={{ $json.payload }}",
+            "tool_id": "={{ $json.tool_id }}",
+            "trace_id": "={{ $json.trace_id }}"
+          }
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "3fa60a75-af92-4a23-92e4-fbd0ebbc470a",
+      "name": "Ruf ADP casestore",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        6944,
+        304
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const L = $('Lauf vorbereiten').first().json;\nconst f = (id, inp, expect) => ({ json: Object.assign({ case_id: id, expect: expect }, inp, { trace_id: L.trace_id }) });\nconst A = { privat: $('Werkzeugaktionen jarvis_privat').first().json.aktionen, arbeitgeber_visolva: $('Werkzeugaktionen jarvis_visolva').first().json.aktionen };\nconst D = $('Testdaten Werkzeuge').first().json;\nconst kurz = (ctx) => ctx === 'privat' ? 'p' : 'v';\nconst T = 'docstore_internal.upsert_document';\nconst aus = [];\nfor (const ctx of ['privat', 'arbeitgeber_visolva']) {\n  const a = A[ctx][T].action_id;\n  aus.push(f('WA-' + kurz(ctx) + '-doc-neu', { context_id: ctx, action_id: a, tool_id: T, payload: D[ctx].dok, dry_run: false }, { fields: { status: 'ok', write_outcome: 'created' } }));\n  aus.push(f('WA-' + kurz(ctx) + '-doc-wdh', { context_id: ctx, action_id: a, tool_id: T, payload: D[ctx].dok, dry_run: false }, { fields: { status: 'ok', write_outcome: 'unchanged' } }));\n}\nconst a = A.privat[T].action_id;\nconst dublette = Object.assign({}, D.privat.dok, { document_id: D.privat.zweite_dokument_id });\naus.push(f('WA-p-doc-dublette', { context_id: 'privat', action_id: a, tool_id: T, payload: dublette, dry_run: false }, { error: 'duplicate_content' }));\naus.push(f('WA-p-doc-fremdkontext', { context_id: 'arbeitgeber_visolva', action_id: A.arbeitgeber_visolva[T].action_id, tool_id: T, payload: D.privat.dok, dry_run: false }, { error: 'context_mismatch' }));\nconst ohneDatei = Object.assign({}, D.privat.dok); delete ohneDatei.file;\naus.push(f('WA-p-doc-ungueltig', { context_id: 'privat', action_id: a, tool_id: T, payload: ohneDatei, dry_run: false }, { error: 'file fehlt' }));\naus.push(f('WA-p-doc-status', { context_id: 'privat', action_id: a, tool_id: T, payload: Object.assign({}, D.privat.dok, { status: 'discarded' }), dry_run: false }, { error: 'noch nicht unterstuetzt' }));\nreturn aus;"
+      },
+      "id": "28d92458-829f-4343-ba96-97be018d0be6",
+      "name": "Faelle ADP docstore",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        7168,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "2QdRVAniHgkWjqh2"
+        },
+        "workflowInputs": {
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false,
+          "mappingMode": "defineBelow",
+          "matchingColumns": [],
+          "schema": [
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "context_id",
+              "id": "context_id",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "action_id",
+              "id": "action_id",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "tool_id",
+              "id": "tool_id",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "payload",
+              "id": "payload",
+              "required": false,
+              "type": "object"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "dry_run",
+              "id": "dry_run",
+              "required": false,
+              "type": "boolean"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "trace_id",
+              "id": "trace_id",
+              "required": false,
+              "type": "string"
+            }
+          ],
+          "value": {
+            "action_id": "={{ $json.action_id }}",
+            "context_id": "={{ $json.context_id }}",
+            "dry_run": "={{ $json.dry_run }}",
+            "payload": "={{ $json.payload }}",
+            "tool_id": "={{ $json.tool_id }}",
+            "trace_id": "={{ $json.trace_id }}"
+          }
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "4bddeb9b-b278-4fa0-a046-a53db3cff43c",
+      "name": "Ruf ADP docstore",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        7392,
+        304
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const L = $('Lauf vorbereiten').first().json;\nconst f = (id, inp, expect) => ({ json: Object.assign({ case_id: id, expect: expect }, inp, { trace_id: L.trace_id }) });\nconst A = { privat: $('Werkzeugaktionen jarvis_privat').first().json.aktionen, arbeitgeber_visolva: $('Werkzeugaktionen jarvis_visolva').first().json.aktionen };\nconst D = $('Testdaten Werkzeuge').first().json;\nconst kurz = (ctx) => ctx === 'privat' ? 'p' : 'v';\nconst T = 'tasks_internal.create_task';\nconst aus = [];\nfor (const ctx of ['privat', 'arbeitgeber_visolva']) {\n  const a = A[ctx][T].action_id;\n  aus.push(f('WA-' + kurz(ctx) + '-tsk-neu', { context_id: ctx, action_id: a, tool_id: T, payload: D[ctx].aufgabe, dry_run: false }, { fields: { status: 'ok', write_outcome: 'created' } }));\n  aus.push(f('WA-' + kurz(ctx) + '-tsk-wdh', { context_id: ctx, action_id: a, tool_id: T, payload: D[ctx].aufgabe, dry_run: false }, { fields: { status: 'ok', write_outcome: 'existing' } }));\n}\nconst a = A.privat[T].action_id;\nconst neueId = Object.assign({}, D.privat.aufgabe, { task_id: D.privat.zweite_aufgaben_id });\naus.push(f('WA-p-tsk-neue-id', { context_id: 'privat', action_id: a, tool_id: T, payload: neueId, dry_run: false },\n  { fields: { status: 'ok', write_outcome: 'existing', target_object_ref: { object_type: 'task', object_id: D.privat.aufgabe.task_id, requested_id: D.privat.zweite_aufgaben_id } } }));\naus.push(f('WA-p-tsk-ohne-verantwortung', { context_id: 'privat', action_id: a, tool_id: T, payload: Object.assign({}, D.privat.aufgabe, { actor: 'rolf' }), dry_run: false }, { error: 'assignee fehlt' }));\nreturn aus;"
+      },
+      "id": "a3f7b1f8-28e2-477a-8630-3d6215209be0",
+      "name": "Faelle ADP tasks",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        7616,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "GFTIzQsak9UJVhAj"
+        },
+        "workflowInputs": {
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false,
+          "mappingMode": "defineBelow",
+          "matchingColumns": [],
+          "schema": [
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "context_id",
+              "id": "context_id",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "action_id",
+              "id": "action_id",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "tool_id",
+              "id": "tool_id",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "payload",
+              "id": "payload",
+              "required": false,
+              "type": "object"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "dry_run",
+              "id": "dry_run",
+              "required": false,
+              "type": "boolean"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "trace_id",
+              "id": "trace_id",
+              "required": false,
+              "type": "string"
+            }
+          ],
+          "value": {
+            "action_id": "={{ $json.action_id }}",
+            "context_id": "={{ $json.context_id }}",
+            "dry_run": "={{ $json.dry_run }}",
+            "payload": "={{ $json.payload }}",
+            "tool_id": "={{ $json.tool_id }}",
+            "trace_id": "={{ $json.trace_id }}"
+          }
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "250bf4cf-26bd-4388-8c36-bcfcf44c1af6",
+      "name": "Ruf ADP tasks",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        7840,
+        304
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const L = $('Lauf vorbereiten').first().json;\nconst f = (id, inp, expect) => ({ json: Object.assign({ case_id: id, expect: expect }, inp, { trace_id: L.trace_id }) });\nconst paare = [['Faelle ADP casestore', 'Ruf ADP casestore'], ['Faelle ADP docstore', 'Ruf ADP docstore'], ['Faelle ADP tasks', 'Ruf ADP tasks']];\nconst aus = [];\nfor (const paar of paare) {\n  const fs = $(paar[0]).all();\n  const rs = $(paar[1]).all();\n  for (let i = 0; i < fs.length; i++) {\n    const c = fs[i].json;\n    const r = rs[i] ? rs[i].json : {};\n    if (!/-neu$/.test(c.case_id)) continue;\n    aus.push(f('WN-' + c.case_id.slice(3), { context_id: c.context_id, action_id: c.action_id, contract_tool_id: c.tool_id, contract_version: '1.0.0', verification_method: r.verification_method || 'readback', observed: r.observed || {}, expected: r.expected || {} },\n      { fields: { verification_passed: true, gate_code: 'verified', evidence_stored: true } }));\n    if (c.case_id === 'WA-p-tsk-neu') {\n      const falsch = Object.assign({}, r.expected || {}, { title: 'bewusst falsch, erzwungene Abweichung' });\n      aus.push(f('WN-p-tsk-abweichung', { context_id: c.context_id, action_id: c.action_id, contract_tool_id: c.tool_id, contract_version: '1.0.0', verification_method: 'readback', observed: r.observed || {}, expected: falsch },\n        { fields: { verification_passed: false, gate_code: 'mismatch', evidence_stored: true } }));\n    }\n  }\n}\nreturn aus;"
+      },
+      "id": "035d042c-8d79-43db-823c-a99f54637b38",
+      "name": "Faelle Nachweis Werkzeuge",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        8064,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "UKcnRE0eJzyl8T1V"
+        },
+        "workflowInputs": {
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false,
+          "mappingMode": "defineBelow",
+          "matchingColumns": [],
+          "schema": [
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "context_id",
+              "id": "context_id",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "action_id",
+              "id": "action_id",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "contract_tool_id",
+              "id": "contract_tool_id",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "contract_version",
+              "id": "contract_version",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "verification_method",
+              "id": "verification_method",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "observed",
+              "id": "observed",
+              "required": false,
+              "type": "object"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "expected",
+              "id": "expected",
+              "required": false,
+              "type": "object"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "trace_id",
+              "id": "trace_id",
+              "required": false,
+              "type": "string"
+            }
+          ],
+          "value": {
+            "action_id": "={{ $json.action_id }}",
+            "context_id": "={{ $json.context_id }}",
+            "contract_tool_id": "={{ $json.contract_tool_id }}",
+            "contract_version": "={{ $json.contract_version }}",
+            "expected": "={{ $json.expected }}",
+            "observed": "={{ $json.observed }}",
+            "trace_id": "={{ $json.trace_id }}",
+            "verification_method": "={{ $json.verification_method }}"
+          }
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "8e39d54f-9897-403a-b9b0-3b0ef7ffedd1",
+      "name": "Ruf evidence_verify W",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        8288,
+        304
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const L = $('Lauf vorbereiten').first().json;\nconst f = (id, inp, expect) => ({ json: Object.assign({ case_id: id, expect: expect }, inp, { trace_id: L.trace_id }) });\nconst A = { privat: $('Werkzeugaktionen jarvis_privat').first().json.aktionen, arbeitgeber_visolva: $('Werkzeugaktionen jarvis_visolva').first().json.aktionen };\nconst D = $('Testdaten Werkzeuge').first().json;\nconst kurz = (ctx) => ctx === 'privat' ? 'p' : 'v';\nconst S = $('Registerstand lesen').first().json.stand || {};\nconst W = [['casestore_internal.upsert_case', 'fall', 'unchanged'], ['docstore_internal.upsert_document', 'dok', 'unchanged'], ['tasks_internal.create_task', 'aufgabe', 'existing']];\nconst aus = [];\nfor (const ctx of ['privat', 'arbeitgeber_visolva']) {\n  for (const w of W) {\n    const frei = S[w[0]] === 'approved';\n    aus.push(f('WT-' + kurz(ctx) + '-' + w[0].split('.')[0], { context_id: ctx, tool_id: w[0], tool_version: '1.0.0', risk_class: 'A', approval_id: '', approval_status: '', payload: D[ctx][w[1]], action_id: A[ctx][w[0]].action_id, dry_run: false },\n      frei ? { fields: { invocation_allowed: true, gate_code: 'allowed', status: 'ok', write_outcome: w[2] } } : { fields: { invocation_allowed: false, gate_code: 'tool_not_released' } }));\n  }\n}\nconst frei = S['tasks_internal.create_task'] === 'approved';\naus.push(f('WT-p-ohne-aktion', { context_id: 'privat', tool_id: 'tasks_internal.create_task', tool_version: '1.0.0', risk_class: 'A', approval_id: '', approval_status: '', payload: D.privat.aufgabe, action_id: '', dry_run: false },\n  { fields: { invocation_allowed: false, gate_code: frei ? 'action_id_missing' : 'tool_not_released' } }));\nreturn aus;"
+      },
+      "id": "d19ea4f4-2b9e-448f-8dd5-4d3dc69e90dc",
+      "name": "Faelle Werkzeugaufruf",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        8512,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "ELs6LnRIWKCv04yc"
+        },
+        "workflowInputs": {
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false,
+          "mappingMode": "defineBelow",
+          "matchingColumns": [],
+          "schema": [
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "context_id",
+              "id": "context_id",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "tool_id",
+              "id": "tool_id",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "tool_version",
+              "id": "tool_version",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "risk_class",
+              "id": "risk_class",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "approval_id",
+              "id": "approval_id",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "approval_status",
+              "id": "approval_status",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "payload",
+              "id": "payload",
+              "required": false,
+              "type": "object"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "action_id",
+              "id": "action_id",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "dry_run",
+              "id": "dry_run",
+              "required": false,
+              "type": "boolean"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "trace_id",
+              "id": "trace_id",
+              "required": false,
+              "type": "string"
+            }
+          ],
+          "value": {
+            "action_id": "={{ $json.action_id }}",
+            "approval_id": "={{ $json.approval_id }}",
+            "approval_status": "={{ $json.approval_status }}",
+            "context_id": "={{ $json.context_id }}",
+            "dry_run": "={{ $json.dry_run }}",
+            "payload": "={{ $json.payload }}",
+            "risk_class": "={{ $json.risk_class }}",
+            "tool_id": "={{ $json.tool_id }}",
+            "tool_version": "={{ $json.tool_version }}",
+            "trace_id": "={{ $json.trace_id }}"
+          }
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "0afcaebb-c9fd-4938-84ab-68b77667a9d9",
+      "name": "Ruf tool_invoke W",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        8736,
+        304
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const L = $('Lauf vorbereiten').first().json;\nconst f = (id, inp, expect) => ({ json: Object.assign({ case_id: id, expect: expect }, inp, { trace_id: L.trace_id }) });\nconst A = { privat: $('Werkzeugaktionen jarvis_privat').first().json.aktionen, arbeitgeber_visolva: $('Werkzeugaktionen jarvis_visolva').first().json.aktionen };\nconst D = $('Testdaten Werkzeuge').first().json;\nconst kurz = (ctx) => ctx === 'privat' ? 'p' : 'v';\nconst aus = [];\nfor (const ctx of ['privat', 'arbeitgeber_visolva']) {\n  aus.push(f('WF-' + kurz(ctx), { context_id: ctx, entry_kind: 'smoke_test', actor: 'jarvis', summary_de: 'trc_smoke Werkzeugfreigabe ' + L.run_id + ': Anlage, Readback, Nachweis', action_id: A[ctx]['tasks_internal.create_task'].action_id, task_id: '', event_id: '',\n    body: { release_run: L.run_id, werkzeuge: ['casestore_internal.upsert_case', 'docstore_internal.upsert_document', 'tasks_internal.create_task'] } }, { fields: { status: 'logged' } }));\n}\nreturn aus;"
+      },
+      "id": "e6bc274e-ed01-47c7-8b05-e9dab8c47c78",
+      "name": "Faelle Fachprotokoll Werkzeuge",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        8960,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "8ur7Lc15KEF0Y8M1"
+        },
+        "workflowInputs": {
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false,
+          "mappingMode": "defineBelow",
+          "matchingColumns": [],
+          "schema": [
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "context_id",
+              "id": "context_id",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "entry_kind",
+              "id": "entry_kind",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "actor",
+              "id": "actor",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "summary_de",
+              "id": "summary_de",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "action_id",
+              "id": "action_id",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "task_id",
+              "id": "task_id",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "event_id",
+              "id": "event_id",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "body",
+              "id": "body",
+              "required": false,
+              "type": "object"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "trace_id",
+              "id": "trace_id",
+              "required": false,
+              "type": "string"
+            }
+          ],
+          "value": {
+            "action_id": "={{ $json.action_id }}",
+            "actor": "={{ $json.actor }}",
+            "body": "={{ $json.body }}",
+            "context_id": "={{ $json.context_id }}",
+            "entry_kind": "={{ $json.entry_kind }}",
+            "event_id": "={{ $json.event_id }}",
+            "summary_de": "={{ $json.summary_de }}",
+            "task_id": "={{ $json.task_id }}",
+            "trace_id": "={{ $json.trace_id }}"
+          }
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "c02e17e7-bb33-4f99-b7d4-7db8907a5658",
+      "name": "Ruf fach_log_write W",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        9184,
+        304
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT\n  (SELECT count(*)::int FROM jarvis_privat.\"case\" WHERE body->'trace'->>'trace_id' = $1) AS faelle,\n  (SELECT count(*)::int FROM jarvis_privat.document WHERE body->'trace'->>'trace_id' = $1) AS dokumente,\n  (SELECT count(*)::int FROM jarvis_privat.task WHERE body->'trace'->>'trace_id' = $1) AS aufgaben,\n  (SELECT count(*)::int FROM jarvis_privat.document d JOIN jarvis_privat.\"case\" c ON c.case_id = d.case_id WHERE d.body->'trace'->>'trace_id' = $1 AND c.body->'trace'->>'trace_id' = $1) AS verknuepft,\n  (SELECT coalesce(json_object_agg(verification_result, n), '{}'::json) FROM (SELECT verification_result, count(*)::int AS n FROM jarvis_privat.evidence WHERE action_id LIKE $2 GROUP BY 1) x) AS nachweise,\n  (SELECT count(*)::int FROM jarvis_privat.action_log WHERE body->>'release_run' = $3) AS fach",
+        "options": {
+          "queryReplacement": "={{ $('Lauf vorbereiten').first().json.trace_id }},{{ 'act_smoke_' + $('Lauf vorbereiten').first().json.ts + '_p_%' }},{{ $('Lauf vorbereiten').first().json.run_id }}"
+        }
+      },
+      "id": "98eb20e6-02d4-4c08-9e42-6ee15763bf64",
+      "name": "Readback Werkzeuge jarvis_privat",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        9856,
+        0
+      ],
+      "executeOnce": true,
+      "credentials": {
+        "postgres": {
+          "id": "oCkj27EiMe96vXvU",
+          "name": "jv_privat_postgres"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT\n  (SELECT count(*)::int FROM jarvis_visolva.\"case\" WHERE body->'trace'->>'trace_id' = $1) AS faelle,\n  (SELECT count(*)::int FROM jarvis_visolva.document WHERE body->'trace'->>'trace_id' = $1) AS dokumente,\n  (SELECT count(*)::int FROM jarvis_visolva.task WHERE body->'trace'->>'trace_id' = $1) AS aufgaben,\n  (SELECT count(*)::int FROM jarvis_visolva.document d JOIN jarvis_visolva.\"case\" c ON c.case_id = d.case_id WHERE d.body->'trace'->>'trace_id' = $1 AND c.body->'trace'->>'trace_id' = $1) AS verknuepft,\n  (SELECT coalesce(json_object_agg(verification_result, n), '{}'::json) FROM (SELECT verification_result, count(*)::int AS n FROM jarvis_visolva.evidence WHERE action_id LIKE $2 GROUP BY 1) x) AS nachweise,\n  (SELECT count(*)::int FROM jarvis_visolva.action_log WHERE body->>'release_run' = $3) AS fach",
+        "options": {
+          "queryReplacement": "={{ $('Lauf vorbereiten').first().json.trace_id }},{{ 'act_smoke_' + $('Lauf vorbereiten').first().json.ts + '_v_%' }},{{ $('Lauf vorbereiten').first().json.run_id }}"
+        }
+      },
+      "id": "0dc104ce-2833-410d-badc-f39e30608b84",
+      "name": "Readback Werkzeuge jarvis_visolva",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        10080,
+        0
+      ],
+      "executeOnce": true,
+      "credentials": {
+        "postgres": {
+          "id": "7BblU6FbDds3EZBb",
+          "name": "jv_visolva_postgres"
+        }
+      }
     }
   ],
   "connections": {
@@ -1302,17 +2363,6 @@
         ]
       ]
     },
-    "Ruf tool_invoke": {
-      "main": [
-        [
-          {
-            "node": "Faelle Nachweis",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Faelle Nachweis": {
       "main": [
         [
@@ -1324,33 +2374,11 @@
         ]
       ]
     },
-    "Ruf evidence_verify": {
-      "main": [
-        [
-          {
-            "node": "Testaktion jarvis_privat",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Testaktion jarvis_privat": {
       "main": [
         [
           {
             "node": "Testaktion jarvis_visolva",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Testaktion jarvis_visolva": {
-      "main": [
-        [
-          {
-            "node": "Faelle Sperre",
             "type": "main",
             "index": 0
           }
@@ -1434,17 +2462,6 @@
         ]
       ]
     },
-    "Ruf error_handler": {
-      "main": [
-        [
-          {
-            "node": "Readback jarvis_privat",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Readback jarvis_privat": {
       "main": [
         [
@@ -1456,7 +2473,293 @@
         ]
       ]
     },
+    "Ruf tool_invoke": {
+      "main": [
+        [
+          {
+            "node": "Testaktion jarvis_privat",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Testaktion jarvis_visolva": {
+      "main": [
+        [
+          {
+            "node": "Faelle Nachweis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ruf evidence_verify": {
+      "main": [
+        [
+          {
+            "node": "Faelle Sperre",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ruf error_handler": {
+      "main": [
+        [
+          {
+            "node": "Registerstand lesen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Registerstand lesen": {
+      "main": [
+        [
+          {
+            "node": "Werkzeugaktionen jarvis_privat",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Werkzeugaktionen jarvis_privat": {
+      "main": [
+        [
+          {
+            "node": "Werkzeugaktionen jarvis_visolva",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Werkzeugaktionen jarvis_visolva": {
+      "main": [
+        [
+          {
+            "node": "Testdaten Werkzeuge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Testdaten Werkzeuge": {
+      "main": [
+        [
+          {
+            "node": "Faelle Klasse Werkzeuge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Faelle Klasse Werkzeuge": {
+      "main": [
+        [
+          {
+            "node": "Ruf action_classify W",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ruf action_classify W": {
+      "main": [
+        [
+          {
+            "node": "Faelle Sperre Werkzeuge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Faelle Sperre Werkzeuge": {
+      "main": [
+        [
+          {
+            "node": "Ruf idempotency_guard W",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ruf idempotency_guard W": {
+      "main": [
+        [
+          {
+            "node": "Faelle ADP casestore",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Faelle ADP casestore": {
+      "main": [
+        [
+          {
+            "node": "Ruf ADP casestore",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ruf ADP casestore": {
+      "main": [
+        [
+          {
+            "node": "Faelle ADP docstore",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Faelle ADP docstore": {
+      "main": [
+        [
+          {
+            "node": "Ruf ADP docstore",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ruf ADP docstore": {
+      "main": [
+        [
+          {
+            "node": "Faelle ADP tasks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Faelle ADP tasks": {
+      "main": [
+        [
+          {
+            "node": "Ruf ADP tasks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ruf ADP tasks": {
+      "main": [
+        [
+          {
+            "node": "Faelle Nachweis Werkzeuge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Faelle Nachweis Werkzeuge": {
+      "main": [
+        [
+          {
+            "node": "Ruf evidence_verify W",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ruf evidence_verify W": {
+      "main": [
+        [
+          {
+            "node": "Faelle Werkzeugaufruf",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Faelle Werkzeugaufruf": {
+      "main": [
+        [
+          {
+            "node": "Ruf tool_invoke W",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ruf tool_invoke W": {
+      "main": [
+        [
+          {
+            "node": "Faelle Fachprotokoll Werkzeuge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Faelle Fachprotokoll Werkzeuge": {
+      "main": [
+        [
+          {
+            "node": "Ruf fach_log_write W",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ruf fach_log_write W": {
+      "main": [
+        [
+          {
+            "node": "Readback jarvis_privat",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
     "Readback jarvis_visolva": {
+      "main": [
+        [
+          {
+            "node": "Readback Werkzeuge jarvis_privat",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Readback Werkzeuge jarvis_privat": {
+      "main": [
+        [
+          {
+            "node": "Readback Werkzeuge jarvis_visolva",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Readback Werkzeuge jarvis_visolva": {
       "main": [
         [
           {

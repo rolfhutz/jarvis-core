@@ -25,6 +25,7 @@ sondern aus Abhaengigkeiten:
 | `0012_context_login_search_path.sql` | fester Suchpfad der Login-Benutzer | 0011 |
 | `0013_tool_registry_schema.sql` | Werkzeugregister zur Laufzeit, Freigabeprotokoll, Kontextregeln | 0002 |
 | `0014_tool_registry_seed.sql` | **erzeugt** aus den Registerdateien, prueft sich selbst | 0013 |
+| `0015_case_number_seq_sync.sql` | Vorgangsnummern-Zaehler je Kontext und Jahr auf hoechste vergebene Nummer anheben (Befund B-1, 1.0.8), prueft sich selbst | 0005, 0006 |
 
 Die Rechtevergabe steht bewusst am Ende: `REVOKE ALL ON ALL TABLES IN SCHEMA`
 wirkt nur auf Tabellen, die zu diesem Zeitpunkt bereits vorhanden sind. Wuerde
@@ -64,7 +65,8 @@ done
 (Supabase). Ohne sie kann niemand die Kontextrollen annehmen und die Abnahme
 1.0-A1 bis 1.0-A4 ist nicht pruefbar. Begruendung im Kopf der Datei.
 
-Wiederholbarkeit: `0001`, `0009`, `0010`, `0011`, `0012` und `0014` sind ohne Weiteres erneut ausfuehrbar.
+Wiederholbarkeit: `0001`, `0009`, `0010`, `0011`, `0012`, `0014` und `0015` sind ohne Weiteres erneut ausfuehrbar.
+`0015` hebt Zaehler nur an, senkt sie nie ab.
 `0014` wird ausschliesslich mit `tools/render_tool_registry.py` erzeugt und bricht ab,
 wenn eine bereits geladene Werkzeugversion eine abweichende Definition haette.
 `0002` bis `0008` legen Objekte an und scheitern beim zweiten Lauf gegen
