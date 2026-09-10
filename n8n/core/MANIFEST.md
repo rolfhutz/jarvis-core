@@ -1,34 +1,36 @@
 # Manifest der JARVIS-Kernworkflows
 
-**Stand:** 10. September 2026, nach Schritt 1.0.8
+**Stand:** 10. September 2026, nach Schritt 1.0.8 und Entscheidung TS-23
 **Instanz:** persoenliches n8n-Projekt `Rolf Hutz` (n8n Cloud)
 **Grundlage:** SPEC_PHASE_0 1.1.0, SPEC_PHASE_1 4.0.2, ADR-002, ADR-003, E-1, E-2
 
 | Workflow | ID | Status in n8n | Datenbank | Aenderung in 1.0.8 |
 |---|---|---|---|---|
-| `JV-CORE-SUB-context_resolve-v1` | `5IyWf1dH3huijkKG` | Entwurf, getestet | nein | unveraendert |
-| `JV-CORE-SUB-id_generate-v1` | `ZtUV95YyMA5IlgoE` | Entwurf, getestet | nein | unveraendert |
-| `JV-CORE-SUB-idempotency_guard-v1` | `bpC5dlK2Ez0sVhUj` | Entwurf, getestet | ja | unveraendert |
-| `JV-CORE-SUB-action_classify-v1` | `tWVy6kRzwFMw4lmJ` | Entwurf, getestet | ja | unveraendert |
-| `JV-CORE-SUB-tool_invoke-v1` | `ELs6LnRIWKCv04yc` | Entwurf, getestet | ja | Verteiler auf Adapter (E-1), `action_id`, `dry_run`, `adapter_error` |
-| `JV-CORE-SUB-evidence_verify-v1` | `UKcnRE0eJzyl8T1V` | Entwurf, getestet | ja | Nachweis wird gespeichert, Rueckgabe `evidence_id` (E-2) |
-| `JV-CORE-SUB-fach_log_write-v1` | `8ur7Lc15KEF0Y8M1` | Entwurf, getestet | ja | unveraendert |
-| `JV-CORE-SUB-tech_log_write-v1` | `Bp7m62faVmLZ6VdB` | Entwurf, getestet | ja | unveraendert |
-| `JV-CORE-SUB-error_handler-v1` | `HOTikshdbkz6dk9q` | Entwurf, getestet | ja | unveraendert |
+| `JV-CORE-SUB-context_resolve-v1` | `5IyWf1dH3huijkKG` | **veroeffentlicht** | nein | unveraendert |
+| `JV-CORE-SUB-id_generate-v1` | `ZtUV95YyMA5IlgoE` | **veroeffentlicht** | nein | unveraendert |
+| `JV-CORE-SUB-idempotency_guard-v1` | `bpC5dlK2Ez0sVhUj` | **veroeffentlicht** | ja | unveraendert |
+| `JV-CORE-SUB-action_classify-v1` | `tWVy6kRzwFMw4lmJ` | **veroeffentlicht** | ja | unveraendert |
+| `JV-CORE-SUB-tool_invoke-v1` | `ELs6LnRIWKCv04yc` | **veroeffentlicht** | ja | Verteiler auf Adapter (E-1), `action_id`, `dry_run`, `adapter_error` |
+| `JV-CORE-SUB-evidence_verify-v1` | `UKcnRE0eJzyl8T1V` | **veroeffentlicht** | ja | Nachweis wird gespeichert, Rueckgabe `evidence_id` (E-2) |
+| `JV-CORE-SUB-fach_log_write-v1` | `8ur7Lc15KEF0Y8M1` | **veroeffentlicht** | ja | unveraendert |
+| `JV-CORE-SUB-tech_log_write-v1` | `Bp7m62faVmLZ6VdB` | **veroeffentlicht** | ja | unveraendert |
+| `JV-CORE-SUB-error_handler-v1` | `HOTikshdbkz6dk9q` | **veroeffentlicht** | ja | unveraendert |
 | `JV-CORE-ADP-tasks_internal-v1` | `GFTIzQsak9UJVhAj` | **veroeffentlicht**, Aufrufer beschraenkt | ja | neu |
 | `JV-CORE-ADP-docstore_internal-v1` | `2QdRVAniHgkWjqh2` | **veroeffentlicht**, Aufrufer beschraenkt | ja | neu |
 | `JV-CORE-ADP-casestore_internal-v1` | `V1fuepKIR20OwgZp` | **veroeffentlicht**, Aufrufer beschraenkt | ja | neu |
 | `JV-CORE-OPS-db_keepalive-v1` | `DTRoxZvPQ5BPhM4o` | **veroeffentlicht** | ja | unveraendert |
 | `JV-CORE-OPS-smoke_test-v1` | `P5IlT5RlGBK1aqiO` | Entwurf, manuell | ja | 47 Knoten, 104 Pruefungen |
 
-"Entwurf" heisst in n8n: nicht veroeffentlicht. Subworkflows werden nur von
-Elternworkflows aufgerufen und brauchen keinen eigenen Ausloeser.
+"Entwurf" heisst in n8n: nicht veroeffentlicht. Seit TS-23 (10.09.2026) sind alle Kern-Subworkflows
+und Adapter veroeffentlicht; nur der Smoke-Test bleibt Entwurf (manueller Ausloeser).
 
 **Adapter:** Aufruferbeschraenkung `callerPolicy: workflowsFromAList`,
 `callerIds: ELs6LnRIWKCv04yc,P5IlT5RlGBK1aqiO` (nur `tool_invoke` und Smoke-Test, A-6).
-Die Adapter muessen veroeffentlicht sein, sonst scheitert der verschachtelte Aufruf aus
-`tool_invoke` (Befund 1.0.8, Lauf 22175; Ursache ungeklaert, TS-23). **Aenderungen an
-einem Adapter wirken erst nach erneutem Veroeffentlichen.**
+**Regel TS-23:** In n8n 2.x sind unveroeffentlichte Entwuerfe fuer Elternworkflows nicht
+sichtbar (Befund 1.0.8, Lauf 22175). Deshalb sind alle `SUB` und `ADP` veroeffentlicht.
+**Eine Aenderung wirkt erst nach erneutem Veroeffentlichen.** Ablauf je Aenderung:
+aendern → veroeffentlichen → pruefen, dass veroeffentlichte Version = aktueller Stand
+(`versionId` = `activeVersionId`) → Smoke-Test → Export ins Repo.
 
 ## Credentials
 
@@ -60,6 +62,7 @@ Kennwoerter nur im Passwortmanager und im Credential-Speicher von n8n.
 | Werkzeugfreigabe 1.0.8, Smoke-Test 104/104 (22087, 22265) | `docs/evidence/PHASE_1_0_8_TOOL_RELEASE_2026-09-10.md` |
 | 1.0-A8 / 1.0.8-A10 Wiederherstellung, 14 Workflows | `docs/evidence/PHASE_1_0_8_RESTORE_2026-09-10.md` |
 | Phase-1.0-Gate | `docs/evidence/PHASE_1_0_GATE_2026-09-10.md` |
+| TS-23: Smoke-Test nach Veroeffentlichung aller SUB, 104/104 (22371) | `docs/decisions/DECISION_LOG.md` |
 
 ## Bekannte Grenzen
 

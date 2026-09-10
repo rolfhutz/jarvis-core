@@ -66,7 +66,8 @@ Prüfumfang: 39 Prüfungen aus 1.0 (C, I, K, T, E, G, F, L, H), 48 Werkzeugprüf
    visolva 4 = V-2026-0004. 0015 wurde vor der Ablage im Repo eingespielt; die Repo-Datei ist
    mit dem in Supabase registrierten Text identisch (bis auf den abschliessenden Zeilenumbruch).
 2. **Verschachtelter Aufruf unveröffentlichter Adapter** (22175): „Workflow is not active and
-   cannot be executed“. Nach Veröffentlichung bestanden (22265). Ursache offen (TS-23).
+   cannot be executed“. Nach Veröffentlichung bestanden (22265). *Nachtrag 10.09.2026:* Ursache ist das Veröffentlichungsmodell
+   von n8n 2.x (Entwürfe für Elternworkflows nicht sichtbar); Regel TS-23 entschieden und umgesetzt, siehe DECISION_LOG.
 3. **B-2 Export verlor die Aufruferbeschränkung.** `normalize_n8n_export.py` behielt
    `callerPolicy`, entfernte `callerIds`; `check_restore.py` prüfte keine Einstellungen.
    Behoben, Gegenprobe in `PHASE_1_0_8_RESTORE_2026-09-10.md`.
