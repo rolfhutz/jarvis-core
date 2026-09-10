@@ -9,6 +9,7 @@ freigegebenen Referenztests bleiben zusaetzlich in den Spezifikationspaketen.
 |---|---|
 | `db/phase_1_0_acceptance.py` | Abnahmekriterien 1.0-A1 bis 1.0-A7 aus Spezifikation 7.3, praktisch gegen eine laufende Instanz |
 | `db/readback_phase_1_0.py` | Readback: liest Schemata, Tabellen, Rollen, Bedingungen, Trigger, Indizes und Registereintraege aus dem Systemkatalog zurueck |
+| `db/p1_1a_runtime_config.sql` | Schritt 1.1a: Rechte, Anhalteregel, Ausnahmeliste, Registerstand nach 0016 bis 0019; 21 Pruefungen, rollt sich selbst zurueck |
 | `db/i05_new_action_same_source.sql` | Testfall I-05 gegen die Zielinstanz; rollt sich selbst zurueck, Ergebnis steht in der Fehlermeldung |
 
 ```bash

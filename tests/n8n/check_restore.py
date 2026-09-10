@@ -10,7 +10,8 @@ Ablauf (siehe n8n/core/README.md):
 
 Geprueft: Workflow-IDs, Knotenmenge, Parameter, Verbindungen, Credential-Zuordnung
 je Knoten, Kontext-Credential passend zum Knotennamen, Subworkflow-Verweise,
-Aufruferbeschraenkung (settings.callerPolicy, settings.callerIds; seit 1.0.8).
+Aufruferbeschraenkung (settings.callerPolicy, settings.callerIds; seit 1.0.8) und
+Binaermodus (settings.binaryMode; seit 1.1, TS-24).
 """
 import argparse, json, glob, sys
 ap = argparse.ArgumentParser()
@@ -48,6 +49,11 @@ for name, s in sorted(src.items()):
         if soll is not None:
             zaehler['aufruferregeln'] += 1
             if soll != ist: fehler.append(name + ': settings.' + key + ' weicht ab: ' + repr(ist))
+    # TS-24: Binaermodus
+    soll = (s.get('settings') or {}).get('binaryMode'); ist = (o.get('settings') or {}).get('binaryMode')
+    if soll is not None:
+        zaehler['binaermodus'] = zaehler.get('binaermodus', 0) + 1
+        if soll != ist: fehler.append(name + ': settings.binaryMode weicht ab: ' + repr(ist))
     if json.dumps(s['connections'], sort_keys=True) != json.dumps(o['connections'], sort_keys=True):
         fehler.append(name + ': Verbindungen weichen ab')
     for n in o['nodes']:

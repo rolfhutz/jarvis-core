@@ -19,7 +19,9 @@ Die verbindliche Entscheidung zu Infrastruktur und Ablage steht in
 ```text
 spec/              freigegebene Spezifikationspakete
 docs/decisions/    verbindliche Architektur- und Umsetzungsentscheidungen
+config/            Laufzeitkonfiguration (nur env-Verweise) und Schemata
 config/templates/  Konfigurationsvorlagen ohne echte IDs oder Geheimnisse
+docs/plan/         freigegebene Vorlagen je Umsetzungsschritt
 db/migrations/     versionierte SQL-Migrationen
 n8n/core/          exportierte JARVIS-Kernworkflows
 n8n/phase-1/       exportierte Workflows des Dokumentenassistenten
@@ -30,9 +32,11 @@ tools/             Hilfsskripte
 
 ## Naechster Schritt
 
-Schritt 1.1 (Eingang und Normalisierung) mit den aus G-1 uebertragenen Abnahmefaellen.
+Schritt 1.1 (Eingang und Normalisierung) nach der freigegebenen Vorlage
+`docs/plan/PHASE_1_1_FREIGABEVORLAGE_2026-09-10.md`. Bauabschnitt 1.1a
+(Migrationen 0016 bis 0019, Eingangskonfiguration, Registernachtrag) liegt als
+Entwurf vor und ist **noch nicht in Supabase eingespielt**.
 Kern-Subworkflows sind veroeffentlicht (TS-23); Aenderungsablauf in `n8n/core/README.md`.
-Stand und Uebergabe: `docs/handover/HANDOVER_PHASE_1_0_GATE_2026-09-10.md`.
 
 ## Verbindliche Regeln
 

@@ -1,0 +1,68 @@
+{
+  "config_version": "1.0.0",
+  "generated_note": "Schritt 1.1, Entscheidung 1.1-E4. Enthaelt keine Ordner-IDs, keine Konten, keine Zugangsdaten. Werte der env-Verweise stehen ausschliesslich in n8n-Variablen. Laden nur ueber tools/render_intake_config.py.",
+  "contexts": {
+    "privat": {
+      "document_settings": {
+        "storage_adapter_id": "storage_gdrive",
+        "storage_container_ref": null,
+        "inbox_ref": "env:JV_PRIVAT_INBOX_FOLDER_ID",
+        "working_ref": "env:JV_PRIVAT_WORKING_FOLDER_ID",
+        "archive_root_ref": "env:JV_PRIVAT_ARCHIVE_ROOT_ID",
+        "drafts_ref": "env:JV_PRIVAT_DRAFTS_FOLDER_ID",
+        "reports_ref": "env:JV_PRIVAT_REPORTS_FOLDER_ID",
+        "allowed_mime_types": ["application/pdf", "image/jpeg", "image/png", "image/tiff"],
+        "max_file_size_mb": 50,
+        "ocr_provider_allowlist": [],
+        "ocr_min_characters": 200,
+        "ocr_min_mean_confidence": "0.600",
+        "fingerprint_max_hamming": 6,
+        "synthetic_marker_required": false,
+        "synthetic_marker_prefix": null,
+        "quarantine_halt_threshold": 5,
+        "quarantine_halt_window_minutes": 60
+      },
+      "source_bindings": [
+        {
+          "binding_key": "privat_drive_inbox",
+          "adapter_id": "storage_gdrive",
+          "channel": "drive_inbox",
+          "location_ref": "env:JV_PRIVAT_INBOX_FOLDER_ID",
+          "purpose": "intake",
+          "enabled": true
+        }
+      ]
+    },
+    "arbeitgeber_visolva": {
+      "document_settings": {
+        "storage_adapter_id": "storage_sharepoint",
+        "storage_container_ref": "env:JV_VISOLVA_SP_DRIVE_ID",
+        "inbox_ref": "env:JV_VISOLVA_INBOX_FOLDER_ID",
+        "working_ref": "env:JV_VISOLVA_WORKING_FOLDER_ID",
+        "archive_root_ref": "env:JV_VISOLVA_ARCHIVE_ROOT_ID",
+        "drafts_ref": "env:JV_VISOLVA_DRAFTS_FOLDER_ID",
+        "reports_ref": "env:JV_VISOLVA_REPORTS_FOLDER_ID",
+        "allowed_mime_types": ["application/pdf", "image/jpeg", "image/png", "image/tiff"],
+        "max_file_size_mb": 50,
+        "ocr_provider_allowlist": [],
+        "ocr_min_characters": 200,
+        "ocr_min_mean_confidence": "0.600",
+        "fingerprint_max_hamming": 6,
+        "synthetic_marker_required": true,
+        "synthetic_marker_prefix": "SYNTH_",
+        "quarantine_halt_threshold": 5,
+        "quarantine_halt_window_minutes": 60
+      },
+      "source_bindings": [
+        {
+          "binding_key": "visolva_sharepoint_inbox",
+          "adapter_id": "storage_sharepoint",
+          "channel": "drive_inbox",
+          "location_ref": "env:JV_VISOLVA_INBOX_FOLDER_ID",
+          "purpose": "intake",
+          "enabled": true
+        }
+      ]
+    }
+  }
+}

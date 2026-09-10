@@ -40,7 +40,9 @@ SECRET_PATTERNS = [
     re.compile(r"\bsk-[A-Za-z0-9]{20,}"),
 ]
 KEEP_SETTINGS = {"executionOrder", "callerPolicy", "callerIds", "errorWorkflow", "saveDataSuccessExecution",
-                 "saveDataErrorExecution", "saveManualExecutions", "executionTimeout", "timezone"}
+                 "saveDataErrorExecution", "saveManualExecutions", "executionTimeout", "timezone",
+                 # TS-24 (Schritt 1.1): Umgang mit Binaerdaten muss die Wiederherstellung ueberleben.
+                 "binaryMode"}
 DROP_NODE_KEYS = {"webhookId"}
 
 
@@ -114,6 +116,10 @@ def self_test() -> None:
                                                           "callerIds": "ELs6,P5Il", "availableInMCP": True})
     assert normalize(adp, "2026-09-10")["settings"] == {"executionOrder": "v1", "callerPolicy": "workflowsFromAList",
                                                          "callerIds": "ELs6,P5Il"}
+    # TS-24: binaryMode muss den Export ueberleben (ab Dateieingang 1.1).
+    binw = dict(raw, name="JV-P1-SUB-demo-v1", settings={"executionOrder": "v1", "binaryMode": "separate",
+                                                        "availableInMCP": True})
+    assert normalize(binw, "2026-09-10")["settings"] == {"executionOrder": "v1", "binaryMode": "separate"}
     assert "instanceId" not in json.dumps(out)
     bad = dict(raw, nodes=[{"name": "X", "parameters": {"url": "postgres://u:p@h/db"}}])
     try:
@@ -126,7 +132,7 @@ def self_test() -> None:
         raise AssertionError("Namenskonvention nicht geprueft")
     except ExportError:
         pass
-    print("SELBSTTEST BESTANDEN: 4 Pruefungen, 2 Gegenproben")
+    print("SELBSTTEST BESTANDEN: 5 Pruefungen, 2 Gegenproben")
 
 
 def main() -> int:

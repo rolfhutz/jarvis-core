@@ -13,9 +13,22 @@ Ablauf:
     4. Migration 0014 erzeugen: Einfuegen ohne Ueberschreiben, danach eine
        Pruefung, die bei abweichender Definition derselben Version abbricht.
 
+Registersaetze (seit Schritt 1.1):
+    0014  Phase-0- und Phase-1-Register (unveraendert, Ausgabe bytegleich)
+    0018  Nachtrag 1.1 nach ADR-001 und Entscheidung 1.1-E1
+
+Doppelpflege wird ueber alle Dateien aller Saetze geprueft. Innerhalb eines
+Satzes ist jede tool_id eindeutig; ueber Saetze hinweg darf eine tool_id nur
+mit einer anderen Version erneut vorkommen (neue Vertragsversion).
+Im Satz 0018 muss jeder input_schema_ref und output_schema_ref auf eine
+vorhandene Datei zeigen: zuerst im Paket der Registerdatei, dann im Phase-1-,
+dann im Phase-0-Paket.
+
 Aufrufe:
     python3 tools/render_tool_registry.py --out db/migrations/
+    python3 tools/render_tool_registry.py --set 0018 --out db/migrations/
     python3 tools/render_tool_registry.py --check db/migrations/0014_tool_registry_seed.sql
+    python3 tools/render_tool_registry.py --set 0018 --check db/migrations/0018_tool_registry_seed_1_1.sql
     python3 tools/render_tool_registry.py --self-test
 
 Das Skript stellt keine Datenbankverbindung her und fuehrt nichts aus.
@@ -36,11 +49,32 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 PHASE0 = ROOT / "spec" / "phase-0" / "jarvis-phase-0"
 PHASE1 = ROOT / "spec" / "phase-1" / "jarvis-phase-1"
 SCHEMA_DIR = PHASE0 / "schemas"
-REGISTRY_FILES = [
-    PHASE0 / "registry" / "tool_registry.json",
-    PHASE1 / "registry" / "tool_registry_phase1.json",
-]
-OUTPUT_NAME = "0014_tool_registry_seed.sql"
+NACHTRAG_1_1 = ROOT / "spec" / "phase-1" / "nachtrag-1.1"
+SETS = {
+    "0014": {
+        "files": [
+            PHASE0 / "registry" / "tool_registry.json",
+            PHASE1 / "registry" / "tool_registry_phase1.json",
+        ],
+        "output": "0014_tool_registry_seed.sql",
+        "title": "JARVIS Phase 1.0 - Migration 0014 - Befuellung des Werkzeugregisters",
+        # Bestand: Phase-0-Werkzeuge ausserhalb von Phase 1 (z. B. mail_default)
+        # verweisen auf noch nicht vorhandene Schemata. Fuer Phase 1 prueft das
+        # validate_phase1.py. Keine nachtraegliche Verschaerfung dieses Satzes.
+        "check_refs": False,
+    },
+    "0018": {
+        "files": [NACHTRAG_1_1 / "registry" / "tool_registry_phase1_1.json"],
+        "output": "0018_tool_registry_seed_1_1.sql",
+        "title": "JARVIS Phase 1.1 - Migration 0018 - Werkzeugregister Nachtrag 1.1 (ADR-001, 1.1-E1)",
+        "check_refs": True,
+    },
+}
+DEFAULT_SET = "0014"
+# Rueckwaertskompatibel: bisherige Namen zeigen auf den Satz 0014.
+REGISTRY_FILES = SETS[DEFAULT_SET]["files"]
+OUTPUT_NAME = SETS[DEFAULT_SET]["output"]
+SCHEMA_ROOTS_FALLBACK = [PHASE1, PHASE0]
 
 # Felder, die im Status nicht Teil der unveraenderlichen Definition sind.
 MUTABLE_FIELDS = {"status"}
@@ -104,11 +138,42 @@ def sql_bool(value: bool) -> str:
     return "true" if value else "false"
 
 
-def load_tools() -> list[dict]:
+def _resolve_schema_ref(registry_file: pathlib.Path, ref: str) -> pathlib.Path | None:
+    package = registry_file.parent.parent
+    for base in [package] + SCHEMA_ROOTS_FALLBACK:
+        candidate = (base / ref).resolve()
+        if ROOT not in candidate.parents:
+            continue
+        if candidate.is_file():
+            return candidate
+    return None
+
+
+def _all_files() -> list[pathlib.Path]:
+    return [f for key in sorted(SETS) for f in SETS[key]["files"]]
+
+
+def check_global_duplicates() -> None:
+    """(tool_id, version) ist ueber alle Saetze eindeutig."""
+    seen: dict[tuple[str, str], str] = {}
+    for path in _all_files():
+        doc = json.loads(path.read_text(encoding="utf-8"))
+        rel = path.relative_to(ROOT).as_posix()
+        for tool in doc["tools"]:
+            key = (tool["tool_id"], tool["version"])
+            if key in seen:
+                raise RenderError(f"Doppelpflege: {key[0]}@{key[1]} steht in {seen[key]} und {rel}")
+            seen[key] = rel
+
+
+def load_tools(set_key: str = DEFAULT_SET) -> list[dict]:
+    if set_key not in SETS:
+        raise RenderError(f"Unbekannter Registersatz: {set_key}")
     validator = _validator()
+    check_global_duplicates()
     seen: dict[str, str] = {}
     rows = []
-    for path in REGISTRY_FILES:
+    for path in SETS[set_key]["files"]:
         raw = path.read_bytes()
         doc = json.loads(raw.decode("utf-8"))
         errors = sorted(validator.iter_errors(doc), key=lambda e: list(e.path))
@@ -122,6 +187,9 @@ def load_tools() -> list[dict]:
             if tid in seen:
                 raise RenderError(f"Doppelpflege: {tid} steht in {seen[tid]} und {rel}")
             seen[tid] = rel
+            for field in ("input_schema_ref", "output_schema_ref"):
+                if SETS[set_key]["check_refs"] and _resolve_schema_ref(path, tool[field]) is None:
+                    raise RenderError(f"{tid}@{tool['version']}: {field} {tool[field]!r} ist nicht aufloesbar")
             canon = canonical_definition(tool)
             rows.append({
                 "tool": tool,
@@ -133,15 +201,15 @@ def load_tools() -> list[dict]:
     return rows
 
 
-def render(rows: list[dict]) -> str:
+def render(rows: list[dict], set_key: str = DEFAULT_SET) -> str:
     out = [
         "-- =====================================================================",
-        "-- JARVIS Phase 1.0 - Migration 0014 - Befuellung des Werkzeugregisters",
+        "-- " + SETS[set_key]["title"],
         "--",
         "-- ERZEUGT durch tools/render_tool_registry.py. Nicht von Hand bearbeiten.",
         "-- Quelle:",
     ]
-    for f in REGISTRY_FILES:
+    for f in SETS[set_key]["files"]:
         out.append(f"--   {f.relative_to(ROOT).as_posix()}")
     out += [
         "--",
@@ -226,7 +294,17 @@ def self_test() -> None:
     # Gegenprobe: schemawidriger Eintrag wird abgewiesen
     bad = {"registry_version": "1.0.0", "tools": [dict(rows[0]["tool"], external_effect="financial", risk_class_default="A")]}
     assert list(_validator().iter_errors(bad)), "Schemaverstoss nicht erkannt"
-    print(f"SELBSTTEST BESTANDEN: {len(rows)} Werkzeuge, 5 Gegenproben")
+    # Satz 0018: gleiche tool_id mit neuer Version ist zulaessig, gleiche Version nicht
+    rows18 = load_tools("0018")
+    assert render(rows18, "0018").count("INSERT INTO jarvis_ops.tool_registry") == len(rows18)
+    ids14 = {(r["tool"]["tool_id"], r["tool"]["version"]) for r in rows}
+    ids18 = {(r["tool"]["tool_id"], r["tool"]["version"]) for r in rows18}
+    assert not ids14 & ids18, "Version doppelt ueber Saetze"
+    # Gegenprobe: nicht aufloesbarer Schemaverweis wird erkannt
+    reg_file = SETS["0018"]["files"][0]
+    assert _resolve_schema_ref(reg_file, "schemas/tools/gibt_es_nicht.json") is None
+    assert _resolve_schema_ref(reg_file, "../../../../etc/passwd") is None
+    print(f"SELBSTTEST BESTANDEN: {len(rows)} + {len(rows18)} Werkzeuge, 7 Gegenproben")
 
 
 def main() -> int:
@@ -234,12 +312,13 @@ def main() -> int:
     ap.add_argument("--out", type=pathlib.Path)
     ap.add_argument("--check", type=pathlib.Path)
     ap.add_argument("--self-test", action="store_true")
+    ap.add_argument("--set", default=DEFAULT_SET, choices=sorted(SETS))
     a = ap.parse_args()
     try:
         if a.self_test:
             self_test()
             return 0
-        sql = render(load_tools())
+        sql = render(load_tools(a.set), a.set)
         if a.check:
             if a.check.read_text(encoding="utf-8") != sql:
                 print("ABWEICHUNG: Migration entspricht nicht den Registerdateien. Neu erzeugen.")
@@ -248,7 +327,7 @@ def main() -> int:
             return 0
         if a.out:
             a.out.mkdir(parents=True, exist_ok=True)
-            target = a.out / OUTPUT_NAME
+            target = a.out / SETS[a.set]["output"]
             target.write_text(sql, encoding="utf-8")
             print(f"geschrieben: {target}")
             return 0

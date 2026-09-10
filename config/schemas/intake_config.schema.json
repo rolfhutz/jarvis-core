@@ -1,0 +1,110 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://jarvis.local/schemas/config/intake_config.schema.json",
+  "title": "JARVIS Eingangskonfiguration je Kontext",
+  "description": "Laufzeitkonfiguration fuer Schritt 1.1 (Entscheidung 1.1-E4). Enthaelt ausschliesslich env-Verweise, keine Ordner-IDs, keine Konten, keine Zugangsdaten. Wird mit tools/render_intake_config.py in jarvis_ops geladen. Version 1.0.0.",
+  "type": "object",
+  "properties": {
+    "config_version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+    "generated_note": { "type": "string" },
+    "contexts": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": { "pattern": "^[a-z][a-z0-9_]{2,31}$" },
+      "additionalProperties": { "$ref": "#/$defs/context" }
+    }
+  },
+  "required": ["config_version", "contexts"],
+  "additionalProperties": false,
+  "$defs": {
+    "env_ref": {
+      "type": "string",
+      "pattern": "^env:JV_[A-Z0-9_]{3,60}$",
+      "description": "Name einer n8n-Variable. Der Wert steht nie im Repository."
+    },
+    "context": {
+      "type": "object",
+      "properties": {
+        "document_settings": { "$ref": "#/$defs/document_settings" },
+        "source_bindings": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/source_binding" },
+          "minItems": 1
+        }
+      },
+      "required": ["document_settings", "source_bindings"],
+      "additionalProperties": false
+    },
+    "document_settings": {
+      "type": "object",
+      "properties": {
+        "storage_adapter_id": { "type": "string", "pattern": "^[a-z][a-z0-9_]{2,63}$" },
+        "storage_container_ref": {
+          "oneOf": [ { "$ref": "#/$defs/env_ref" }, { "type": "null" } ],
+          "description": "Nur fuer Speicher mit Container, z. B. SharePoint-Bibliothek. Google Drive: null."
+        },
+        "inbox_ref": { "$ref": "#/$defs/env_ref" },
+        "working_ref": { "$ref": "#/$defs/env_ref" },
+        "archive_root_ref": { "$ref": "#/$defs/env_ref" },
+        "drafts_ref": { "$ref": "#/$defs/env_ref" },
+        "reports_ref": { "$ref": "#/$defs/env_ref" },
+        "allowed_mime_types": {
+          "type": "array",
+          "items": { "type": "string", "enum": ["application/pdf", "image/jpeg", "image/png", "image/tiff"] },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "max_file_size_mb": { "type": "integer", "minimum": 1, "maximum": 200 },
+        "ocr_provider_allowlist": {
+          "type": "array",
+          "items": { "type": "string", "pattern": "^[a-z][a-z0-9_]{2,63}$" },
+          "uniqueItems": true,
+          "description": "Positivliste nach Spezifikation 10.4. Leer heisst: keine OCR-Uebermittlung zulaessig (fail closed)."
+        },
+        "ocr_min_characters": { "type": "integer", "minimum": 1 },
+        "ocr_min_mean_confidence": {
+          "type": "string",
+          "pattern": "^(0\\.[0-9]{3}|1\\.000)$",
+          "description": "Zeichenfolge mit drei Nachkommastellen, keine Gleitkommazahl."
+        },
+        "fingerprint_max_hamming": { "type": "integer", "minimum": 0, "maximum": 64 },
+        "synthetic_marker_required": { "type": "boolean" },
+        "synthetic_marker_prefix": { "type": ["string", "null"], "pattern": "^[A-Z][A-Z0-9_]{1,15}$" },
+        "quarantine_halt_threshold": { "type": "integer", "minimum": 1 },
+        "quarantine_halt_window_minutes": { "type": "integer", "minimum": 1 }
+      },
+      "required": [
+        "storage_adapter_id", "storage_container_ref", "inbox_ref", "working_ref", "archive_root_ref",
+        "drafts_ref", "reports_ref", "allowed_mime_types", "max_file_size_mb", "ocr_provider_allowlist",
+        "ocr_min_characters", "ocr_min_mean_confidence", "fingerprint_max_hamming",
+        "synthetic_marker_required", "synthetic_marker_prefix",
+        "quarantine_halt_threshold", "quarantine_halt_window_minutes"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "description": "Wer die Synthetik-Kennzeichnung verlangt, muss das Praefix nennen (1.1-E6).",
+          "if": { "properties": { "synthetic_marker_required": { "const": true } } },
+          "then": { "properties": { "synthetic_marker_prefix": { "type": "string" } } }
+        }
+      ]
+    },
+    "source_binding": {
+      "type": "object",
+      "properties": {
+        "binding_key": { "type": "string", "pattern": "^[a-z][a-z0-9_]{2,63}$" },
+        "adapter_id": { "type": "string", "pattern": "^[a-z][a-z0-9_]{2,63}$" },
+        "channel": { "type": "string", "enum": ["drive_inbox", "scan", "mobile_photo", "manual_upload", "api"] },
+        "location_ref": { "$ref": "#/$defs/env_ref" },
+        "purpose": {
+          "type": "string",
+          "enum": ["intake", "probe"],
+          "description": "probe nur fuer den Nachweis K-07; nur probe-Bindungen duerfen denselben Ort teilen."
+        },
+        "enabled": { "type": "boolean" }
+      },
+      "required": ["binding_key", "adapter_id", "channel", "location_ref", "purpose", "enabled"],
+      "additionalProperties": false
+    }
+  }
+}
