@@ -26,6 +26,10 @@ sondern aus Abhaengigkeiten:
 | `0013_tool_registry_schema.sql` | Werkzeugregister zur Laufzeit, Freigabeprotokoll, Kontextregeln | 0002 |
 | `0014_tool_registry_seed.sql` | **erzeugt** aus den Registerdateien, prueft sich selbst | 0013 |
 | `0015_case_number_seq_sync.sql` | Vorgangsnummern-Zaehler je Kontext und Jahr auf hoechste vergebene Nummer anheben (Befund B-1, 1.0.8), prueft sich selbst | 0005, 0006 |
+| `0016_intake_runtime_tables.sql` | Eingang 1.1: `context_document_settings`, `source_binding` (Anhalten nur im eigenen Kontext, Aufheben nur Administrator), `intake_exception` (K-07, append-only) | 0001, 0002 |
+| `0017_intake_config_seed.sql` | **erzeugt** aus `config/intake_config.json` (`tools/render_intake_config.py`), prueft sich selbst | 0016 |
+| `0018_tool_registry_seed_1_1.sql` | **erzeugt** aus dem Registernachtrag 1.1 (`tools/render_tool_registry.py --set 0018`), prueft sich selbst | 0013 |
+| `0019_deprecate_storage_gdrive_get_file_1_0_0.sql` | `storage_gdrive.get_file@1.0.0` auf `deprecated` mit Nachweisverweis 1.1-E1, prueft sich selbst | 0014, 0018 |
 
 Die Rechtevergabe steht bewusst am Ende: `REVOKE ALL ON ALL TABLES IN SCHEMA`
 wirkt nur auf Tabellen, die zu diesem Zeitpunkt bereits vorhanden sind. Wuerde
@@ -65,11 +69,13 @@ done
 (Supabase). Ohne sie kann niemand die Kontextrollen annehmen und die Abnahme
 1.0-A1 bis 1.0-A4 ist nicht pruefbar. Begruendung im Kopf der Datei.
 
-Wiederholbarkeit: `0001`, `0009`, `0010`, `0011`, `0012`, `0014` und `0015` sind ohne Weiteres erneut ausfuehrbar.
+Wiederholbarkeit: `0001`, `0009`, `0010`, `0011`, `0012`, `0014`, `0015`, `0017`, `0018` und `0019` sind ohne Weiteres erneut ausfuehrbar.
+`0017` setzt Konfigurationsfelder auf den Stand der Datei, laesst den Laufzeitzustand (`halted_at`) unberuehrt
+und deaktiviert Bindungen, die nicht mehr in der Datei stehen.
 `0015` hebt Zaehler nur an, senkt sie nie ab.
 `0014` wird ausschliesslich mit `tools/render_tool_registry.py` erzeugt und bricht ab,
 wenn eine bereits geladene Werkzeugversion eine abweichende Definition haette.
-`0002` bis `0008` legen Objekte an und scheitern beim zweiten Lauf gegen
+`0002` bis `0008`, `0013` und `0016` legen Objekte an und scheitern beim zweiten Lauf gegen
 dieselbe Instanz — beabsichtigt, weil ein stiller zweiter Lauf gefaehrlicher
 waere als ein Fehler.
 
