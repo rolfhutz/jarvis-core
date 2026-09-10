@@ -5,7 +5,7 @@ Persoenliches, arbeitgeberunabhaengiges Repository fuer den schrittweisen Aufbau
 ## Verbindlicher Stand (10.09.2026)
 
 - Phase 0: Spezifikation 1.1.0 freigegeben; Gate am 31.08.2026 geschlossen (A-3/A-4 aus n8n nachgewiesen).
-- Phase 1: Spezifikation 4.0.2 freigegeben; Schritt 1.0 umgesetzt einschliesslich 1.0.8 (drei interne Werkzeuge freigegeben). Phase-1.0-Gate vorbereitet, Freigabe durch Rolf ausstehend.
+- Phase 1: Spezifikation 4.0.2 freigegeben; Schritt 1.0 abgeschlossen, Phase-1.0-Gate am 10.09.2026 freigegeben (G-1: Restumfang an 1.1/1.2 uebertragen). Drei interne Werkzeuge `approved`.
 - PostgreSQL: Supabase Free fuer Phase 1.0 und den ersten Pilot, Keep-Alive produktiv.
 - Dokumentablage privat: Google Drive, Eingang ueber Drive-Eingangsordner.
 - Dokumentablage `arbeitgeber_visolva`: SharePoint, in Phase 1 nur synthetische Testdokumente.
@@ -30,8 +30,8 @@ tools/             Hilfsskripte
 
 ## Naechster Schritt
 
-Gate-Freigabe Phase 1.0 durch Rolf auf Grundlage von
-`docs/evidence/PHASE_1_0_GATE_2026-09-10.md`, danach Schritt 1.1.
+Schritt 1.1 (Eingang und Normalisierung) mit den aus G-1 uebertragenen Abnahmefaellen.
+Kern-Subworkflows sind veroeffentlicht (TS-23); Aenderungsablauf in `n8n/core/README.md`.
 Stand und Uebergabe: `docs/handover/HANDOVER_PHASE_1_0_GATE_2026-09-10.md`.
 
 ## Verbindliche Regeln
