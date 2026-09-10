@@ -7,6 +7,7 @@ Keine Geheimnisse oder echte Dokumentdaten einchecken.
 |---|---|
 | `render_phase1_tables.py` | Rendert die Phase-1-Erweiterungstabellen (Spezifikation 7.2) aus `db/templates/` je Kontext |
 | `render_tool_registry.py` | Validiert beide Registerdateien und erzeugt Migration 0014 fuer `jarvis_ops.tool_registry` |
+| `normalize_n8n_export.py` | Bereinigt n8n-Exporte fuer `n8n/core/`, prueft Namenskonvention und bricht bei moeglichen Geheimnissen ab |
 
 Das Werkzeug uebernimmt Schemaname, Kontextkennung und Datenbankbenutzer
 ausschliesslich aus der Kontextkonfiguration und prueft sie gegen dieselben

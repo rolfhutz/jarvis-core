@@ -1,115 +1,378 @@
 {
+  "id": "UKcnRE0eJzyl8T1V",
   "name": "JV-CORE-SUB-evidence_verify-v1",
   "nodes": [
     {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "context_id"
+            },
+            {
+              "name": "action_id"
+            },
+            {
+              "name": "contract_tool_id"
+            },
+            {
+              "name": "contract_version"
+            },
+            {
+              "name": "verification_method"
+            },
+            {
+              "name": "observed",
+              "type": "object"
+            },
+            {
+              "name": "expected",
+              "type": "object"
+            },
+            {
+              "name": "trace_id"
+            }
+          ]
+        }
+      },
       "id": "0f99edb7-8f37-4c21-a06e-a76caea8e208",
       "name": "Aufruf durch Elternworkflow",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1.2,
-      "position": [0, 0],
-      "parameters": {
-        "inputSource": "workflowInputs",
-        "workflowInputs": {
-          "values": [
-            { "name": "context_id", "type": "string" },
-            { "name": "action_id", "type": "string" },
-            { "name": "contract_tool_id", "type": "string" },
-            { "name": "contract_version", "type": "string" },
-            { "name": "readback_supported", "type": "boolean" },
-            { "name": "verification_method", "type": "string" },
-            { "name": "observed", "type": "object" },
-            { "name": "expected", "type": "object" },
-            { "name": "trace_id", "type": "string" }
-          ]
-        }
-      }
+      "position": [
+        0,
+        0
+      ]
     },
     {
-      "id": "ef7e06a6-1443-4e56-89bd-5999012f07df",
-      "name": "Nachweis nach D3 pruefen",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [220, 0],
       "parameters": {
-        "mode": "runOnceForAllItems",
-        "language": "javaScript",
-        "jsCode": "const METHODEN = [\"readback\", \"provider_receipt\", \"provider_status\", \"none\"];\nconst KONTEXTE = [\"privat\", \"arbeitgeber_visolva\"];\nconst ergebnis = [];\n\nfor (const item of $input.all()) {\n  const kontext = item.json.context_id;\n  const methode = item.json.verification_method;\n  const readbackMoeglich = item.json.readback_supported === true;\n  const beobachtet = item.json.observed || {};\n  const erwartet = item.json.expected || {};\n\n  if (KONTEXTE.indexOf(kontext) === -1) {\n    throw new Error(\"evidence_verify_invalid_input: context_id nicht im Register\");\n  }\n  if (METHODEN.indexOf(methode) === -1) {\n    throw new Error(\"evidence_verify_invalid_input: verification_method unzulaessig\");\n  }\n  if (!item.json.action_id) {\n    throw new Error(\"evidence_verify_invalid_input: action_id fehlt\");\n  }\n\n  let bestanden = false;\n  let grund = \"\";\n  let ergebniswert = \"failed\";\n\n  if (readbackMoeglich && methode !== \"readback\") {\n    grund = \"readback_required: Ein unabhaengiger Readback ist moeglich und damit verpflichtend (D3).\";\n  } else if (methode === \"none\") {\n    grund = \"no_verification: Ohne Nachweis gilt die Aktion nicht als erfolgreich.\";\n  } else {\n    const schluessel = Object.keys(erwartet);\n    let abweichung = \"\";\n    for (const k of schluessel) {\n      if (JSON.stringify(beobachtet[k]) !== JSON.stringify(erwartet[k])) {\n        abweichung = k;\n        break;\n      }\n    }\n    if (schluessel.length === 0) {\n      grund = \"expected_empty: Ohne erwarteten Zielzustand ist kein Abgleich moeglich.\";\n    } else if (abweichung) {\n      grund = \"mismatch: Feld \" + abweichung + \" weicht vom erwarteten Zustand ab.\";\n    } else {\n      bestanden = true;\n      ergebniswert = \"verified\";\n      grund = \"\";\n    }\n  }\n\n  ergebnis.push({ json: {\n    verification_passed: bestanden,\n    verification_result: ergebniswert,\n    verification_method: methode,\n    readback_supported: readbackMoeglich,\n    reason: grund,\n    action_id: item.json.action_id,\n    contract_tool_id: item.json.contract_tool_id || null,\n    contract_version: item.json.contract_version || null,\n    context_id: kontext,\n    observed_at: new Date().toISOString(),\n    trace_id: item.json.trace_id || null\n  } });\n}\nreturn ergebnis;"
-      }
-    },
-    {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.verification_passed }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
       "id": "56948351-25fe-4fe6-8e95-8556113bdef8",
       "name": "Nachweis bestanden?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
-      "position": [440, 0],
-      "parameters": {
-        "conditions": {
-          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
-          "conditions": [
-            {
-              "leftValue": "={{ $json.verification_passed }}",
-              "operator": { "type": "boolean", "operation": "true", "singleValue": true }
-            }
-          ],
-          "combinator": "and"
-        }
-      }
+      "position": [
+        1104,
+        0
+      ]
     },
     {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a1",
+              "name": "status",
+              "value": "verified",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
       "id": "59cb09a7-c1f1-4ee4-a098-35620c7959f9",
       "name": "Nachweis bestaetigt",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.5,
-      "position": [660, -80],
-      "parameters": {
-        "mode": "manual",
-        "includeOtherFields": true,
-        "assignments": {
-          "assignments": [
-            { "id": "a1", "name": "status", "value": "verified", "type": "string" }
-          ]
-        }
-      }
+      "position": [
+        1328,
+        -80
+      ]
     },
     {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a1",
+              "name": "status",
+              "value": "verification_failed",
+              "type": "string"
+            },
+            {
+              "id": "a2",
+              "name": "action_status_allowed",
+              "value": "failed",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
       "id": "39bf51aa-3223-4e6f-aa51-d56c61a43973",
       "name": "Nachweis verweigert",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.5,
-      "position": [660, 80],
+      "position": [
+        1328,
+        80
+      ]
+    },
+    {
       "parameters": {
-        "mode": "manual",
-        "includeOtherFields": true,
-        "assignments": {
-          "assignments": [
-            { "id": "a1", "name": "status", "value": "verification_failed", "type": "string" },
-            { "id": "a2", "name": "action_status_allowed", "value": "failed", "type": "string" }
+        "jsCode": "const KONTEXTE = [\"privat\", \"arbeitgeber_visolva\"];\nconst alle = $input.all();\nif (alle.length !== 1) {\n  throw new Error(\"evidence_verify_invalid_input: genau ein Aufruf je Ausfuehrung erwartet, erhalten \" + alle.length);\n}\nconst e = alle[0].json;\nif (KONTEXTE.indexOf(e.context_id) === -1) {\n  throw new Error(\"evidence_verify_invalid_input: context_id nicht im Register\");\n}\nif (!e.action_id) {\n  throw new Error(\"evidence_verify_invalid_input: action_id fehlt\");\n}\nif (!/^[a-z][a-z0-9_]*\\.[a-z][a-z0-9_]*$/.test(String(e.contract_tool_id || \"\"))) {\n  throw new Error(\"evidence_verify_invalid_input: contract_tool_id fehlt oder ist ungueltig\");\n}\nif (!/^[0-9]+\\.[0-9]+\\.[0-9]+$/.test(String(e.contract_version || \"\"))) {\n  throw new Error(\"evidence_verify_invalid_input: contract_version fehlt oder ist ungueltig\");\n}\nif (!/^[a-z_]+$/.test(String(e.verification_method || \"\"))) {\n  throw new Error(\"evidence_verify_invalid_input: verification_method fehlt oder ist ungueltig\");\n}\nreturn [{ json: {\n  context_id: e.context_id,\n  action_id: e.action_id,\n  contract_tool_id: e.contract_tool_id,\n  contract_version: e.contract_version,\n  verification_method: e.verification_method,\n  observed: e.observed || {},\n  expected: e.expected || {},\n  trace_id: e.trace_id || null\n} }];"
+      },
+      "id": "43c91049-040e-4f95-b8f4-b2aca41d1e7e",
+      "name": "Eingabe pruefen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.context_id }}",
+                    "operator": {
+                      "operation": "equals",
+                      "type": "string"
+                    },
+                    "rightValue": "privat"
+                  }
+                ],
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                }
+              }
+            },
+            {
+              "conditions": {
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.context_id }}",
+                    "operator": {
+                      "operation": "equals",
+                      "type": "string"
+                    },
+                    "rightValue": "arbeitgeber_visolva"
+                  }
+                ],
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                }
+              }
+            }
           ]
+        },
+        "options": {}
+      },
+      "id": "050cc435-f3dc-4e8c-8420-9e00cae7bc5d",
+      "name": "Kontext waehlen",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        448,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT (r.tool_id IS NOT NULL) AS found, r.readback_supported, r.accepted_methods, r.evidence_limitation FROM (SELECT 1) AS eins LEFT JOIN jarvis_ops.tool_registry r ON r.tool_id = $1 AND r.version = $2",
+        "options": {
+          "queryReplacement": "={{ $json.contract_tool_id }},{{ $json.contract_version }}"
+        }
+      },
+      "id": "b6689d98-0501-4419-8773-7e91a6c1aede",
+      "name": "Vertrag lesen als jv_privat_user",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        672,
+        -96
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "oCkj27EiMe96vXvU",
+          "name": "jv_privat_postgres"
         }
       }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT (r.tool_id IS NOT NULL) AS found, r.readback_supported, r.accepted_methods, r.evidence_limitation FROM (SELECT 1) AS eins LEFT JOIN jarvis_ops.tool_registry r ON r.tool_id = $1 AND r.version = $2",
+        "options": {
+          "queryReplacement": "={{ $json.contract_tool_id }},{{ $json.contract_version }}"
+        }
+      },
+      "id": "09e14487-54f9-4fa4-87e0-520ffb609495",
+      "name": "Vertrag lesen als jv_visolva_user",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        672,
+        112
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "7BblU6FbDds3EZBb",
+          "name": "jv_visolva_postgres"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Entscheidung D3: Die Nachweisstrategie kommt ausschliesslich aus jarvis_ops.tool_registry.\n// Angaben des Aufrufers zur Readback-Faehigkeit werden nicht beruecksichtigt.\nconst e = $('Eingabe pruefen').first().json;\nconst r = $input.first().json;\nconst beobachtet = e.observed || {};\nconst erwartet = e.expected || {};\nlet code = \"\";\nlet grund = \"\";\nlet bestanden = false;\nif (r.found !== true) {\n  code = \"contract_unknown\"; grund = \"Werkzeugvertrag \" + e.contract_tool_id + \"@\" + e.contract_version + \" ist nicht im Register\";\n} else if (r.readback_supported === true && e.verification_method !== \"readback\") {\n  code = \"readback_required\"; grund = \"Readback ist laut Register moeglich und damit verpflichtend (D3)\";\n} else if ((r.accepted_methods || []).indexOf(e.verification_method) === -1) {\n  code = \"method_not_accepted\"; grund = \"Methode \" + e.verification_method + \" ist im Vertrag nicht zugelassen\";\n} else {\n  const schluessel = Object.keys(erwartet);\n  let abweichung = \"\";\n  for (const k of schluessel) {\n    if (JSON.stringify(beobachtet[k]) !== JSON.stringify(erwartet[k])) { abweichung = k; break; }\n  }\n  if (schluessel.length === 0) {\n    code = \"expected_empty\"; grund = \"Ohne erwarteten Zielzustand ist kein Abgleich moeglich\";\n  } else if (abweichung) {\n    code = \"mismatch\"; grund = \"Feld \" + abweichung + \" weicht vom erwarteten Zustand ab\";\n  } else {\n    code = \"verified\"; bestanden = true;\n  }\n}\nconst ergebnis = bestanden ? \"verified\" : \"failed\";\nreturn [{ json: {\n  verification_passed: bestanden,\n  verification_result: ergebnis,\n  gate_code: code,\n  reason: grund,\n  verification: {\n    method: e.verification_method,\n    result: ergebnis,\n    contract_ref: {\n      tool_id: e.contract_tool_id,\n      version: e.contract_version,\n      readback_supported: r.found === true ? r.readback_supported : null\n    },\n    limitation: (r.found === true && r.readback_supported === false) ? r.evidence_limitation : null\n  },\n  action_id: e.action_id,\n  context_id: e.context_id,\n  observed_at: new Date().toISOString(),\n  trace_id: e.trace_id\n} }];"
+      },
+      "id": "030b7570-a05d-4406-9c6b-0a19af936eb9",
+      "name": "Nachweis nach D3 pruefen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        0
+      ]
     }
   ],
   "connections": {
-    "Aufruf durch Elternworkflow": {
-      "main": [[{ "node": "Nachweis nach D3 pruefen", "type": "main", "index": 0 }]]
-    },
-    "Nachweis nach D3 pruefen": {
-      "main": [[{ "node": "Nachweis bestanden?", "type": "main", "index": 0 }]]
-    },
     "Nachweis bestanden?": {
       "main": [
-        [{ "node": "Nachweis bestaetigt", "type": "main", "index": 0 }],
-        [{ "node": "Nachweis verweigert", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Nachweis bestaetigt",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Nachweis verweigert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aufruf durch Elternworkflow": {
+      "main": [
+        [
+          {
+            "node": "Eingabe pruefen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Eingabe pruefen": {
+      "main": [
+        [
+          {
+            "node": "Kontext waehlen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Kontext waehlen": {
+      "main": [
+        [
+          {
+            "node": "Vertrag lesen als jv_privat_user",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Vertrag lesen als jv_visolva_user",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vertrag lesen als jv_privat_user": {
+      "main": [
+        [
+          {
+            "node": "Nachweis nach D3 pruefen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vertrag lesen als jv_visolva_user": {
+      "main": [
+        [
+          {
+            "node": "Nachweis nach D3 pruefen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Nachweis nach D3 pruefen": {
+      "main": [
+        [
+          {
+            "node": "Nachweis bestanden?",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     }
   },
-  "settings": { "executionOrder": "v1" },
+  "settings": {
+    "executionOrder": "v1"
+  },
   "meta": {
     "jarvis_source_workflow_id": "UKcnRE0eJzyl8T1V",
     "jarvis_phase": "1.0",
     "jarvis_spec_phase_0": "1.1.0",
     "jarvis_spec_phase_1": "4.0.2",
-    "jarvis_exported_at": "2026-08-30",
-    "jarvis_required_credentials": []
+    "jarvis_exported_at": "2026-09-10",
+    "jarvis_required_credentials": [
+      {
+        "id": "7BblU6FbDds3EZBb",
+        "name": "jv_visolva_postgres"
+      },
+      {
+        "id": "oCkj27EiMe96vXvU",
+        "name": "jv_privat_postgres"
+      }
+    ]
   }
 }

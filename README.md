@@ -2,17 +2,17 @@
 
 Persoenliches, arbeitgeberunabhaengiges Repository fuer den schrittweisen Aufbau von JARVIS.
 
-## Verbindlicher Stand
+## Verbindlicher Stand (10.09.2026)
 
-- Phase 0: Spezifikation 1.1.0 freigegeben; technisches Gate A-3/A-4 noch offen.
-- Phase 1: Spezifikation 4.0.2 freigegeben; Umsetzung noch nicht begonnen.
-- PostgreSQL: Supabase Free fuer Phase 1.0 und den ersten Pilot.
-- Dokumentablage privat: Google Drive.
+- Phase 0: Spezifikation 1.1.0 freigegeben; Gate am 31.08.2026 geschlossen (A-3/A-4 aus n8n nachgewiesen).
+- Phase 1: Spezifikation 4.0.2 freigegeben; Schritt 1.0 in Umsetzung, offen ist nur noch 1.0.8.
+- PostgreSQL: Supabase Free fuer Phase 1.0 und den ersten Pilot, Keep-Alive produktiv.
+- Dokumentablage privat: Google Drive, Eingang ueber Drive-Eingangsordner.
 - Dokumentablage `arbeitgeber_visolva`: SharePoint, in Phase 1 nur synthetische Testdokumente.
-- Workflow-Orchestrierung: n8n.
+- Workflow-Orchestrierung: n8n; Kernworkflows in `n8n/core/`.
 
 Die verbindliche Entscheidung zu Infrastruktur und Ablage steht in
-[`docs/decisions/ADR-001_STORAGE_AND_POSTGRES.md`](docs/decisions/ADR-001_STORAGE_AND_POSTGRES.md).
+[`docs/decisions/`](docs/decisions/), Uebersicht im [`DECISION_LOG.md`](docs/decisions/DECISION_LOG.md).
 
 ## Struktur
 
@@ -30,14 +30,10 @@ tools/             Hilfsskripte
 
 ## Naechster Schritt
 
-Phase 1.0 implementieren und zuerst die offenen Phase-0-Nachweise A-3 und A-4 erbringen:
-
-1. SQL-Migrationen aus Phase 0 gegen Supabase PostgreSQL vorbereiten.
-2. `jarvis_ops`, `jarvis_privat` und `jarvis_visolva` einrichten.
-3. Getrennte Datenbankrollen und n8n-Credentials anlegen.
-4. Kern-Subworkflows fuer Kontext, Idempotenz und Fachprotokollierung bauen.
-5. Kontexttrennung und Dublettenfreiheit praktisch nachweisen.
-6. Export und Wiederherstellung testen.
+Schritt 1.0.8: interne Adapter fuer `docstore_internal.upsert_document`,
+`casestore_internal.upsert_case` und `tasks_internal.create_task` bauen, mit
+Readback nachweisen und im Register freigeben. Danach Phase-1.0-Gate.
+Stand und Uebergabe: `docs/handover/HANDOVER_PHASE_1_0_2026-09-10.md`.
 
 ## Verbindliche Regeln
 
