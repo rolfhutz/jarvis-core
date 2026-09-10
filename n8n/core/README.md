@@ -1,7 +1,7 @@
 # JARVIS Core Workflows
 
-Exportierte n8n-Workflows des Fundaments: neun Kern-Subworkflows (`JV-CORE-SUB-*`)
-und zwei Betriebsworkflows (`JV-CORE-OPS-*`). Uebersicht und Status in
+Exportierte n8n-Workflows des Fundaments: neun Kern-Subworkflows (`JV-CORE-SUB-*`),
+drei interne Adapter (`JV-CORE-ADP-*`, seit 1.0.8) und zwei Betriebsworkflows (`JV-CORE-OPS-*`). Uebersicht und Status in
 [`MANIFEST.md`](MANIFEST.md).
 
 ## Regeln
@@ -13,6 +13,10 @@ und zwei Betriebsworkflows (`JV-CORE-OPS-*`). Uebersicht und Status in
   Geheimnisse, aber beides ist fuer eine korrekte Wiederherstellung noetig
   (Nachweis 1.0-A8). Kennwoerter stehen nie im Export.
 - Keine Execution-Daten, keine Pin-Daten.
+- Die Aufruferbeschraenkung der Adapter (`settings.callerPolicy`, `settings.callerIds`)
+  bleibt im Export erhalten und wird beim Import uebernommen (Befund B-2, 1.0.8).
+- Der Veroeffentlichungsstatus ist nicht Teil des Exports; er wird nach dem Import
+  von Hand gesetzt (Schritt 4).
 
 ## Wiederherstellung in eine leere Instanz
 
@@ -39,6 +43,11 @@ und zwei Betriebsworkflows (`JV-CORE-OPS-*`). Uebersicht und Status in
    `n8n export:workflow --all --separate --output=<ordner>` und
    `n8n export:credentials --all --output=<datei>`, dann
    `python3 tests/n8n/check_restore.py --src n8n/core --out <ordner> --creds <datei>`
-4. `JV-CORE-OPS-db_keepalive-v1` veroeffentlichen. Alle anderen bleiben
-   unveroeffentlicht; die Subworkflows werden nur von Elternworkflows aufgerufen.
-5. `JV-CORE-OPS-smoke_test-v1` einmal manuell ausfuehren. Erwartet: 48 von 48.
+   Erwartet (Stand 1.0.8): 14 Workflows, 155 Knoten, 38 Credential-Zuordnungen,
+   20 Subworkflow-Verweise, 6 Aufruferregeln, `ERGEBNIS: BESTANDEN`.
+4. Veroeffentlichen: `JV-CORE-OPS-db_keepalive-v1` und die drei `JV-CORE-ADP-*`.
+   Die Adapter muessen veroeffentlicht sein, sonst scheitert der verschachtelte Aufruf
+   aus `tool_invoke` (TS-23). Alle anderen bleiben unveroeffentlicht.
+5. `JV-CORE-OPS-smoke_test-v1` einmal manuell ausfuehren. Erwartet: 104 von 104.
+   Achtung: Der Lauf schreibt synthetische Daten in den Fachbestand und verbraucht
+   echte Vorgangsnummern (TS-18).

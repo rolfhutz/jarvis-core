@@ -29,6 +29,13 @@
               "type": "object"
             },
             {
+              "name": "action_id"
+            },
+            {
+              "name": "dry_run",
+              "type": "boolean"
+            },
+            {
               "name": "trace_id"
             }
           ]
@@ -76,18 +83,6 @@
       ]
     },
     {
-      "parameters": {},
-      "id": "03c03df1-dedf-4c95-9279-6e703a4aa89a",
-      "name": "Adapteraufruf Platzhalter",
-      "type": "n8n-nodes-base.noOp",
-      "typeVersion": 1,
-      "position": [
-        1328,
-        -80
-      ],
-      "notes": "Hier wird ab Phase 1.1 der freigegebene Adapter aufgerufen. In Phase 1.0 unerreichbar, weil kein Werkzeug auf approved steht."
-    },
-    {
       "parameters": {
         "assignments": {
           "assignments": [
@@ -114,12 +109,12 @@
       "typeVersion": 3.5,
       "position": [
         1328,
-        80
+        240
       ]
     },
     {
       "parameters": {
-        "jsCode": "const KONTEXTE = [\"privat\", \"arbeitgeber_visolva\"];\nconst alle = $input.all();\nif (alle.length !== 1) {\n  throw new Error(\"tool_invoke_invalid_input: genau ein Aufruf je Ausfuehrung erwartet, erhalten \" + alle.length);\n}\nconst e = alle[0].json;\nif (KONTEXTE.indexOf(e.context_id) === -1) {\n  throw new Error(\"tool_invoke_invalid_input: context_id nicht im Register\");\n}\nif (!/^[a-z][a-z0-9_]*\\.[a-z][a-z0-9_]*$/.test(String(e.tool_id || \"\"))) {\n  throw new Error(\"tool_invoke_invalid_input: tool_id fehlt oder ist ungueltig\");\n}\nif (!/^[0-9]+\\.[0-9]+\\.[0-9]+$/.test(String(e.tool_version || \"\"))) {\n  throw new Error(\"tool_invoke_invalid_input: tool_version fehlt oder ist ungueltig\");\n}\nreturn [{ json: {\n  context_id: e.context_id,\n  tool_id: e.tool_id,\n  tool_version: e.tool_version,\n  risk_class: e.risk_class || \"\",\n  approval_id: e.approval_id || null,\n  approval_status: e.approval_status || null,\n  payload: e.payload || {},\n  trace_id: e.trace_id || null\n} }];"
+        "jsCode": "const KONTEXTE = [\"privat\", \"arbeitgeber_visolva\"];\nconst alle = $input.all();\nif (alle.length !== 1) {\n  throw new Error(\"tool_invoke_invalid_input: genau ein Aufruf je Ausfuehrung erwartet, erhalten \" + alle.length);\n}\nconst e = alle[0].json;\nif (KONTEXTE.indexOf(e.context_id) === -1) {\n  throw new Error(\"tool_invoke_invalid_input: context_id nicht im Register\");\n}\nif (!/^[a-z][a-z0-9_]*\\.[a-z][a-z0-9_]*$/.test(String(e.tool_id || \"\"))) {\n  throw new Error(\"tool_invoke_invalid_input: tool_id fehlt oder ist ungueltig\");\n}\nif (!/^[0-9]+\\.[0-9]+\\.[0-9]+$/.test(String(e.tool_version || \"\"))) {\n  throw new Error(\"tool_invoke_invalid_input: tool_version fehlt oder ist ungueltig\");\n}\nif (e.action_id !== undefined && e.action_id !== null && e.action_id !== '' && !/^act_[A-Za-z0-9_]{6,64}$/.test(String(e.action_id))) {\n  throw new Error(\"tool_invoke_invalid_input: action_id ist ungueltig\");\n}\nreturn [{ json: {\n  context_id: e.context_id,\n  tool_id: e.tool_id,\n  tool_version: e.tool_version,\n  risk_class: e.risk_class || \"\",\n  approval_id: e.approval_id || null,\n  approval_status: e.approval_status || null,\n  payload: e.payload || {},\n  action_id: e.action_id || null,\n  dry_run: e.dry_run === true,\n  trace_id: e.trace_id || null\n} }];"
       },
       "id": "216c941b-55ba-4fef-aeea-a27650e9c038",
       "name": "Eingabe pruefen",
@@ -192,7 +187,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT (r.tool_id IS NOT NULL) AS found, r.status AS tool_status, r.risk_class_default::text AS registry_class, coalesce($3 = ANY (r.allowed_contexts), false) AS context_allowed, r.readback_supported, r.accepted_methods, r.evidence_limitation, (SELECT count(*) FROM jarvis_ops.tool_registry x WHERE x.tool_id = $1)::int AS versions_known FROM (SELECT 1) AS eins LEFT JOIN jarvis_ops.tool_registry r ON r.tool_id = $1 AND r.version = $2",
+        "query": "SELECT (r.tool_id IS NOT NULL) AS found, r.status AS tool_status, r.adapter_id, r.risk_class_default::text AS registry_class, coalesce($3 = ANY (r.allowed_contexts), false) AS context_allowed, r.readback_supported, r.accepted_methods, r.evidence_limitation, (SELECT count(*) FROM jarvis_ops.tool_registry x WHERE x.tool_id = $1)::int AS versions_known FROM (SELECT 1) AS eins LEFT JOIN jarvis_ops.tool_registry r ON r.tool_id = $1 AND r.version = $2",
         "options": {
           "queryReplacement": "={{ $json.tool_id }},{{ $json.tool_version }},{{ $json.context_id }}"
         }
@@ -215,7 +210,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT (r.tool_id IS NOT NULL) AS found, r.status AS tool_status, r.risk_class_default::text AS registry_class, coalesce($3 = ANY (r.allowed_contexts), false) AS context_allowed, r.readback_supported, r.accepted_methods, r.evidence_limitation, (SELECT count(*) FROM jarvis_ops.tool_registry x WHERE x.tool_id = $1)::int AS versions_known FROM (SELECT 1) AS eins LEFT JOIN jarvis_ops.tool_registry r ON r.tool_id = $1 AND r.version = $2",
+        "query": "SELECT (r.tool_id IS NOT NULL) AS found, r.status AS tool_status, r.adapter_id, r.risk_class_default::text AS registry_class, coalesce($3 = ANY (r.allowed_contexts), false) AS context_allowed, r.readback_supported, r.accepted_methods, r.evidence_limitation, (SELECT count(*) FROM jarvis_ops.tool_registry x WHERE x.tool_id = $1)::int AS versions_known FROM (SELECT 1) AS eins LEFT JOIN jarvis_ops.tool_registry r ON r.tool_id = $1 AND r.version = $2",
         "options": {
           "queryReplacement": "={{ $json.tool_id }},{{ $json.tool_version }},{{ $json.context_id }}"
         }
@@ -237,7 +232,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Vertragstor vor jedem Werkzeugaufruf. Einzige Quelle: jarvis_ops.tool_registry.\nconst RANG = { A: 1, B: 2, C: 3 };\nconst e = $('Eingabe pruefen').first().json;\nconst r = $input.first().json;\nlet code = \"allowed\";\nlet grund = \"\";\nif (r.found !== true && Number(r.versions_known) === 0) {\n  code = \"tool_not_registered\"; grund = \"Werkzeug nicht im Register: \" + e.tool_id;\n} else if (r.found !== true) {\n  code = \"tool_version_mismatch\"; grund = \"Version \" + e.tool_version + \" von \" + e.tool_id + \" ist nicht registriert\";\n} else if (r.tool_status === \"deprecated\") {\n  code = \"tool_deprecated\"; grund = \"Werkzeugversion ist ausser Betrieb\";\n} else if (r.context_allowed !== true) {\n  code = \"context_not_allowed\"; grund = \"Werkzeug ist fuer Kontext \" + e.context_id + \" nicht zugelassen\";\n} else if (!RANG[e.risk_class]) {\n  code = \"risk_class_missing\"; grund = \"risk_class fehlt oder ist unzulaessig\";\n} else if (RANG[e.risk_class] < RANG[r.registry_class]) {\n  code = \"risk_class_downgrade\"; grund = \"Aktion traegt Klasse \" + e.risk_class + \", Register verlangt mindestens \" + r.registry_class;\n} else if (e.risk_class === \"C\" && (!e.approval_id || e.approval_status !== \"approved\")) {\n  code = \"approval_missing\"; grund = \"Klasse C ohne gueltige Freigabe\";\n} else if (r.tool_status !== \"approved\") {\n  code = \"tool_not_released\"; grund = \"Werkzeug steht auf \" + r.tool_status + \". Freigabe erst nach praktischem Nachweis.\";\n}\nconst ok = code === \"allowed\";\nreturn [{ json: {\n  invocation_allowed: ok,\n  gate_code: code,\n  reason: grund,\n  tool_id: e.tool_id,\n  tool_version: e.tool_version,\n  tool_status: r.tool_status || null,\n  registry_class: r.registry_class || null,\n  readback_supported: r.found === true ? r.readback_supported : null,\n  accepted_methods: r.found === true ? r.accepted_methods : null,\n  evidence_limitation: r.found === true ? r.evidence_limitation : null,\n  risk_class: e.risk_class || null,\n  context_id: e.context_id,\n  trace_id: e.trace_id\n} }];"
+        "jsCode": "// Vertragstor vor jedem Werkzeugaufruf. Einzige Quelle: jarvis_ops.tool_registry.\nconst RANG = { A: 1, B: 2, C: 3 };\nconst e = $('Eingabe pruefen').first().json;\nconst r = $input.first().json;\nlet code = \"allowed\";\nlet grund = \"\";\nif (r.found !== true && Number(r.versions_known) === 0) {\n  code = \"tool_not_registered\"; grund = \"Werkzeug nicht im Register: \" + e.tool_id;\n} else if (r.found !== true) {\n  code = \"tool_version_mismatch\"; grund = \"Version \" + e.tool_version + \" von \" + e.tool_id + \" ist nicht registriert\";\n} else if (r.tool_status === \"deprecated\") {\n  code = \"tool_deprecated\"; grund = \"Werkzeugversion ist ausser Betrieb\";\n} else if (r.context_allowed !== true) {\n  code = \"context_not_allowed\"; grund = \"Werkzeug ist fuer Kontext \" + e.context_id + \" nicht zugelassen\";\n} else if (!RANG[e.risk_class]) {\n  code = \"risk_class_missing\"; grund = \"risk_class fehlt oder ist unzulaessig\";\n} else if (RANG[e.risk_class] < RANG[r.registry_class]) {\n  code = \"risk_class_downgrade\"; grund = \"Aktion traegt Klasse \" + e.risk_class + \", Register verlangt mindestens \" + r.registry_class;\n} else if (e.risk_class === \"C\" && (!e.approval_id || e.approval_status !== \"approved\")) {\n  code = \"approval_missing\"; grund = \"Klasse C ohne gueltige Freigabe\";\n} else if (r.tool_status !== \"approved\") {\n  code = \"tool_not_released\"; grund = \"Werkzeug steht auf \" + r.tool_status + \". Freigabe erst nach praktischem Nachweis.\";\n} else if (!e.action_id) {\n  code = \"action_id_missing\"; grund = \"Werkzeugaufruf ohne action_id ist unzulaessig\";\n}\nconst ok = code === \"allowed\";\nreturn [{ json: {\n  invocation_allowed: ok,\n  gate_code: code,\n  reason: grund,\n  tool_id: e.tool_id,\n  tool_version: e.tool_version,\n  tool_status: r.tool_status || null,\n  adapter_id: r.found === true ? r.adapter_id : null,\n  action_id: e.action_id,\n  dry_run: e.dry_run,\n  payload: e.payload,\n  registry_class: r.registry_class || null,\n  readback_supported: r.found === true ? r.readback_supported : null,\n  accepted_methods: r.found === true ? r.accepted_methods : null,\n  evidence_limitation: r.found === true ? r.evidence_limitation : null,\n  risk_class: e.risk_class || null,\n  context_id: e.context_id,\n  trace_id: e.trace_id\n} }];"
       },
       "id": "312074b8-3d11-4ffa-a369-b21168cd5818",
       "name": "Vertragstor pruefen",
@@ -247,6 +242,429 @@
         880,
         0
       ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.adapter_id }}",
+                    "operator": {
+                      "operation": "equals",
+                      "type": "string"
+                    },
+                    "rightValue": "docstore_internal"
+                  }
+                ],
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                }
+              },
+              "renameOutput": true,
+              "outputKey": "docstore_internal"
+            },
+            {
+              "conditions": {
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.adapter_id }}",
+                    "operator": {
+                      "operation": "equals",
+                      "type": "string"
+                    },
+                    "rightValue": "casestore_internal"
+                  }
+                ],
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                }
+              },
+              "renameOutput": true,
+              "outputKey": "casestore_internal"
+            },
+            {
+              "conditions": {
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.adapter_id }}",
+                    "operator": {
+                      "operation": "equals",
+                      "type": "string"
+                    },
+                    "rightValue": "tasks_internal"
+                  }
+                ],
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                }
+              },
+              "renameOutput": true,
+              "outputKey": "tasks_internal"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "unbekannt"
+        }
+      },
+      "id": "bcf41951-60cd-46b9-b1ba-19b17e2ad8e2",
+      "name": "Adapter waehlen",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        1328,
+        -160
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "2QdRVAniHgkWjqh2"
+        },
+        "workflowInputs": {
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false,
+          "mappingMode": "defineBelow",
+          "matchingColumns": [],
+          "schema": [
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "context_id",
+              "id": "context_id",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "action_id",
+              "id": "action_id",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "tool_id",
+              "id": "tool_id",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "payload",
+              "id": "payload",
+              "required": false,
+              "type": "object"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "dry_run",
+              "id": "dry_run",
+              "required": false,
+              "type": "boolean"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "trace_id",
+              "id": "trace_id",
+              "required": false,
+              "type": "string"
+            }
+          ],
+          "value": {
+            "action_id": "={{ $json.action_id }}",
+            "context_id": "={{ $json.context_id }}",
+            "dry_run": "={{ $json.dry_run }}",
+            "payload": "={{ $json.payload }}",
+            "tool_id": "={{ $json.tool_id }}",
+            "trace_id": "={{ $json.trace_id }}"
+          }
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "3a3b6491-0e1d-4089-a57f-ab42da513124",
+      "name": "Ruf ADP docstore_internal",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        1552,
+        -400
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "V1fuepKIR20OwgZp"
+        },
+        "workflowInputs": {
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false,
+          "mappingMode": "defineBelow",
+          "matchingColumns": [],
+          "schema": [
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "context_id",
+              "id": "context_id",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "action_id",
+              "id": "action_id",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "tool_id",
+              "id": "tool_id",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "payload",
+              "id": "payload",
+              "required": false,
+              "type": "object"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "dry_run",
+              "id": "dry_run",
+              "required": false,
+              "type": "boolean"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "trace_id",
+              "id": "trace_id",
+              "required": false,
+              "type": "string"
+            }
+          ],
+          "value": {
+            "action_id": "={{ $json.action_id }}",
+            "context_id": "={{ $json.context_id }}",
+            "dry_run": "={{ $json.dry_run }}",
+            "payload": "={{ $json.payload }}",
+            "tool_id": "={{ $json.tool_id }}",
+            "trace_id": "={{ $json.trace_id }}"
+          }
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "7319f60c-61bd-407d-90f9-45e0f5a7bde1",
+      "name": "Ruf ADP casestore_internal",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        1552,
+        -240
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "GFTIzQsak9UJVhAj"
+        },
+        "workflowInputs": {
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false,
+          "mappingMode": "defineBelow",
+          "matchingColumns": [],
+          "schema": [
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "context_id",
+              "id": "context_id",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "action_id",
+              "id": "action_id",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "tool_id",
+              "id": "tool_id",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "payload",
+              "id": "payload",
+              "required": false,
+              "type": "object"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "dry_run",
+              "id": "dry_run",
+              "required": false,
+              "type": "boolean"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "trace_id",
+              "id": "trace_id",
+              "required": false,
+              "type": "string"
+            }
+          ],
+          "value": {
+            "action_id": "={{ $json.action_id }}",
+            "context_id": "={{ $json.context_id }}",
+            "dry_run": "={{ $json.dry_run }}",
+            "payload": "={{ $json.payload }}",
+            "tool_id": "={{ $json.tool_id }}",
+            "trace_id": "={{ $json.trace_id }}"
+          }
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "469613c6-16f1-4915-ab63-9391d58304fe",
+      "name": "Ruf ADP tasks_internal",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        1552,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "u1",
+              "name": "invocation_allowed",
+              "type": "boolean",
+              "value": false
+            },
+            {
+              "id": "u2",
+              "name": "gate_code",
+              "type": "string",
+              "value": "adapter_unknown"
+            },
+            {
+              "id": "u3",
+              "name": "reason",
+              "type": "string",
+              "value": "={{ 'Kein Adapter-Workflow fuer adapter_id ' + $json.adapter_id }}"
+            },
+            {
+              "id": "u4",
+              "name": "status",
+              "type": "string",
+              "value": "rejected"
+            },
+            {
+              "id": "u5",
+              "name": "rejected_at",
+              "type": "string",
+              "value": "={{ $now.toISO() }}"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "b95c9c8c-af14-4d69-9a36-a39721c0bbdb",
+      "name": "Adapter unbekannt",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        1552,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Fuehrt Vertragstor und Adapterergebnis zusammen. Der Nachweis erfolgt getrennt ueber evidence_verify (D8).\n// Ein Adapterfehler steht in adapter_error; das Feld error bleibt n8n-Laufzeitfehlern vorbehalten.\nconst t = $('Vertragstor pruefen').first().json;\nconst a = $input.first().json;\nreturn [{ json: {\n  invocation_allowed: true,\n  gate_code: 'allowed',\n  reason: '',\n  tool_id: t.tool_id,\n  tool_version: t.tool_version,\n  adapter_id: t.adapter_id,\n  context_id: t.context_id,\n  action_id: t.action_id,\n  risk_class: t.risk_class,\n  readback_supported: t.readback_supported,\n  accepted_methods: t.accepted_methods,\n  dry_run: t.dry_run,\n  status: a.status || 'error',\n  write_outcome: a.write_outcome || 'unknown',\n  target_object_ref: a.target_object_ref || null,\n  verification_method: a.verification_method || null,\n  observed: a.observed || null,\n  expected: a.expected || null,\n  case_number: a.case_number || null,\n  existing_document_id: a.existing_document_id || null,\n  adapter_error: a.error || null,\n  invoked_at: new Date().toISOString(),\n  trace_id: t.trace_id\n} }];"
+      },
+      "id": "4ce0ada9-a825-4706-9b8c-0d723cb96be1",
+      "name": "Ergebnis zusammenfuehren",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1776,
+        -240
+      ]
     }
   ],
   "connections": {
@@ -254,7 +672,7 @@
       "main": [
         [
           {
-            "node": "Adapteraufruf Platzhalter",
+            "node": "Adapter waehlen",
             "type": "main",
             "index": 0
           }
@@ -335,6 +753,71 @@
         [
           {
             "node": "Aufruf zulaessig?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Adapter waehlen": {
+      "main": [
+        [
+          {
+            "node": "Ruf ADP docstore_internal",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ruf ADP casestore_internal",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ruf ADP tasks_internal",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Adapter unbekannt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ruf ADP docstore_internal": {
+      "main": [
+        [
+          {
+            "node": "Ergebnis zusammenfuehren",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ruf ADP casestore_internal": {
+      "main": [
+        [
+          {
+            "node": "Ergebnis zusammenfuehren",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ruf ADP tasks_internal": {
+      "main": [
+        [
+          {
+            "node": "Ergebnis zusammenfuehren",
             "type": "main",
             "index": 0
           }

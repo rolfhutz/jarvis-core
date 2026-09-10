@@ -39,7 +39,7 @@ SECRET_PATTERNS = [
     re.compile(r"eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}"),
     re.compile(r"\bsk-[A-Za-z0-9]{20,}"),
 ]
-KEEP_SETTINGS = {"executionOrder", "callerPolicy", "errorWorkflow", "saveDataSuccessExecution",
+KEEP_SETTINGS = {"executionOrder", "callerPolicy", "callerIds", "errorWorkflow", "saveDataSuccessExecution",
                  "saveDataErrorExecution", "saveManualExecutions", "executionTimeout", "timezone"}
 DROP_NODE_KEYS = {"webhookId"}
 
@@ -109,6 +109,11 @@ def self_test() -> None:
     assert out["nodes"][0]["credentials"] == {"postgres": {"id": "oCkj", "name": "jv_privat_postgres"}}
     assert out["settings"] == {"executionOrder": "v1"}
     assert out["meta"]["jarvis_required_credentials"] == [{"id": "oCkj", "name": "jv_privat_postgres"}]
+    # Aufruferbeschraenkung der Adapter muss den Export ueberleben (1.0.8, A10).
+    adp = dict(raw, name="JV-CORE-ADP-demo-v1", settings={"executionOrder": "v1", "callerPolicy": "workflowsFromAList",
+                                                          "callerIds": "ELs6,P5Il", "availableInMCP": True})
+    assert normalize(adp, "2026-09-10")["settings"] == {"executionOrder": "v1", "callerPolicy": "workflowsFromAList",
+                                                         "callerIds": "ELs6,P5Il"}
     assert "instanceId" not in json.dumps(out)
     bad = dict(raw, nodes=[{"name": "X", "parameters": {"url": "postgres://u:p@h/db"}}])
     try:
@@ -121,7 +126,7 @@ def self_test() -> None:
         raise AssertionError("Namenskonvention nicht geprueft")
     except ExportError:
         pass
-    print("SELBSTTEST BESTANDEN: 3 Pruefungen, 2 Gegenproben")
+    print("SELBSTTEST BESTANDEN: 4 Pruefungen, 2 Gegenproben")
 
 
 def main() -> int:

@@ -14,3 +14,9 @@
 | ADR-003 | 2026-09-10 | angenommen | Kein Freitext ueber `queryReplacement`; Freitext als base64-JSON-Block |
 | BETR-1 | 2026-09-10 | umgesetzt | Keep-Alive `JV-CORE-OPS-db_keepalive-v1` produktiv (taeglich 05:00 UTC) nach Pausierung des Supabase-Projekts |
 | OFFEN-1 | 2026-09-10 | offen | Repository vorlaeufig oeffentlich (Rolf); spaetestens vor Pilotstart wieder privat |
+| E-1 | 2026-09-10 | angenommen | `tool_invoke` leitet per Verteiler (Switch auf `adapter_id` aus dem Register) an je einen festen Aufrufknoten weiter; unbekannte `adapter_id` → `adapter_unknown`; neuer Adapter = versionierte Aenderung an `tool_invoke` |
+| E-2 | 2026-09-10 | angenommen | `evidence_verify` speichert jeden echten Abgleich (`verified`, `mismatch`) in `<kontext>.evidence` und gibt `evidence_id` zurueck; scheitert die Ablage, gilt der Nachweis als nicht erbracht (`evidence_store_failed`); Freigabeverweis = `evidence_id` |
+| A-6 | 2026-09-10 | angenommen | Freigabelauf ruft die Adapter direkt aus dem Smoke-Test auf (Bedingung 3 vor 5); `tool_invoke` bleibt streng; Adapter nur von `tool_invoke` und Smoke-Test aufrufbar (`callerPolicy`) |
+| A-7 | 2026-09-10 | angenommen | Vertragsverstoesse des Aufrufers (`readback_required`, `method_not_accepted`, `contract_unknown`, `expected_empty`) erzeugen keine Nachweiszeile |
+| 0015 | 2026-09-10 | umgesetzt | Vorgangsnummern-Zaehler je Kontext und Jahr auf hoechste vergebene Nummer angehoben (Befund B-1). Hinweis: vor Ablage im Repo in Supabase eingespielt; Repo-Datei nachtraeglich abgelegt und inhaltsgleich geprueft |
+| REL-1 | 2026-09-10 | umgesetzt | Freigabe `casestore_internal.upsert_case`, `docstore_internal.upsert_document`, `tasks_internal.create_task` (je 1.0.0) nach Spezifikation 12.1.1; Nachweis Lauf 22087, je zwei `evidence_id` in `tool_release_log` |

@@ -9,7 +9,8 @@ Ablauf (siehe n8n/core/README.md):
   5. python3 tests/n8n/check_restore.py --src n8n/core --out <rueckexport> --creds <credentials.json>
 
 Geprueft: Workflow-IDs, Knotenmenge, Parameter, Verbindungen, Credential-Zuordnung
-je Knoten, Kontext-Credential passend zum Knotennamen, Subworkflow-Verweise.
+je Knoten, Kontext-Credential passend zum Knotennamen, Subworkflow-Verweise,
+Aufruferbeschraenkung (settings.callerPolicy, settings.callerIds; seit 1.0.8).
 """
 import argparse, json, glob, sys
 ap = argparse.ArgumentParser()
@@ -23,7 +24,7 @@ for f in glob.glob(A.out + '/*.json'):
     d = json.load(open(f, encoding='utf-8')); out[d['name']] = d
 creds = {c['id']: c['name'] for c in json.load(open(A.creds))}
 ids = {d['id'] for d in out.values()}
-fehler = []; zaehler = {'workflows': 0, 'knoten': 0, 'credential_zuordnungen': 0, 'subworkflow_verweise': 0}
+fehler = []; zaehler = {'workflows': 0, 'knoten': 0, 'credential_zuordnungen': 0, 'subworkflow_verweise': 0, 'aufruferregeln': 0}
 def strip(n):
     n = dict(n); c = n.pop('credentials', None); n.pop('id', None); n.pop('webhookId', None); return n, c
 for name, s in sorted(src.items()):
@@ -42,6 +43,11 @@ for name, s in sorted(src.items()):
             got = (cb or {}).get(t) or {}
             if got.get('id') != ref['id'] or creds.get(got.get('id')) != ref['name']:
                 fehler.append(name + '/' + k + ': Credential ' + ref['name'] + ' falsch zugeordnet: ' + str(got))
+    for key in ('callerPolicy', 'callerIds'):
+        soll = (s.get('settings') or {}).get(key); ist = (o.get('settings') or {}).get(key)
+        if soll is not None:
+            zaehler['aufruferregeln'] += 1
+            if soll != ist: fehler.append(name + ': settings.' + key + ' weicht ab: ' + repr(ist))
     if json.dumps(s['connections'], sort_keys=True) != json.dumps(o['connections'], sort_keys=True):
         fehler.append(name + ': Verbindungen weichen ab')
     for n in o['nodes']:

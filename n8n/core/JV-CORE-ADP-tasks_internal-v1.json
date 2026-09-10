@@ -1,0 +1,454 @@
+{
+  "id": "GFTIzQsak9UJVhAj",
+  "name": "JV-CORE-ADP-tasks_internal-v1",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "context_id"
+            },
+            {
+              "name": "action_id"
+            },
+            {
+              "name": "tool_id"
+            },
+            {
+              "name": "payload",
+              "type": "object"
+            },
+            {
+              "name": "dry_run",
+              "type": "boolean"
+            },
+            {
+              "name": "trace_id"
+            }
+          ]
+        }
+      },
+      "id": "fca4cf02-9102-4f23-b315-fbc4fc6dd85c",
+      "name": "Aufruf durch tool_invoke",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const WERKZEUG = 'tasks_internal.create_task';\nconst ADAPTER_ID = 'tasks_internal';\nconst SCHEMA = { privat: 'jarvis_privat', arbeitgeber_visolva: 'jarvis_visolva' };\nconst ULID = '[0-9A-HJKMNP-TV-Z]{26}';\nconst alle = $input.all();\nif (alle.length !== 1) {\n  throw new Error('adp_tasks_internal_invalid_input: genau ein Aufruf je Ausfuehrung erwartet, erhalten ' + alle.length);\n}\nconst e = alle[0].json;\nconst p = (e.payload && typeof e.payload === 'object' && !Array.isArray(e.payload)) ? e.payload : null;\nconst fehler = [];\nconst txt = function (v, min, max) { return typeof v === 'string' && v.length >= min && v.length <= max; };\nconst zeit = function (v) { return typeof v === 'string' && /Z$/.test(v) && !isNaN(Date.parse(v)); };\nconst norm = function (v) { return (v === undefined || v === null || v === '') ? null : new Date(v).toISOString().replace(/[.][0-9]{3}Z$/, 'Z'); };\nconst oder = function (v) { return (v === undefined || v === '') ? null : v; };\nconst obj = function (v) { return v && typeof v === 'object' && !Array.isArray(v); };\nif (!SCHEMA[e.context_id]) fehler.push('context_id unbekannt');\nif (e.tool_id !== WERKZEUG) fehler.push('tool_id passt nicht zu diesem Adapter');\nif (!/^act_[A-Za-z0-9_]{6,64}$/.test(String(e.action_id || ''))) fehler.push('action_id fehlt oder ist ungueltig');\nif (!p) {\n  fehler.push('payload fehlt');\n} else {\n  if (p.context_id !== e.context_id) fehler.push('context_mismatch: payload.context_id weicht vom Aufrufkontext ab');\n  if (!/^[0-9]+[.][0-9]+[.][0-9]+$/.test(String(p.schema_version || ''))) fehler.push('schema_version ungueltig');\n  if (!zeit(p.created_at)) fehler.push('created_at fehlt oder ist kein UTC-Zeitstempel');\n  if (!(obj(p.producer) && p.producer.producer_type && p.producer.producer_id)) fehler.push('producer unvollstaendig');\n  if (!new RegExp('^tsk_' + ULID + '$').test(String(p.task_id || ''))) fehler.push('task_id ungueltig');\n  if (!txt(p.title, 3, 200)) fehler.push('title fehlt oder Laenge unzulaessig');\n  if (!txt(p.success_criterion, 3, 1000)) fehler.push('success_criterion fehlt oder Laenge unzulaessig');\n  if (['jarvis', 'rolf', 'mitarbeiter', 'externer'].indexOf(p.actor) === -1) fehler.push('actor unzulaessig');\n  if (p.actor && p.actor !== 'jarvis' && !obj(p.assignee)) fehler.push('assignee fehlt fuer menschlichen Verantwortlichen');\n  if (['open', 'in_progress', 'blocked', 'waiting_external', 'done', 'cancelled', 'superseded'].indexOf(p.status) === -1) fehler.push('status unzulaessig');\n  if (p.status === 'done' && (!zeit(p.closed_at) || !Array.isArray(p.closing_evidence_ids) || p.closing_evidence_ids.length === 0)) fehler.push('done verlangt closed_at und closing_evidence_ids');\n  if (['low', 'normal', 'high', 'critical'].indexOf(p.priority) === -1) fehler.push('priority unzulaessig');\n  if (!/^[a-f0-9]{64}$/.test(String(p.idempotency_key || ''))) fehler.push('idempotency_key ist kein SHA-256');\n  if (!obj(p.origin)) fehler.push('origin fehlt');\n  if (p.due_at !== undefined && p.due_at !== null && !zeit(p.due_at)) fehler.push('due_at ist kein UTC-Zeitstempel');\n}\nlet zeile = null;\nlet erwartet = null;\nif (fehler.length === 0) {\n  zeile = { task_id: p.task_id, schema_version: p.schema_version, context_id: p.context_id, title: p.title, success_criterion: p.success_criterion, actor: p.actor, status: p.status, priority: p.priority, due_at: oder(p.due_at), idempotency_key: p.idempotency_key, body: p };\n  erwartet = { context_id: p.context_id, title: p.title, success_criterion: p.success_criterion, actor: p.actor, status: p.status, priority: p.priority, due_at: norm(p.due_at), idempotency_key: p.idempotency_key };\n}\nconst basis = { adapter_id: ADAPTER_ID, tool_id: WERKZEUG, context_id: e.context_id || null, action_id: e.action_id || null, trace_id: e.trace_id || null };\nif (fehler.length > 0) {\n  return [{ json: Object.assign({ route: 'invalid', fehler: fehler }, basis) }];\n}\nreturn [{ json: Object.assign({ route: e.dry_run === true ? 'dry_run' : e.context_id, requested_id: p.task_id, zeile_b64: Buffer.from(JSON.stringify(zeile), 'utf8').toString('base64'), expected: erwartet }, basis) }];"
+      },
+      "id": "136b31d3-b4d4-4534-80d8-80c50a3c88c3",
+      "name": "Eingabe pruefen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.route }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "privat"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.route }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "arbeitgeber_visolva"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.route }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "dry_run"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.route }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "invalid"
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b5c5b6ec-ea44-4b8d-860d-6ec8f0c173b7",
+      "name": "Weg waehlen",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        448,
+        528
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH r AS (\n  SELECT * FROM jsonb_to_record(convert_from(decode($1, 'base64'), 'UTF8')::jsonb)\n  AS x(task_id text, schema_version text, context_id text, title text, success_criterion text, actor text, status text, priority text, due_at timestamptz, idempotency_key text, body jsonb)\n), vorher AS (\n  SELECT t.task_id FROM jarvis_privat.task t JOIN r ON t.idempotency_key = r.idempotency_key\n), neu AS (\n  INSERT INTO jarvis_privat.task (task_id, schema_version, context_id, title, success_criterion, actor, status, priority, due_at, idempotency_key, body)\n  SELECT task_id, schema_version, context_id, title, success_criterion, actor, status, priority, due_at, idempotency_key, body FROM r\n  WHERE NOT EXISTS (SELECT 1 FROM vorher)\n  ON CONFLICT (idempotency_key) DO NOTHING\n  RETURNING task_id\n)\nSELECT coalesce((SELECT task_id FROM neu), (SELECT task_id FROM vorher)) AS resolved_id,\n       CASE WHEN EXISTS (SELECT 1 FROM neu) THEN 'created'\n            WHEN EXISTS (SELECT 1 FROM vorher) THEN 'existing'\n            ELSE 'conflict' END AS write_outcome",
+        "options": {
+          "queryReplacement": "={{ $json.zeile_b64 }}"
+        }
+      },
+      "id": "d5db8448-2c4f-4711-b9ff-f8b3da2ef32a",
+      "name": "Aufgabe schreiben jarvis_privat",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        672,
+        80
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "oCkj27EiMe96vXvU",
+          "name": "jv_privat_postgres"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT (t.task_id IS NOT NULL) AS found, $2::text AS write_outcome, t.task_id, t.context_id, t.title, t.success_criterion, t.actor, t.status, t.priority,\n       to_char(t.due_at AT TIME ZONE 'UTC', 'YYYY-MM-DD\"T\"HH24:MI:SS\"Z\"') AS due_at, t.idempotency_key::text AS idempotency_key\nFROM (SELECT 1) AS eins LEFT JOIN jarvis_privat.task t ON t.task_id = $1",
+        "options": {
+          "queryReplacement": "={{ $json.resolved_id }},{{ $json.write_outcome }}"
+        }
+      },
+      "id": "e07a1bb4-d546-40c7-bded-f5af32ef8ca5",
+      "name": "Readback jarvis_privat",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        896,
+        0
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "oCkj27EiMe96vXvU",
+          "name": "jv_privat_postgres"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const e = $('Eingabe pruefen').first().json;\nconst r = $input.first().json;\nconst basis = { adapter_id: e.adapter_id, tool_id: e.tool_id, context_id: e.context_id, action_id: e.action_id, trace_id: e.trace_id };\nif (r.found !== true) {\n  return [{ json: Object.assign({ status: 'error', write_outcome: r.write_outcome || 'unknown', error: { error_class: 'consistency', error_code: 'readback_missing', retryable: false, message: 'Zielobjekt nach dem Schreiben nicht lesbar' } }, basis) }];\n}\nconst beobachtet = { context_id: r.context_id, title: r.title, success_criterion: r.success_criterion, actor: r.actor, status: r.status, priority: r.priority, due_at: r.due_at || null, idempotency_key: r.idempotency_key };\nreturn [{ json: Object.assign({ status: 'ok', write_outcome: r.write_outcome, target_object_ref: { object_type: 'task', object_id: r.task_id, requested_id: e.requested_id }, verification_method: 'readback', observed: beobachtet, expected: e.expected }, basis) }];"
+      },
+      "id": "c8de94cd-0373-4c4f-90b8-847379fcfa8a",
+      "name": "Ergebnis bilden",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH r AS (\n  SELECT * FROM jsonb_to_record(convert_from(decode($1, 'base64'), 'UTF8')::jsonb)\n  AS x(task_id text, schema_version text, context_id text, title text, success_criterion text, actor text, status text, priority text, due_at timestamptz, idempotency_key text, body jsonb)\n), vorher AS (\n  SELECT t.task_id FROM jarvis_visolva.task t JOIN r ON t.idempotency_key = r.idempotency_key\n), neu AS (\n  INSERT INTO jarvis_visolva.task (task_id, schema_version, context_id, title, success_criterion, actor, status, priority, due_at, idempotency_key, body)\n  SELECT task_id, schema_version, context_id, title, success_criterion, actor, status, priority, due_at, idempotency_key, body FROM r\n  WHERE NOT EXISTS (SELECT 1 FROM vorher)\n  ON CONFLICT (idempotency_key) DO NOTHING\n  RETURNING task_id\n)\nSELECT coalesce((SELECT task_id FROM neu), (SELECT task_id FROM vorher)) AS resolved_id,\n       CASE WHEN EXISTS (SELECT 1 FROM neu) THEN 'created'\n            WHEN EXISTS (SELECT 1 FROM vorher) THEN 'existing'\n            ELSE 'conflict' END AS write_outcome",
+        "options": {
+          "queryReplacement": "={{ $json.zeile_b64 }}"
+        }
+      },
+      "id": "09aac6d2-2b03-4492-8329-50fa83765dcf",
+      "name": "Aufgabe schreiben jarvis_visolva",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        672,
+        416
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "7BblU6FbDds3EZBb",
+          "name": "jv_visolva_postgres"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT (t.task_id IS NOT NULL) AS found, $2::text AS write_outcome, t.task_id, t.context_id, t.title, t.success_criterion, t.actor, t.status, t.priority,\n       to_char(t.due_at AT TIME ZONE 'UTC', 'YYYY-MM-DD\"T\"HH24:MI:SS\"Z\"') AS due_at, t.idempotency_key::text AS idempotency_key\nFROM (SELECT 1) AS eins LEFT JOIN jarvis_visolva.task t ON t.task_id = $1",
+        "options": {
+          "queryReplacement": "={{ $json.resolved_id }},{{ $json.write_outcome }}"
+        }
+      },
+      "id": "efb834b3-75fd-43aa-ba56-52a91f23f030",
+      "name": "Readback jarvis_visolva",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        896,
+        336
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "7BblU6FbDds3EZBb",
+          "name": "jv_visolva_postgres"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const e = $input.first().json;\nreturn [{ json: { status: 'dry_run', adapter_id: e.adapter_id, tool_id: e.tool_id, context_id: e.context_id, action_id: e.action_id, write_outcome: 'none', expected: e.expected, trace_id: e.trace_id } }];"
+      },
+      "id": "a2217c9f-765e-4ab8-8c6d-cbd4880d02e9",
+      "name": "Ergebnis Probelauf",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        608
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const e = $input.first().json;\nreturn [{ json: { status: 'error', adapter_id: e.adapter_id, tool_id: e.tool_id, context_id: e.context_id, action_id: e.action_id, write_outcome: 'none', error: { error_class: 'validation', error_code: 'invalid_input', retryable: false, message: e.fehler.join('; ') }, trace_id: e.trace_id } }];"
+      },
+      "id": "2c034d7c-36b6-418b-af8d-40a7446e3fbd",
+      "name": "Ergebnis ungueltige Eingabe",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        800
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const e = $('Eingabe pruefen').first().json;\nconst f = $input.first().json;\nconst roh = JSON.stringify(f.error || f).slice(0, 2000);\nlet klasse = 'unknown';\nlet code = 'db_error';\nlet wiederholbar = false;\nif (/42501|permission denied/i.test(roh)) { klasse = 'permission'; code = 'permission_denied'; }\nelse if (/23505|duplicate key/i.test(roh)) { klasse = 'conflict'; code = 'unique_violation'; }\nelse if (/23514|check constraint/i.test(roh)) { klasse = 'validation'; code = 'constraint_violation'; }\nelse if (/23503|foreign key/i.test(roh)) { klasse = 'validation'; code = 'reference_missing'; }\nelse if (/timeout|timed out|ETIMEDOUT/i.test(roh)) { klasse = 'timeout'; code = 'db_timeout'; wiederholbar = true; }\nelse if (/ECONNREFUSED|ECONNRESET|ENOTFOUND|terminat|connection/i.test(roh)) { klasse = 'transient_network'; code = 'db_unreachable'; wiederholbar = true; }\nreturn [{ json: { status: 'error', adapter_id: e.adapter_id, tool_id: e.tool_id, context_id: e.context_id, action_id: e.action_id, write_outcome: 'unknown', error: { error_class: klasse, error_code: code, retryable: wiederholbar, message: roh.slice(0, 500) }, trace_id: e.trace_id } }];"
+      },
+      "id": "543be5a6-e189-4b26-9cb7-d808671c82fc",
+      "name": "Datenbankfehler einordnen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        272
+      ]
+    }
+  ],
+  "connections": {
+    "Aufruf durch tool_invoke": {
+      "main": [
+        [
+          {
+            "node": "Eingabe pruefen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Eingabe pruefen": {
+      "main": [
+        [
+          {
+            "node": "Weg waehlen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Weg waehlen": {
+      "main": [
+        [
+          {
+            "node": "Aufgabe schreiben jarvis_privat",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Aufgabe schreiben jarvis_visolva",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ergebnis Probelauf",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ergebnis ungueltige Eingabe",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aufgabe schreiben jarvis_privat": {
+      "main": [
+        [
+          {
+            "node": "Readback jarvis_privat",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Datenbankfehler einordnen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Readback jarvis_privat": {
+      "main": [
+        [
+          {
+            "node": "Ergebnis bilden",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Datenbankfehler einordnen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aufgabe schreiben jarvis_visolva": {
+      "main": [
+        [
+          {
+            "node": "Readback jarvis_visolva",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Datenbankfehler einordnen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Readback jarvis_visolva": {
+      "main": [
+        [
+          {
+            "node": "Ergebnis bilden",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Datenbankfehler einordnen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromAList",
+    "callerIds": "ELs6LnRIWKCv04yc,P5IlT5RlGBK1aqiO"
+  },
+  "meta": {
+    "jarvis_source_workflow_id": "GFTIzQsak9UJVhAj",
+    "jarvis_phase": "1.0",
+    "jarvis_spec_phase_0": "1.1.0",
+    "jarvis_spec_phase_1": "4.0.2",
+    "jarvis_exported_at": "2026-09-10",
+    "jarvis_required_credentials": [
+      {
+        "id": "7BblU6FbDds3EZBb",
+        "name": "jv_visolva_postgres"
+      },
+      {
+        "id": "oCkj27EiMe96vXvU",
+        "name": "jv_privat_postgres"
+      }
+    ]
+  }
+}
