@@ -21,6 +21,10 @@ sondern aus Abhaengigkeiten:
 | `0008_grants_and_isolation_visolva.sql` | Rechte, Entzug auf `jarvis_privat` | 0003, 0005 |
 | `0009_context_registry_seed.sql` | Kontextregister und Vertragsversionen | 0002 |
 | `0010_admin_role_membership.sql` | `SET`-Recht des Administrators auf die Kontextrollen | 0001 |
+| `0011_context_login_users.sql` | Login-Benutzer je Kontext, erben die Gruppenrolle (E1) | 0001 |
+| `0012_context_login_search_path.sql` | fester Suchpfad der Login-Benutzer | 0011 |
+| `0013_tool_registry_schema.sql` | Werkzeugregister zur Laufzeit, Freigabeprotokoll, Kontextregeln | 0002 |
+| `0014_tool_registry_seed.sql` | **erzeugt** aus den Registerdateien, prueft sich selbst | 0013 |
 
 Die Rechtevergabe steht bewusst am Ende: `REVOKE ALL ON ALL TABLES IN SCHEMA`
 wirkt nur auf Tabellen, die zu diesem Zeitpunkt bereits vorhanden sind. Wuerde
@@ -60,7 +64,9 @@ done
 (Supabase). Ohne sie kann niemand die Kontextrollen annehmen und die Abnahme
 1.0-A1 bis 1.0-A4 ist nicht pruefbar. Begruendung im Kopf der Datei.
 
-Wiederholbarkeit: `0001`, `0009` und `0010` sind ohne Weiteres erneut ausfuehrbar.
+Wiederholbarkeit: `0001`, `0009`, `0010`, `0011`, `0012` und `0014` sind ohne Weiteres erneut ausfuehrbar.
+`0014` wird ausschliesslich mit `tools/render_tool_registry.py` erzeugt und bricht ab,
+wenn eine bereits geladene Werkzeugversion eine abweichende Definition haette.
 `0002` bis `0008` legen Objekte an und scheitern beim zweiten Lauf gegen
 dieselbe Instanz — beabsichtigt, weil ein stiller zweiter Lauf gefaehrlicher
 waere als ein Fehler.
