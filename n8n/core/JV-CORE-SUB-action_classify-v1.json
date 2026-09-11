@@ -68,7 +68,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const KONTEXTE = [\"privat\", \"arbeitgeber_visolva\"];\nconst alle = $input.all();\nif (alle.length !== 1) {\n  throw new Error(\"action_classify_invalid_input: genau ein Aufruf je Ausfuehrung erwartet, erhalten \" + alle.length);\n}\nconst e = alle[0].json;\nif (KONTEXTE.indexOf(e.context_id) === -1) {\n  throw new Error(\"action_classify_invalid_input: context_id nicht im Register\");\n}\nif (!e.action_type) {\n  throw new Error(\"action_classify_invalid_input: action_type fehlt\");\n}\nif (!/^[a-z][a-z0-9_]*\\.[a-z][a-z0-9_]*$/.test(String(e.tool_id || \"\"))) {\n  throw new Error(\"action_classify_invalid_input: tool_id fehlt oder ist ungueltig\");\n}\nif (!/^[0-9]+\\.[0-9]+\\.[0-9]+$/.test(String(e.tool_version || \"\"))) {\n  throw new Error(\"action_classify_invalid_input: tool_version fehlt oder ist ungueltig\");\n}\nconst hoch = e.manual_escalation ? String(e.manual_escalation) : \"\";\nif (hoch && [\"A\", \"B\", \"C\"].indexOf(hoch) === -1) {\n  throw new Error(\"action_classify_invalid_input: manual_escalation unzulaessig\");\n}\nreturn [{ json: {\n  context_id: e.context_id,\n  action_type: String(e.action_type),\n  tool_id: e.tool_id,\n  tool_version: e.tool_version,\n  manual_escalation: hoch,\n  trace_id: e.trace_id || null\n} }];"
+        "jsCode": "const alle = $input.all();\nif (alle.length !== 1) {\n  throw new Error(\"action_classify_invalid_input: genau ein Aufruf je Ausfuehrung erwartet, erhalten \" + alle.length);\n}\nconst e = alle[0].json;\nif (!/^[a-z][a-z0-9_]{2,63}$/.test(String(e.context_id || \"\"))) {\n  throw new Error(\"action_classify_invalid_input: context_id fehlt oder hat kein gueltiges Format\");\n}\nif (!e.action_type) {\n  throw new Error(\"action_classify_invalid_input: action_type fehlt\");\n}\nif (!/^[a-z][a-z0-9_]*\\.[a-z][a-z0-9_]*$/.test(String(e.tool_id || \"\"))) {\n  throw new Error(\"action_classify_invalid_input: tool_id fehlt oder ist ungueltig\");\n}\nif (!/^[0-9]+\\.[0-9]+\\.[0-9]+$/.test(String(e.tool_version || \"\"))) {\n  throw new Error(\"action_classify_invalid_input: tool_version fehlt oder ist ungueltig\");\n}\nconst hoch = e.manual_escalation ? String(e.manual_escalation) : \"\";\nif (hoch && [\"A\", \"B\", \"C\"].indexOf(hoch) === -1) {\n  throw new Error(\"action_classify_invalid_input: manual_escalation unzulaessig\");\n}\nreturn [{ json: {\n  context_id: e.context_id,\n  action_type: String(e.action_type),\n  tool_id: e.tool_id,\n  tool_version: e.tool_version,\n  manual_escalation: hoch,\n  trace_id: e.trace_id || null\n} }];"
       },
       "id": "4b67d9b1-3080-49aa-84c5-661f41b56ffa",
       "name": "Eingabe pruefen",
@@ -127,7 +127,10 @@
             }
           ]
         },
-        "options": {}
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "unbekannt"
+        }
       },
       "id": "f1716a3a-7fae-433d-8f0a-89d612df9719",
       "name": "Kontext waehlen",
@@ -196,6 +199,19 @@
         880,
         0
       ]
+    },
+    {
+      "parameters": {
+        "errorMessage": "=action_classify_invalid_input: context_id ohne Kontextweiche: {{ $json.context_id }}"
+      },
+      "id": "5b584298-3d88-4a85-a1c5-e87bfe1906c1",
+      "name": "Kontext ohne Weiche",
+      "type": "n8n-nodes-base.stopAndError",
+      "typeVersion": 1,
+      "position": [
+        672,
+        320
+      ]
     }
   ],
   "connections": {
@@ -233,6 +249,13 @@
         [
           {
             "node": "Register lesen als jv_visolva_user",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Kontext ohne Weiche",
             "type": "main",
             "index": 0
           }
@@ -274,14 +297,15 @@
     }
   },
   "settings": {
-    "executionOrder": "v1"
+    "executionOrder": "v1",
+    "binaryMode": "separate"
   },
   "meta": {
     "jarvis_source_workflow_id": "tWVy6kRzwFMw4lmJ",
     "jarvis_phase": "1.0",
     "jarvis_spec_phase_0": "1.1.0",
     "jarvis_spec_phase_1": "4.0.2",
-    "jarvis_exported_at": "2026-09-10",
+    "jarvis_exported_at": "2026-09-11",
     "jarvis_required_credentials": [
       {
         "id": "7BblU6FbDds3EZBb",

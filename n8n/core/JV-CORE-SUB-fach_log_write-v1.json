@@ -52,7 +52,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Werte werden als ein base64-kodierter JSON-Block an die Datenbank uebergeben.\n// Grund: Die kommagetrennte Parameterliste des Postgres-Knotens zerlegt Texte mit Kommas\n// und macht aus leeren Werten den Text \"null\" (Smoke-Test 10.09.2026, Ausfuehrung 21865).\nconst KONTEXTE = [\"privat\", \"arbeitgeber_visolva\"];\nconst AKTEURE = [\"jarvis\", \"rolf\", \"mitarbeiter\", \"externer\"];\nfunction b64(o) {\n  const s = JSON.stringify(o);\n  return (typeof Buffer !== \"undefined\") ? Buffer.from(s, \"utf8\").toString(\"base64\") : btoa(unescape(encodeURIComponent(s)));\n}\nconst ergebnis = [];\nfor (const item of $input.all()) {\n  const kontext = item.json.context_id;\n  if (KONTEXTE.indexOf(kontext) === -1) {\n    throw new Error(\"fach_log_write_invalid_input: context_id nicht im Register\");\n  }\n  if (!item.json.entry_kind) {\n    throw new Error(\"fach_log_write_invalid_input: entry_kind fehlt\");\n  }\n  if (AKTEURE.indexOf(item.json.actor) === -1) {\n    throw new Error(\"fach_log_write_invalid_input: actor unzulaessig\");\n  }\n  const zusammenfassung = String(item.json.summary_de || \"\");\n  if (zusammenfassung.length < 3) {\n    throw new Error(\"fach_log_write_invalid_input: summary_de fehlt oder ist zu kurz\");\n  }\n  const zeile = {\n    entry_kind: String(item.json.entry_kind),\n    actor: item.json.actor,\n    summary_de: zusammenfassung,\n    action_id: item.json.action_id || null,\n    task_id: item.json.task_id || null,\n    event_id: item.json.event_id || null,\n    corrects_log_id: item.json.corrects_log_id || null,\n    body: item.json.body || {}\n  };\n  ergebnis.push({ json: {\n    context_id: kontext,\n    entry_kind: zeile.entry_kind,\n    action_id: zeile.action_id,\n    trace_id: item.json.trace_id || null,\n    row_b64: b64(zeile)\n  } });\n}\nreturn ergebnis;"
+        "jsCode": "// Werte werden als ein base64-kodierter JSON-Block an die Datenbank uebergeben.\n// Grund: Die kommagetrennte Parameterliste des Postgres-Knotens zerlegt Texte mit Kommas\n// und macht aus leeren Werten den Text \"null\" (Smoke-Test 10.09.2026, Ausfuehrung 21865).\nconst AKTEURE = [\"jarvis\", \"rolf\", \"mitarbeiter\", \"externer\"];\nfunction b64(o) {\n  const s = JSON.stringify(o);\n  return (typeof Buffer !== \"undefined\") ? Buffer.from(s, \"utf8\").toString(\"base64\") : btoa(unescape(encodeURIComponent(s)));\n}\nconst ergebnis = [];\nfor (const item of $input.all()) {\n  const kontext = item.json.context_id;\n  if (!/^[a-z][a-z0-9_]{2,63}$/.test(String(kontext || \"\"))) {\n    throw new Error(\"fach_log_write_invalid_input: context_id fehlt oder hat kein gueltiges Format\");\n  }\n  if (!item.json.entry_kind) {\n    throw new Error(\"fach_log_write_invalid_input: entry_kind fehlt\");\n  }\n  if (AKTEURE.indexOf(item.json.actor) === -1) {\n    throw new Error(\"fach_log_write_invalid_input: actor unzulaessig\");\n  }\n  const zusammenfassung = String(item.json.summary_de || \"\");\n  if (zusammenfassung.length < 3) {\n    throw new Error(\"fach_log_write_invalid_input: summary_de fehlt oder ist zu kurz\");\n  }\n  const zeile = {\n    entry_kind: String(item.json.entry_kind),\n    actor: item.json.actor,\n    summary_de: zusammenfassung,\n    action_id: item.json.action_id || null,\n    task_id: item.json.task_id || null,\n    event_id: item.json.event_id || null,\n    corrects_log_id: item.json.corrects_log_id || null,\n    body: item.json.body || {}\n  };\n  ergebnis.push({ json: {\n    context_id: kontext,\n    entry_kind: zeile.entry_kind,\n    action_id: zeile.action_id,\n    trace_id: item.json.trace_id || null,\n    row_b64: b64(zeile)\n  } });\n}\nreturn ergebnis;"
       },
       "id": "bb7b9c20-9347-4d78-884f-cd9c25a257bc",
       "name": "Protokolleintrag pruefen",
@@ -111,7 +111,10 @@
             }
           ]
         },
-        "options": {}
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "unbekannt"
+        }
       },
       "id": "2bd9650a-0e0d-4a4f-864d-dde1e03b41a3",
       "name": "Kontext waehlen",
@@ -207,6 +210,19 @@
         624,
         -320
       ]
+    },
+    {
+      "parameters": {
+        "errorMessage": "=fach_log_write_invalid_input: context_id ohne Kontextweiche: {{ $json.context_id }}"
+      },
+      "id": "a9c2d234-adba-4399-95c9-d8c91d5e6754",
+      "name": "Kontext ohne Weiche",
+      "type": "n8n-nodes-base.stopAndError",
+      "typeVersion": 1,
+      "position": [
+        672,
+        320
+      ]
     }
   ],
   "connections": {
@@ -247,6 +263,13 @@
             "type": "main",
             "index": 0
           }
+        ],
+        [
+          {
+            "node": "Kontext ohne Weiche",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
@@ -274,14 +297,15 @@
     }
   },
   "settings": {
-    "executionOrder": "v1"
+    "executionOrder": "v1",
+    "binaryMode": "separate"
   },
   "meta": {
     "jarvis_source_workflow_id": "8ur7Lc15KEF0Y8M1",
     "jarvis_phase": "1.0",
     "jarvis_spec_phase_0": "1.1.0",
     "jarvis_spec_phase_1": "4.0.2",
-    "jarvis_exported_at": "2026-09-10",
+    "jarvis_exported_at": "2026-09-11",
     "jarvis_required_credentials": [
       {
         "id": "7BblU6FbDds3EZBb",

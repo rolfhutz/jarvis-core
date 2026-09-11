@@ -61,7 +61,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Werte werden als ein base64-kodierter JSON-Block an die Datenbank uebergeben (Befund Smoke-Test 21865).\nconst MUSTER = [\n  [/(?:)\\b(api[_-]?key|apikey|token|secret|password|passwort|pwd|authorization|bearer|credential|client[_-]?secret)\\b\\s*[:=]?\\s*\\S+/gi, \"[entfernt]\"],\n  [/eyJ[A-Za-z0-9_-]{5,}\\.[A-Za-z0-9_-]{5,}\\.[A-Za-z0-9_-]{5,}/g, \"[entfernt]\"],\n  [/(token|key|secret|password)=[^&\\s]+/gi, \"[entfernt]\"],\n  [/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}/g, \"[entfernt]\"],\n  [/postgres(?:ql)?:\\/\\/[^\\s]+/gi, \"[entfernt]\"],\n  [/\\+?\\d[\\d\\s()\\/-]{7,}\\d/g, \"[entfernt]\"]\n];\nconst KONTEXTE = [\"privat\", \"arbeitgeber_visolva\"];\nfunction b64(o) {\n  const s = JSON.stringify(o);\n  return (typeof Buffer !== \"undefined\") ? Buffer.from(s, \"utf8\").toString(\"base64\") : btoa(unescape(encodeURIComponent(s)));\n}\nconst ergebnis = [];\nfor (const item of $input.all()) {\n  const kontext = item.json.context_id;\n  if (KONTEXTE.indexOf(kontext) === -1) {\n    throw new Error(\"tech_log_write_invalid_input: context_id nicht im Register\");\n  }\n  if (!item.json.trace_id) {\n    throw new Error(\"tech_log_write_invalid_input: trace_id fehlt\");\n  }\n  if (!item.json.workflow_name) {\n    throw new Error(\"tech_log_write_invalid_input: workflow_name fehlt\");\n  }\n  let text = String(item.json.message_raw || \"\");\n  for (const paar of MUSTER) {\n    text = text.replace(paar[0], paar[1]);\n  }\n  if (text.length > 500) {\n    text = text.slice(0, 497) + \"...\";\n  }\n  const zahl = (v) => (v === undefined || v === null || v === \"\") ? null : Number(v);\n  const zeile = {\n    trace_id: item.json.trace_id,\n    run_id: item.json.run_id || null,\n    workflow_name: item.json.workflow_name,\n    node_name: item.json.node_name || null,\n    context_id: kontext,\n    object_kind: item.json.object_kind || null,\n    object_id: item.json.object_id || null,\n    tool_id: item.json.tool_id || null,\n    adapter_id: item.json.adapter_id || null,\n    status_code: zahl(item.json.status_code),\n    error_class: item.json.error_class || null,\n    message_safe: text,\n    duration_ms: zahl(item.json.duration_ms)\n  };\n  ergebnis.push({ json: {\n    context_id: kontext,\n    trace_id: zeile.trace_id,\n    message_safe: text,\n    row_b64: b64(zeile)\n  } });\n}\nreturn ergebnis;"
+        "jsCode": "// Werte werden als ein base64-kodierter JSON-Block an die Datenbank uebergeben (Befund Smoke-Test 21865).\nconst MUSTER = [\n  [/(?:)\\b(api[_-]?key|apikey|token|secret|password|passwort|pwd|authorization|bearer|credential|client[_-]?secret)\\b\\s*[:=]?\\s*\\S+/gi, \"[entfernt]\"],\n  [/eyJ[A-Za-z0-9_-]{5,}\\.[A-Za-z0-9_-]{5,}\\.[A-Za-z0-9_-]{5,}/g, \"[entfernt]\"],\n  [/(token|key|secret|password)=[^&\\s]+/gi, \"[entfernt]\"],\n  [/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}/g, \"[entfernt]\"],\n  [/postgres(?:ql)?:\\/\\/[^\\s]+/gi, \"[entfernt]\"],\n  [/\\+?\\d[\\d\\s()\\/-]{7,}\\d/g, \"[entfernt]\"]\n];\nfunction b64(o) {\n  const s = JSON.stringify(o);\n  return (typeof Buffer !== \"undefined\") ? Buffer.from(s, \"utf8\").toString(\"base64\") : btoa(unescape(encodeURIComponent(s)));\n}\nconst ergebnis = [];\nfor (const item of $input.all()) {\n  const kontext = item.json.context_id;\n  if (!/^[a-z][a-z0-9_]{2,63}$/.test(String(kontext || \"\"))) {\n    throw new Error(\"tech_log_write_invalid_input: context_id fehlt oder hat kein gueltiges Format\");\n  }\n  if (!item.json.trace_id) {\n    throw new Error(\"tech_log_write_invalid_input: trace_id fehlt\");\n  }\n  if (!item.json.workflow_name) {\n    throw new Error(\"tech_log_write_invalid_input: workflow_name fehlt\");\n  }\n  let text = String(item.json.message_raw || \"\");\n  for (const paar of MUSTER) {\n    text = text.replace(paar[0], paar[1]);\n  }\n  if (text.length > 500) {\n    text = text.slice(0, 497) + \"...\";\n  }\n  const zahl = (v) => (v === undefined || v === null || v === \"\") ? null : Number(v);\n  const zeile = {\n    trace_id: item.json.trace_id,\n    run_id: item.json.run_id || null,\n    workflow_name: item.json.workflow_name,\n    node_name: item.json.node_name || null,\n    context_id: kontext,\n    object_kind: item.json.object_kind || null,\n    object_id: item.json.object_id || null,\n    tool_id: item.json.tool_id || null,\n    adapter_id: item.json.adapter_id || null,\n    status_code: zahl(item.json.status_code),\n    error_class: item.json.error_class || null,\n    message_safe: text,\n    duration_ms: zahl(item.json.duration_ms)\n  };\n  ergebnis.push({ json: {\n    context_id: kontext,\n    trace_id: zeile.trace_id,\n    message_safe: text,\n    row_b64: b64(zeile)\n  } });\n}\nreturn ergebnis;"
       },
       "id": "3062704e-50ce-43fd-93ea-1a0cf5749c20",
       "name": "message_safe bereinigen",
@@ -120,7 +120,10 @@
             }
           ]
         },
-        "options": {}
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "unbekannt"
+        }
       },
       "id": "cfc8c058-3a2e-4e55-a447-6b39e9ed7e3d",
       "name": "Kontext waehlen",
@@ -216,6 +219,19 @@
         624,
         -320
       ]
+    },
+    {
+      "parameters": {
+        "errorMessage": "=tech_log_write_invalid_input: context_id ohne Kontextweiche: {{ $json.context_id }}"
+      },
+      "id": "3333a4f3-09fe-4d3b-8d96-ef44e7c7d0be",
+      "name": "Kontext ohne Weiche",
+      "type": "n8n-nodes-base.stopAndError",
+      "typeVersion": 1,
+      "position": [
+        672,
+        320
+      ]
     }
   ],
   "connections": {
@@ -256,6 +272,13 @@
             "type": "main",
             "index": 0
           }
+        ],
+        [
+          {
+            "node": "Kontext ohne Weiche",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
@@ -283,14 +306,15 @@
     }
   },
   "settings": {
-    "executionOrder": "v1"
+    "executionOrder": "v1",
+    "binaryMode": "separate"
   },
   "meta": {
     "jarvis_source_workflow_id": "Bp7m62faVmLZ6VdB",
     "jarvis_phase": "1.0",
     "jarvis_spec_phase_0": "1.1.0",
     "jarvis_spec_phase_1": "4.0.2",
-    "jarvis_exported_at": "2026-09-10",
+    "jarvis_exported_at": "2026-09-11",
     "jarvis_required_credentials": [
       {
         "id": "7BblU6FbDds3EZBb",
