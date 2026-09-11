@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://jarvis.local/schemas/config/intake_config.schema.json",
   "title": "JARVIS Eingangskonfiguration je Kontext",
-  "description": "Laufzeitkonfiguration fuer Schritt 1.1 (Entscheidung 1.1-E4). Enthaelt ausschliesslich env-Verweise, keine Ordner-IDs, keine Konten, keine Zugangsdaten. Wird mit tools/render_intake_config.py in jarvis_ops geladen. Version 1.0.0.",
+  "description": "Laufzeitkonfiguration fuer Schritt 1.1 (Entscheidung 1.1-E4). Enthaelt ausschliesslich env-Verweise, keine Ordner-IDs, keine Konten, keine Zugangsdaten. Wird mit tools/render_intake_config.py in jarvis_ops geladen. Version 1.1.0 (1.1b-E1: Kontextwurzel).",
   "type": "object",
   "properties": {
     "config_version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
@@ -43,6 +43,10 @@
           "oneOf": [ { "$ref": "#/$defs/env_ref" }, { "type": "null" } ],
           "description": "Nur fuer Speicher mit Container, z. B. SharePoint-Bibliothek. Google Drive: null."
         },
+        "context_root_ref": {
+          "$ref": "#/$defs/env_ref",
+          "description": "Kontextwurzel (1.1b-E1). Alle Ordnerrollen des Kontexts liegen darunter; Speicheradapter lesen und schreiben nur innerhalb dieser Wurzel (P1-T-22, 1.1-A11)."
+        },
         "inbox_ref": { "$ref": "#/$defs/env_ref" },
         "working_ref": { "$ref": "#/$defs/env_ref" },
         "archive_root_ref": { "$ref": "#/$defs/env_ref" },
@@ -74,7 +78,7 @@
         "quarantine_halt_window_minutes": { "type": "integer", "minimum": 1 }
       },
       "required": [
-        "storage_adapter_id", "storage_container_ref", "inbox_ref", "working_ref", "archive_root_ref",
+        "storage_adapter_id", "storage_container_ref", "context_root_ref", "inbox_ref", "working_ref", "archive_root_ref",
         "drafts_ref", "reports_ref", "allowed_mime_types", "max_file_size_mb", "ocr_provider_allowlist",
         "ocr_min_characters", "ocr_min_mean_confidence", "fingerprint_max_hamming",
         "synthetic_marker_required", "synthetic_marker_prefix",

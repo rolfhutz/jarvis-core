@@ -1189,14 +1189,14 @@
     },
     {
       "parameters": {
-        "jsCode": "const L = $('Lauf vorbereiten').first().json;\nconst gruppen = [['Faelle Kontext','Ruf context_resolve'],['Faelle Kennung','Ruf id_generate'],['Faelle Klasse','Ruf action_classify'],['Faelle Vertragstor','Ruf tool_invoke'],['Faelle Nachweis','Ruf evidence_verify'],['Faelle Sperre','Ruf idempotency_guard'],['Faelle Fachprotokoll','Ruf fach_log_write'],['Faelle Technikprotokoll','Ruf tech_log_write'],['Faelle Fehler','Ruf error_handler'],['Faelle Klasse Werkzeuge','Ruf action_classify W'],['Faelle Sperre Werkzeuge','Ruf idempotency_guard W'],['Faelle ADP casestore','Ruf ADP casestore'],['Faelle ADP docstore','Ruf ADP docstore'],['Faelle ADP tasks','Ruf ADP tasks'],['Faelle Nachweis Werkzeuge','Ruf evidence_verify W'],['Faelle Werkzeugaufruf','Ruf tool_invoke W'],['Faelle Fachprotokoll Werkzeuge','Ruf fach_log_write W']];\nconst erg = []; const byId = {}; const paare = {};\nfor (const g of gruppen) {\n  let fs, rs;\n  try { fs = $(g[0]).all(); rs = $(g[1]).all(); } catch (x) { erg.push({ case_id: g[1], pass: false, detail: 'nicht ausgefuehrt: ' + x.message }); continue; }\n  if (fs.length !== rs.length) erg.push({ case_id: g[1], pass: false, detail: 'Faelle ' + fs.length + ' ungleich Ergebnisse ' + rs.length });\n  for (let i = 0; i < fs.length; i++) {\n    const c = fs[i].json; const j = rs[i] ? rs[i].json : {}; const ex = c.expect || {};\n    byId[c.case_id] = j;\n    const txt = JSON.stringify(j); const istFehler = j && j.error !== undefined;\n    let pass = true; let d = '';\n    if (ex.error) { pass = istFehler && txt.indexOf(ex.error) !== -1; d = pass ? 'erwartet abgewiesen' : 'Abweisung fehlt: ' + txt.slice(0, 300); }\n    else if (istFehler) { pass = false; d = 'unerwarteter Fehler: ' + txt.slice(0, 300); }\n    else {\n      const fl = ex.fields || {};\n      for (const k of Object.keys(fl)) { if (JSON.stringify(j[k]) !== JSON.stringify(fl[k])) { pass = false; d += k + '=' + JSON.stringify(j[k]) + ' erwartet ' + JSON.stringify(fl[k]) + '; '; } }\n      const mt = ex.match || {};\n      for (const k of Object.keys(mt)) { if (!new RegExp(mt[k]).test(String(j[k]))) { pass = false; d += k + ' passt nicht zum Muster; '; } }\n      if (ex.same_key_as && (!byId[ex.same_key_as] || j.idempotency_key !== byId[ex.same_key_as].idempotency_key)) { pass = false; d += 'Schluessel nicht deterministisch; '; }\n      if (ex.limitation === 'present' && !(j.verification && j.verification.limitation)) { pass = false; d += 'limitation fehlt; '; }\n      if (ex.limitation === 'absent' && j.verification && j.verification.limitation) { pass = false; d += 'limitation unerwartet; '; }\n      if (ex.pair) { paare[ex.pair] = (paare[ex.pair] || []).concat([j.decision]); }\n      if (!d) d = 'ok';\n    }\n    erg.push({ case_id: c.case_id, pass: pass, detail: d });\n  }\n}\nfor (const p of Object.keys(paare)) { const s = paare[p].slice().sort().join(','); erg.push({ case_id: p + '-parallel', pass: s === 'proceed,skip_duplicate', detail: 'Entscheidungen: ' + s }); }\nconst summary = 'trc_smoke Lauf ' + L.run_id + ': Test, mit Kommas, und Umlauten äöü';\nfor (const x of [['privat', 'Readback jarvis_privat'], ['visolva', 'Readback jarvis_visolva']]) {\n  let r; try { r = $(x[1]).first().json; } catch (e) { erg.push({ case_id: 'RB-' + x[0], pass: false, detail: 'Readback nicht ausgefuehrt' }); continue; }\n  const fach = r.fach || []; const tech = r.tech || []; const err = r.err || [];\n  erg.push({ case_id: 'RB-' + x[0] + '-fachprotokoll', pass: fach.length === 1 && fach[0].summary_de === summary && fach[0].b === 'x, y', detail: JSON.stringify(fach).slice(0, 300) });\n  const ms = tech[0] ? String(tech[0].message_safe) : '';\n  erg.push({ case_id: 'RB-' + x[0] + '-technikprotokoll', pass: tech.length === 1 && ms.indexOf('SMOKE_FAKE_123') === -1 && ms.indexOf('test@example.com') === -1 && ms.indexOf('Smoke-Test, mit Komma') === 0, detail: JSON.stringify(tech).slice(0, 300) });\n  erg.push({ case_id: 'RB-' + x[0] + '-fehlerereignis', pass: err.length === 1, detail: JSON.stringify(err).slice(0, 300) });\n  erg.push({ case_id: 'RB-' + x[0] + '-sperren', pass: r.locks === 1, detail: 'Sperren je Aktion=' + r.locks });\n}\nfor (const x of [['privat', 'Readback Werkzeuge jarvis_privat', 1], ['visolva', 'Readback Werkzeuge jarvis_visolva', 0]]) {\n  let r; try { r = $(x[1]).first().json; } catch (e) { erg.push({ case_id: 'RBW-' + x[0], pass: false, detail: 'Readback Werkzeuge nicht ausgefuehrt' }); continue; }\n  const n = r.nachweise || {};\n  erg.push({ case_id: 'RBW-' + x[0] + '-einmalig', pass: r.faelle === 1 && r.dokumente === 1 && r.aufgaben === 1, detail: 'faelle=' + r.faelle + ' dokumente=' + r.dokumente + ' aufgaben=' + r.aufgaben });\n  erg.push({ case_id: 'RBW-' + x[0] + '-verknuepft', pass: r.verknuepft === 1, detail: 'verknuepft=' + r.verknuepft });\n  erg.push({ case_id: 'RBW-' + x[0] + '-nachweise', pass: n.confirmed === 3 && (n.not_confirmed || 0) === x[2], detail: JSON.stringify(n) });\n  erg.push({ case_id: 'RBW-' + x[0] + '-fachprotokoll', pass: r.fach === 1, detail: 'fach=' + r.fach });\n}\nconst fehl = erg.filter(e => !e.pass);\nreturn [{ json: { gesamtergebnis: fehl.length === 0 ? 'BESTANDEN' : 'NICHT BESTANDEN', lauf: L.run_id, trace_id: L.trace_id, bestanden: erg.length - fehl.length, gesamt: erg.length, nicht_bestanden: fehl, pruefungen: erg } }];"
+        "jsCode": "const L = $('Lauf vorbereiten').first().json;\nconst gruppen = [['Faelle Kontext','Ruf context_resolve'],['Faelle Kennung','Ruf id_generate'],['Faelle Klasse','Ruf action_classify'],['Faelle Vertragstor','Ruf tool_invoke'],['Faelle Nachweis','Ruf evidence_verify'],['Faelle Sperre','Ruf idempotency_guard'],['Faelle Fachprotokoll','Ruf fach_log_write'],['Faelle Technikprotokoll','Ruf tech_log_write'],['Faelle Fehler','Ruf error_handler'],['Faelle Klasse Werkzeuge','Ruf action_classify W'],['Faelle Sperre Werkzeuge','Ruf idempotency_guard W'],['Faelle ADP casestore','Ruf ADP casestore'],['Faelle ADP docstore','Ruf ADP docstore'],['Faelle ADP tasks','Ruf ADP tasks'],['Faelle Nachweis Werkzeuge','Ruf evidence_verify W'],['Faelle Werkzeugaufruf','Ruf tool_invoke W'],['Faelle Fachprotokoll Werkzeuge','Ruf fach_log_write W']];\nconst erg = []; const byId = {}; const paare = {};\nfor (const g of gruppen) {\n  let fs, rs;\n  try { fs = $(g[0]).all(); rs = $(g[1]).all(); } catch (x) { erg.push({ case_id: g[1], pass: false, detail: 'nicht ausgefuehrt: ' + x.message }); continue; }\n  if (fs.length !== rs.length) erg.push({ case_id: g[1], pass: false, detail: 'Faelle ' + fs.length + ' ungleich Ergebnisse ' + rs.length });\n  for (let i = 0; i < fs.length; i++) {\n    const c = fs[i].json; const j = rs[i] ? rs[i].json : {}; const ex = c.expect || {};\n    byId[c.case_id] = j;\n    const txt = JSON.stringify(j); const istFehler = j && j.error !== undefined;\n    let pass = true; let d = '';\n    if (ex.error) { pass = istFehler && txt.indexOf(ex.error) !== -1; d = pass ? 'erwartet abgewiesen' : 'Abweisung fehlt: ' + txt.slice(0, 300); }\n    else if (istFehler) { pass = false; d = 'unerwarteter Fehler: ' + txt.slice(0, 300); }\n    else {\n      const fl = ex.fields || {};\n      for (const k of Object.keys(fl)) { if (JSON.stringify(j[k]) !== JSON.stringify(fl[k])) { pass = false; d += k + '=' + JSON.stringify(j[k]) + ' erwartet ' + JSON.stringify(fl[k]) + '; '; } }\n      const mt = ex.match || {};\n      for (const k of Object.keys(mt)) { if (!new RegExp(mt[k]).test(String(j[k]))) { pass = false; d += k + ' passt nicht zum Muster; '; } }\n      if (ex.same_key_as && (!byId[ex.same_key_as] || j.idempotency_key !== byId[ex.same_key_as].idempotency_key)) { pass = false; d += 'Schluessel nicht deterministisch; '; }\n      if (ex.limitation === 'present' && !(j.verification && j.verification.limitation)) { pass = false; d += 'limitation fehlt; '; }\n      if (ex.limitation === 'absent' && j.verification && j.verification.limitation) { pass = false; d += 'limitation unerwartet; '; }\n      if (ex.pair) { paare[ex.pair] = (paare[ex.pair] || []).concat([j.decision]); }\n      if (!d) d = 'ok';\n    }\n    erg.push({ case_id: c.case_id, pass: pass, detail: d });\n  }\n}\nfor (const p of Object.keys(paare)) { const s = paare[p].slice().sort().join(','); erg.push({ case_id: p + '-parallel', pass: s === 'proceed,skip_duplicate', detail: 'Entscheidungen: ' + s }); }\nconst summary = 'trc_smoke Lauf ' + L.run_id + ': Test, mit Kommas, und Umlauten äöü';\nfor (const x of [['privat', 'Readback jarvis_privat'], ['visolva', 'Readback jarvis_visolva']]) {\n  let r; try { r = $(x[1]).first().json; } catch (e) { erg.push({ case_id: 'RB-' + x[0], pass: false, detail: 'Readback nicht ausgefuehrt' }); continue; }\n  const fach = r.fach || []; const tech = r.tech || []; const err = r.err || [];\n  erg.push({ case_id: 'RB-' + x[0] + '-fachprotokoll', pass: fach.length === 1 && fach[0].summary_de === summary && fach[0].b === 'x, y', detail: JSON.stringify(fach).slice(0, 300) });\n  const ms = tech[0] ? String(tech[0].message_safe) : '';\n  erg.push({ case_id: 'RB-' + x[0] + '-technikprotokoll', pass: tech.length === 1 && ms.indexOf('SMOKE_FAKE_123') === -1 && ms.indexOf('test@example.com') === -1 && ms.indexOf('Smoke-Test, mit Komma') === 0, detail: JSON.stringify(tech).slice(0, 300) });\n  erg.push({ case_id: 'RB-' + x[0] + '-fehlerereignis', pass: err.length === 1, detail: JSON.stringify(err).slice(0, 300) });\n  erg.push({ case_id: 'RB-' + x[0] + '-sperren', pass: r.locks === 1, detail: 'Sperren je Aktion=' + r.locks });\n}\nfor (const x of [['privat', 'Readback Werkzeuge jarvis_privat', 1], ['visolva', 'Readback Werkzeuge jarvis_visolva', 0]]) {\n  let r; try { r = $(x[1]).first().json; } catch (e) { erg.push({ case_id: 'RBW-' + x[0], pass: false, detail: 'Readback Werkzeuge nicht ausgefuehrt' }); continue; }\n  const n = r.nachweise || {};\n  erg.push({ case_id: 'RBW-' + x[0] + '-einmalig', pass: r.faelle === 1 && r.dokumente === 1 && r.aufgaben === 1, detail: 'faelle=' + r.faelle + ' dokumente=' + r.dokumente + ' aufgaben=' + r.aufgaben });\n  erg.push({ case_id: 'RBW-' + x[0] + '-verknuepft', pass: r.verknuepft === 1, detail: 'verknuepft=' + r.verknuepft });\n  erg.push({ case_id: 'RBW-' + x[0] + '-nachweise', pass: n.confirmed === 3 && (n.not_confirmed || 0) === x[2], detail: JSON.stringify(n) });\n  erg.push({ case_id: 'RBW-' + x[0] + '-fachprotokoll', pass: r.fach === 1, detail: 'fach=' + r.fach });\n}\ntry { for (const p of ($('Speicher auswerten').first().json.pruefungen || [])) erg.push(p); } catch (x) { erg.push({ case_id: 'SG-speicherteil', pass: false, detail: 'Speicherteil nicht ausgefuehrt: ' + x.message }); }\nconst fehl = erg.filter(e => !e.pass);\nreturn [{ json: { gesamtergebnis: fehl.length === 0 ? 'BESTANDEN' : 'NICHT BESTANDEN', lauf: L.run_id, trace_id: L.trace_id, bestanden: erg.length - fehl.length, gesamt: erg.length, nicht_bestanden: fehl, pruefungen: erg } }];"
       },
       "id": "3152abe3-fb7c-4810-8e26-17f1ad217f52",
       "name": "Auswertung",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        10304,
+        11872,
         0
       ],
       "executeOnce": true
@@ -2261,6 +2261,440 @@
           "name": "jv_visolva_postgres"
         }
       }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT context_root_ref, inbox_ref, working_ref, archive_root_ref, drafts_ref, reports_ref, config_version\nFROM jarvis_ops.context_document_settings\nWHERE context_id = 'privat'",
+        "options": {}
+      },
+      "id": "5619cbaf-8735-446c-9d56-47a6d18f3515",
+      "name": "Speicherkonfiguration lesen jarvis_privat",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        10304,
+        0
+      ],
+      "executeOnce": true,
+      "credentials": {
+        "postgres": {
+          "id": "oCkj27EiMe96vXvU",
+          "name": "jv_privat_postgres"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://www.googleapis.com/drive/v3/files",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleDriveOAuth2Api",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "q",
+              "value": "={{ \"'\" + $vars.JV_PRIVAT_TEST_INSIDE_FOLDER_ID + \"' in parents and trashed=false\" }}"
+            },
+            {
+              "name": "fields",
+              "value": "files(id,name,mimeType)"
+            },
+            {
+              "name": "pageSize",
+              "value": "50"
+            },
+            {
+              "name": "spaces",
+              "value": "drive"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "a21972f4-3722-416f-82c7-e0cf27bbfd9d",
+      "name": "Testordner innen lesen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        10752,
+        0
+      ],
+      "executeOnce": true,
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "T9eXpovYsz2Ipp6B",
+          "name": "jv_privat_gdrive"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "url": "https://www.googleapis.com/drive/v3/files",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleDriveOAuth2Api",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "q",
+              "value": "={{ \"'\" + $vars.JV_PRIVAT_TEST_OUTSIDE_FOLDER_ID + \"' in parents and trashed=false\" }}"
+            },
+            {
+              "name": "fields",
+              "value": "files(id,name,mimeType)"
+            },
+            {
+              "name": "pageSize",
+              "value": "50"
+            },
+            {
+              "name": "spaces",
+              "value": "drive"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "92ef884b-01be-42b7-aa2f-726dd640904d",
+      "name": "Testordner aussen lesen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        10976,
+        0
+      ],
+      "executeOnce": true,
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "T9eXpovYsz2Ipp6B",
+          "name": "jv_privat_gdrive"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1.1b: Einrichtungspruefung (B-A1) und Faelle fuer storage_gdrive.get_file (A-6).\n// TS-27 A: nur die neun JARVIS-Ordner werden gelesen, keine Ordnerliste des Kontos.\n// Keine Ordner- oder Datei-IDs in den Pruefungstexten.\nconst L = $('Lauf vorbereiten').first().json;\nconst ein = $('Einrichtungsordner').all().map(function (x) { return x.json || {}; });\nconst met = $('Ordnermetadaten Einrichtung').all().map(function (x) { return x.json || {}; });\nconst innenRoh = $('Testordner innen lesen').first().json || {};\nconst aussenRoh = $('Testordner aussen lesen').first().json || {};\nconst innen = Array.isArray(innenRoh.files) ? innenRoh.files : [];\nconst aussen = Array.isArray(aussenRoh.files) ? aussenRoh.files : [];\nconst idOk = function (v) { return typeof v === 'string' && /^[A-Za-z0-9_-]{10,200}$/.test(v); };\nconst M = {};\nein.forEach(function (e, i) { M[e.rolle] = { id: e.ordner_id, gueltig: e.gueltig === true, meta: met[i] || {} }; });\nconst lesbar = function (r) { const x = M[r]; return !!(x && x.gueltig && x.meta.id === x.id && x.meta.mimeType === 'application/vnd.google-apps.folder' && x.meta.trashed !== true); };\nconst eltern = function (r) { const x = M[r]; return (x && Array.isArray(x.meta.parents) && x.meta.parents.length === 1) ? x.meta.parents[0] : null; };\nconst rollen = ['wurzel', 'eingang', 'arbeit', 'archiv', 'entwuerfe', 'berichte', 'test_innen', 'test_aussen', 'k07_probe'];\nconst pruef = [];\nconst P = function (id, ok, detail) { pruef.push({ case_id: id, pass: !!ok, detail: detail }); };\nconst schlecht = rollen.filter(function (r) { return !(M[r] && M[r].gueltig); });\nP('SE-01-variablen-reine-ids', schlecht.length === 0, schlecht.length ? 'keine reine ID: ' + schlecht.join(', ') : 'alle 9 Variablen sind reine IDs');\nconst verschieden = new Set(rollen.map(function (r) { return M[r] ? M[r].id : r; })).size;\nP('SE-02-ordner-verschieden', verschieden === rollen.length, verschieden + ' von ' + rollen.length + ' Ordnern verschieden');\nconst unlesbar = rollen.filter(function (r) { return !lesbar(r); });\nP('SE-03-ordner-lesbar', unlesbar.length === 0, unlesbar.length ? 'nicht lesbar oder kein Ordner: ' + unlesbar.join(', ') : 'alle 9 Ordner lesbar');\nP('SE-04-wurzel-bekannt', lesbar('wurzel'), 'Wurzel lesbar');\nconst wurzel = M.wurzel ? M.wurzel.id : null;\nfor (const k of ['eingang', 'arbeit', 'archiv', 'entwuerfe', 'berichte']) P('SE-05-' + k + '-unter-wurzel', lesbar(k) && eltern(k) === wurzel, k + ' direkt unter der Wurzel');\nP('SE-06-test-innen-unter-wurzel', lesbar('test_innen') && eltern('test_innen') === wurzel, 'Testordner innen direkt unter der Wurzel');\nconst ebene = eltern('wurzel');\nP('SE-07-test-aussen-ausserhalb', lesbar('test_aussen') && ebene !== null && eltern('test_aussen') === ebene, 'Testordner aussen neben der Wurzel');\nP('SE-08-k07-ausserhalb', lesbar('k07_probe') && ebene !== null && eltern('k07_probe') === ebene, 'Ordner K-07-Probe neben der Wurzel');\nconst testInnen = M.test_innen ? M.test_innen.id : '';\nconst pdfInnen = innen.find(function (f) { return f.name === 'SMOKE_innen.pdf' && f.mimeType === 'application/pdf'; });\nconst gdoc = innen.find(function (f) { return f.name === 'SMOKE_gdoc' && f.mimeType === 'application/vnd.google-apps.document'; });\nconst verkn = innen.find(function (f) { return f.mimeType === 'application/vnd.google-apps.shortcut'; });\nconst pdfAussen = aussen.find(function (f) { return f.name === 'SMOKE_aussen.pdf' && f.mimeType === 'application/pdf'; });\nP('SE-09-testobjekte', !!(pdfInnen && gdoc && verkn && pdfAussen) && innen.length === 3, 'innen: ' + innen.map(function (f) { return f.name + ' (' + String(f.mimeType).split('.').pop() + ')'; }).join(', ') + ' | aussen PDF: ' + !!pdfAussen + (innenRoh.error || aussenRoh.error ? ' | Lesefehler Testordner' : ''));\nconst T = 'storage_gdrive.get_file';\nconst A = $('Werkzeugaktion Speicher jarvis_privat').first().json.action_id;\nconst leer = 'JVsmokeFehlt00000';\nconst pl = function (id, extra) { return Object.assign({ context_id: 'privat', adapter_id: 'storage_gdrive', file_external_id: id }, extra || {}); };\nconst fall = function (cid, inp, erw) { return { json: Object.assign({ case_id: cid, erwartet: erw, context_id: 'privat', action_id: A, tool_id: T, dry_run: false, trace_id: L.trace_id }, inp) }; };\nconst innenId = pdfInnen ? pdfInnen.id : leer;\nconst aus = [];\naus.push(fall('SG-01-normal', { payload: pl(innenId) }, { status: 'ok', binaer: true, pruefsumme: 'match' }));\naus.push(fall('SG-02-nur-metadaten', { payload: pl(innenId, { include_content: false }) }, { status: 'ok', binaer: false, gleicher_hash_wie: 'SG-01-normal' }));\naus.push(fall('SG-03-ausserhalb', { payload: pl(pdfAussen ? pdfAussen.id : leer) }, { fehler: 'outside_context_root', stufe: 'root' }));\naus.push(fall('SG-04-verknuepfung', { payload: pl(verkn ? verkn.id : leer) }, { fehler: 'shortcut_not_allowed', stufe: 'type' }));\naus.push(fall('SG-05-google-dokument', { payload: pl(gdoc ? gdoc.id : leer) }, { fehler: 'no_binary_content', stufe: 'type' }));\naus.push(fall('SG-06-ordner', { payload: pl(idOk(testInnen) ? testInnen : leer) }, { fehler: 'not_a_file', stufe: 'type' }));\naus.push(fall('SG-07-zu-gross', { payload: pl(innenId, { max_size_mb: 1 }) }, { fehler: 'file_too_large', stufe: 'type' }));\naus.push(fall('SG-08-unbekannte-datei', { payload: pl('JVsmokeUnbekannt000000000') }, { fehler: 'not_found', stufe: 'metadata' }));\naus.push(fall('SG-09-fremder-kontext', { context_id: 'arbeitgeber_visolva', payload: pl(innenId, { context_id: 'arbeitgeber_visolva' }) }, { fehler: 'context_id ohne Kontextweiche', stufe: 'input' }));\naus.push(fall('SG-10-falsches-werkzeug', { tool_id: 'storage_gdrive.move_file', payload: pl(innenId) }, { fehler: 'tool_id passt nicht', stufe: 'input' }));\naus.push(fall('SG-11-ungueltige-id', { payload: pl('../../etc/passwd') }, { fehler: 'file_external_id fehlt oder ist ungueltig', stufe: 'input' }));\naus.push(fall('SG-12-probelauf', { dry_run: true, payload: pl(innenId) }, { status: 'dry_run', binaer: false }));\naus.push(fall('SG-13-zusatzfeld', { payload: pl(innenId, { parent_path: '/x' }) }, { fehler: 'unzulaessige Felder', stufe: 'input' }));\naus[0].json.einrichtung = pruef;\nreturn aus;"
+      },
+      "id": "78730078-f5b8-4ffc-a90a-6dda2eced3ee",
+      "name": "Faelle Speicher",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        11200,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "qZpVoKoKuPRyOGg7"
+        },
+        "workflowInputs": {
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false,
+          "mappingMode": "defineBelow",
+          "matchingColumns": [],
+          "schema": [
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "context_id",
+              "id": "context_id",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "action_id",
+              "id": "action_id",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "tool_id",
+              "id": "tool_id",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "payload",
+              "id": "payload",
+              "required": false,
+              "type": "object"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "dry_run",
+              "id": "dry_run",
+              "required": false,
+              "type": "boolean"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "trace_id",
+              "id": "trace_id",
+              "required": false,
+              "type": "string"
+            }
+          ],
+          "value": {
+            "action_id": "={{ $json.action_id }}",
+            "context_id": "={{ $json.context_id }}",
+            "dry_run": "={{ $json.dry_run }}",
+            "payload": "={{ $json.payload }}",
+            "tool_id": "={{ $json.tool_id }}",
+            "trace_id": "={{ $json.trace_id }}"
+          }
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "4eb45858-3410-4c2a-a000-0076aedf73a2",
+      "name": "Ruf ADP storage_gdrive",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        11424,
+        0
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const fs = $('Faelle Speicher').all();\nconst rs = $('Ruf ADP storage_gdrive').all();\nconst erg = [];\nfor (const p of (fs.length ? (fs[0].json.einrichtung || []) : [])) erg.push(p);\nif (fs.length !== rs.length) erg.push({ case_id: 'SG-anzahl', pass: false, detail: 'Faelle ' + fs.length + ' ungleich Ergebnisse ' + rs.length });\nconst byId = {};\nfor (let i = 0; i < fs.length; i++) {\n  const c = fs[i].json; const r = rs[i] || {}; const j = r.json || {}; const x = c.erwartet || {};\n  byId[c.case_id] = j;\n  const binaer = !!(r.binary && r.binary.data);\n  let ok = true; const d = [];\n  if (x.fehler) {\n    if (j.status !== 'error' || JSON.stringify(j.error || {}).indexOf(x.fehler) === -1) { ok = false; d.push('erwartet ' + x.fehler + ', erhalten ' + JSON.stringify({ status: j.status, error: j.error, stage: j.checked_stage }).slice(0, 250)); }\n    if (x.stufe && j.checked_stage !== x.stufe) { ok = false; d.push('Stufe ' + j.checked_stage + ' statt ' + x.stufe); }\n    if (binaer) { ok = false; d.push('Binaerdatum trotz Abweisung'); }\n  } else {\n    if (j.status !== x.status) { ok = false; d.push('status ' + j.status + ' statt ' + x.status + ' ' + JSON.stringify(j.error || {}).slice(0, 250)); }\n    if (x.binaer !== undefined && binaer !== x.binaer) { ok = false; d.push('Binaerdatum ' + binaer + ' statt ' + x.binaer); }\n    if (x.status === 'ok') {\n      const res = j.result || {};\n      if (!/^sha256:[a-f0-9]{64}$/.test(String(res.content_hash))) { ok = false; d.push('content_hash fehlt'); }\n      if (res.provider_status !== 200) { ok = false; d.push('provider_status fehlt'); }\n      if (!(res.size_bytes > 1048576)) { ok = false; d.push('Groesse unerwartet'); }\n      if (x.binaer === true && res.content_ref !== 'data') { ok = false; d.push('content_ref fehlt'); }\n      if (x.binaer === false && res.content_ref !== undefined) { ok = false; d.push('content_ref unerwartet'); }\n      if (x.pruefsumme && !(j.observed && j.observed.provider_checksum === x.pruefsumme)) { ok = false; d.push('Anbieterpruefsumme ' + (j.observed ? j.observed.provider_checksum : 'fehlt')); }\n      if (x.gleicher_hash_wie) { const v = byId[x.gleicher_hash_wie]; if (!v || !v.result || v.result.content_hash !== res.content_hash) { ok = false; d.push('Hash weicht von ' + x.gleicher_hash_wie + ' ab'); } }\n    }\n  }\n  erg.push({ case_id: c.case_id, pass: ok, detail: d.length ? d.join('; ') : 'ok' });\n}\ntry {\n  const n = $('Ruf evidence_verify S').first().json;\n  erg.push({ case_id: 'SN-01-freigabenachweis', pass: n.verification_passed === true && n.gate_code === 'verified' && n.evidence_stored === true && !!(n.verification && n.verification.limitation) && /^evd_/.test(String(n.evidence_id)),\n    detail: 'gate=' + n.gate_code + ' gespeichert=' + n.evidence_stored + ' evidence_id=' + n.evidence_id });\n} catch (x) { erg.push({ case_id: 'SN-01-freigabenachweis', pass: false, detail: 'nicht ausgefuehrt: ' + x.message }); }\nreturn [{ json: { pruefungen: erg } }];"
+      },
+      "id": "6d26a21c-983e-4e83-a44e-541c0a0598c0",
+      "name": "Speicher auswerten",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        11648,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO jarvis_privat.action (action_id, schema_version, action_type, tool_id, tool_version, risk_class, risk_class_source, status, priority, idempotency_key, body)\nVALUES ('act_smoke_' || $1 || '_p_gf', '1.0.0', 'smoke.tool_release', 'storage_gdrive.get_file', '1.1.0', 'A', 'tool_default', 'planned', 'low',\n        encode(sha256(convert_to('smk_' || $1 || '_privat_gf', 'UTF8')), 'hex'), jsonb_build_object('zweck', 'Smoke-Test Werkzeugfreigabe 1.1b'))\nRETURNING action_id",
+        "options": {
+          "queryReplacement": "={{ $('Lauf vorbereiten').first().json.ts }}"
+        }
+      },
+      "id": "e3ed6d61-fd70-4b26-9d5e-cccfa7f1e45d",
+      "name": "Werkzeugaktion Speicher jarvis_privat",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        11088,
+        -208
+      ],
+      "executeOnce": true,
+      "credentials": {
+        "postgres": {
+          "id": "oCkj27EiMe96vXvU",
+          "name": "jv_privat_postgres"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1.1b Freigabenachweis (12.1.1 Schritt 4): Ergebnis von SG-01 gegen den Vertrag pruefen.\nconst L = $('Lauf vorbereiten').first().json;\nconst fs = $('Faelle Speicher').all();\nconst rs = $('Ruf ADP storage_gdrive').all();\nconst i = fs.findIndex(function (x) { return x.json.case_id === 'SG-01-normal'; });\nconst c = i >= 0 ? fs[i].json : {};\nconst r = (i >= 0 && rs[i]) ? (rs[i].json || {}) : {};\nreturn [{ json: { case_id: 'SN-01-freigabenachweis', context_id: 'privat', action_id: c.action_id, contract_tool_id: 'storage_gdrive.get_file', contract_version: '1.1.0', verification_method: r.verification_method || 'provider_status', observed: r.observed || {}, expected: { provider_status: 200, provider_checksum: 'match' }, trace_id: L.trace_id } }];"
+      },
+      "id": "bf5c4d17-fdf4-4125-8df3-383c57831e19",
+      "name": "Faelle Nachweis Speicher",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        11536,
+        -208
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "UKcnRE0eJzyl8T1V"
+        },
+        "workflowInputs": {
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false,
+          "mappingMode": "defineBelow",
+          "matchingColumns": [],
+          "schema": [
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "context_id",
+              "id": "context_id",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "action_id",
+              "id": "action_id",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "contract_tool_id",
+              "id": "contract_tool_id",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "contract_version",
+              "id": "contract_version",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "verification_method",
+              "id": "verification_method",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "observed",
+              "id": "observed",
+              "required": false,
+              "type": "object"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "expected",
+              "id": "expected",
+              "required": false,
+              "type": "object"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "trace_id",
+              "id": "trace_id",
+              "required": false,
+              "type": "string"
+            }
+          ],
+          "value": {
+            "action_id": "={{ $json.action_id }}",
+            "context_id": "={{ $json.context_id }}",
+            "contract_tool_id": "={{ $json.contract_tool_id }}",
+            "contract_version": "={{ $json.contract_version }}",
+            "expected": "={{ $json.expected }}",
+            "observed": "={{ $json.observed }}",
+            "trace_id": "={{ $json.trace_id }}",
+            "verification_method": "={{ $json.verification_method }}"
+          }
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "dc99108a-8f30-4d5c-a320-2916981c9e7b",
+      "name": "Ruf evidence_verify S",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        11648,
+        -208
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// TS-27 A: die neun Ordner der Einrichtungspruefung, aufgeloest aus Konfiguration und Variablen.\nconst cfg = $input.first().json || {};\nconst wert = function (n) { const w = $vars[n]; return (typeof w === 'string') ? w.trim() : ''; };\nconst aufl = function (ref) { const m = /^env:(JV_[A-Z0-9_]+)$/.exec(String(ref || '')); return m ? wert(m[1]) : ''; };\nconst idOk = function (v) { return typeof v === 'string' && /^[A-Za-z0-9_-]{10,200}$/.test(v); };\nconst liste = [['wurzel', aufl(cfg.context_root_ref)], ['eingang', aufl(cfg.inbox_ref)], ['arbeit', aufl(cfg.working_ref)], ['archiv', aufl(cfg.archive_root_ref)],\n  ['entwuerfe', aufl(cfg.drafts_ref)], ['berichte', aufl(cfg.reports_ref)], ['test_innen', wert('JV_PRIVAT_TEST_INSIDE_FOLDER_ID')],\n  ['test_aussen', wert('JV_PRIVAT_TEST_OUTSIDE_FOLDER_ID')], ['k07_probe', wert('JV_K07_PROBE_FOLDER_ID')]];\nreturn liste.map(function (x) { return { json: { rolle: x[0], ordner_id: idOk(x[1]) ? x[1] : 'JVsmokeUngueltig000' + x[0].length, gueltig: idOk(x[1]) } }; });"
+      },
+      "id": "0d779560-5654-4898-b7f0-7cd026648266",
+      "name": "Einrichtungsordner",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        10528,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://www.googleapis.com/drive/v3/files/{{ $json.ordner_id }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleDriveOAuth2Api",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "fields",
+              "value": "id,parents,mimeType,trashed"
+            },
+            {
+              "name": "supportsAllDrives",
+              "value": "false"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "0a9a4794-d010-4824-a8aa-12bcb9c3288f",
+      "name": "Ordnermetadaten Einrichtung",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        10640,
+        160
+      ],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "T9eXpovYsz2Ipp6B",
+          "name": "jv_privat_gdrive"
+        }
+      },
+      "onError": "continueRegularOutput"
     }
   ],
   "connections": {
@@ -2763,7 +3197,128 @@
       "main": [
         [
           {
+            "node": "Speicherkonfiguration lesen jarvis_privat",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Testordner innen lesen": {
+      "main": [
+        [
+          {
+            "node": "Testordner aussen lesen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Faelle Speicher": {
+      "main": [
+        [
+          {
+            "node": "Ruf ADP storage_gdrive",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Speicher auswerten": {
+      "main": [
+        [
+          {
             "node": "Auswertung",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Testordner aussen lesen": {
+      "main": [
+        [
+          {
+            "node": "Werkzeugaktion Speicher jarvis_privat",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Werkzeugaktion Speicher jarvis_privat": {
+      "main": [
+        [
+          {
+            "node": "Faelle Speicher",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ruf ADP storage_gdrive": {
+      "main": [
+        [
+          {
+            "node": "Faelle Nachweis Speicher",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Faelle Nachweis Speicher": {
+      "main": [
+        [
+          {
+            "node": "Ruf evidence_verify S",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ruf evidence_verify S": {
+      "main": [
+        [
+          {
+            "node": "Speicher auswerten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Speicherkonfiguration lesen jarvis_privat": {
+      "main": [
+        [
+          {
+            "node": "Einrichtungsordner",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Einrichtungsordner": {
+      "main": [
+        [
+          {
+            "node": "Ordnermetadaten Einrichtung",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ordnermetadaten Einrichtung": {
+      "main": [
+        [
+          {
+            "node": "Testordner innen lesen",
             "type": "main",
             "index": 0
           }
@@ -2785,6 +3340,10 @@
       {
         "id": "7BblU6FbDds3EZBb",
         "name": "jv_visolva_postgres"
+      },
+      {
+        "id": "T9eXpovYsz2Ipp6B",
+        "name": "jv_privat_gdrive"
       },
       {
         "id": "oCkj27EiMe96vXvU",

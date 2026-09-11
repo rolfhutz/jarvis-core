@@ -1,0 +1,759 @@
+{
+  "id": "qZpVoKoKuPRyOGg7",
+  "name": "JV-CORE-ADP-storage_gdrive-v1",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "context_id"
+            },
+            {
+              "name": "action_id"
+            },
+            {
+              "name": "tool_id"
+            },
+            {
+              "name": "payload",
+              "type": "object"
+            },
+            {
+              "name": "dry_run",
+              "type": "boolean"
+            },
+            {
+              "name": "trace_id"
+            }
+          ]
+        }
+      },
+      "id": "f3234122-8886-4f36-a19f-0cabdea19455",
+      "name": "Aufruf durch tool_invoke",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const WERKZEUG = 'storage_gdrive.get_file';\nconst ADAPTER_ID = 'storage_gdrive';\nconst alle = $input.all();\nif (alle.length !== 1) {\n  throw new Error('adp_storage_gdrive_invalid_input: genau ein Aufruf je Ausfuehrung erwartet, erhalten ' + alle.length);\n}\nconst e = alle[0].json;\nconst p = (e.payload && typeof e.payload === 'object' && !Array.isArray(e.payload)) ? e.payload : null;\nconst fehler = [];\nif (!/^[a-z][a-z0-9_]{2,63}$/.test(String(e.context_id || ''))) fehler.push('context_id fehlt oder hat kein gueltiges Format');\nif (e.tool_id !== WERKZEUG) fehler.push('tool_id passt nicht zu diesem Adapter');\nif (!/^act_[A-Za-z0-9_]{6,64}$/.test(String(e.action_id || ''))) fehler.push('action_id fehlt oder ist ungueltig');\nlet einlesen = true;\nlet grenze = null;\nif (!p) {\n  fehler.push('payload fehlt');\n} else {\n  const erlaubt = ['context_id', 'adapter_id', 'file_external_id', 'include_content', 'max_size_mb'];\n  const fremd = Object.keys(p).filter(function (k) { return erlaubt.indexOf(k) === -1; });\n  if (fremd.length > 0) fehler.push('payload enthaelt unzulaessige Felder: ' + fremd.join(', '));\n  if (p.context_id !== e.context_id) fehler.push('context_mismatch: payload.context_id weicht vom Aufrufkontext ab');\n  if (p.adapter_id !== ADAPTER_ID) fehler.push('adapter_id passt nicht zu diesem Adapter');\n  if (!/^[A-Za-z0-9_-]{10,200}$/.test(String(p.file_external_id || ''))) fehler.push('file_external_id fehlt oder ist ungueltig');\n  if (p.include_content !== undefined) {\n    if (typeof p.include_content !== 'boolean') fehler.push('include_content ist kein Wahrheitswert');\n    else einlesen = p.include_content;\n  }\n  if (p.max_size_mb !== undefined) {\n    if (!Number.isInteger(p.max_size_mb) || p.max_size_mb < 1 || p.max_size_mb > 200) fehler.push('max_size_mb ausserhalb 1 bis 200');\n    else grenze = p.max_size_mb;\n  }\n}\nconst basis = { adapter_id: ADAPTER_ID, tool_id: WERKZEUG, context_id: e.context_id || null, action_id: e.action_id || null, trace_id: e.trace_id || null };\nif (fehler.length > 0) {\n  return [{ json: Object.assign({ route: 'invalid', fehler: fehler }, basis) }];\n}\nreturn [{ json: Object.assign({ route: e.dry_run === true ? 'dry_run' : e.context_id, file_external_id: p.file_external_id, include_content: einlesen, max_size_mb: grenze }, basis) }];"
+      },
+      "id": "7da65c4e-c7b4-4503-a16c-8c4954efcb44",
+      "name": "Eingabe pruefen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.route }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "privat"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.route }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "dry_run"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.route }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "invalid"
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "unbekannt"
+        }
+      },
+      "id": "309a8c0b-a05d-4d96-a1a9-4920d4eaa474",
+      "name": "Weg waehlen",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        448,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT storage_adapter_id, context_root_ref, max_file_size_mb\nFROM jarvis_ops.context_document_settings\nWHERE context_id = $1",
+        "options": {
+          "queryReplacement": "={{ $json.context_id }}"
+        }
+      },
+      "id": "437bf772-e10d-4a24-9a69-4a58d0585752",
+      "name": "Einstellungen lesen jarvis_privat",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        672,
+        160
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "oCkj27EiMe96vXvU",
+          "name": "jv_privat_postgres"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const e = $input.first().json;\nreturn [{ json: { status: 'dry_run', adapter_id: e.adapter_id, tool_id: e.tool_id, context_id: e.context_id, action_id: e.action_id, write_outcome: 'none', expected: { file_external_id: e.file_external_id, include_content: e.include_content }, trace_id: e.trace_id } }];"
+      },
+      "id": "7357e728-3ef0-45c5-bf2a-26fdf9474133",
+      "name": "Ergebnis Probelauf",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        480
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const e = $input.first().json;\n// TS-10: Ohne Fehlerliste kommt der Eintrag aus dem Ausweichausgang der Kontextweiche.\nconst fehler = (Array.isArray(e.fehler) && e.fehler.length > 0) ? e.fehler : ['context_id ohne Kontextweiche'];\nreturn [{ json: { status: 'error', adapter_id: e.adapter_id, tool_id: e.tool_id, context_id: e.context_id, action_id: e.action_id, write_outcome: 'none', checked_stage: 'input', error: { error_class: 'validation', error_code: 'invalid_input', retryable: false, message: fehler.join('; ') }, trace_id: e.trace_id } }];"
+      },
+      "id": "4bd4877e-b327-4fcf-9859-31be37fcab25",
+      "name": "Ergebnis ungueltige Eingabe",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        688
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const e = $('Eingabe pruefen').first().json;\nconst f = $input.first().json || {};\nconst roh = JSON.stringify(f.error || f).slice(0, 2000);\nlet klasse = 'unknown';\nlet code = 'db_error';\nlet wiederholbar = false;\nif (/42501|permission denied/i.test(roh)) { klasse = 'permission'; code = 'permission_denied'; }\nelse if (/timeout|timed out|ETIMEDOUT/i.test(roh)) { klasse = 'timeout'; code = 'db_timeout'; wiederholbar = true; }\nelse if (/ECONNREFUSED|ECONNRESET|ENOTFOUND|terminat|connection/i.test(roh)) { klasse = 'transient_network'; code = 'db_unreachable'; wiederholbar = true; }\nreturn [{ json: { status: 'error', adapter_id: e.adapter_id, tool_id: e.tool_id, context_id: e.context_id, action_id: e.action_id, write_outcome: 'none', checked_stage: 'config', error: { error_class: klasse, error_code: code, retryable: wiederholbar, message: roh.slice(0, 300) }, trace_id: e.trace_id } }];"
+      },
+      "id": "fc79dfab-85ab-4780-a1d1-ba22438e4462",
+      "name": "Datenbankfehler einordnen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        896,
+        368
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Kontextwurzel aus den Dokumenteinstellungen (1.1b-E1). Der Verweis zeigt auf eine\n// n8n-Variable; ihr Wert ist die reine Ordner-ID. Fehlt etwas: Abbruch (fail closed).\nconst e = $('Eingabe pruefen').first().json;\nconst basis = { adapter_id: e.adapter_id, tool_id: e.tool_id, context_id: e.context_id, action_id: e.action_id, trace_id: e.trace_id };\nconst abbruch = function (klasse, code, text) {\n  return [{ json: Object.assign({ weiter: false, status: 'error', write_outcome: 'none', checked_stage: 'config', error: { error_class: klasse, error_code: code, retryable: false, message: text } }, basis) }];\n};\nconst zeilen = $input.all().map(function (x) { return x.json; }).filter(function (z) { return z && z.storage_adapter_id; });\nif (zeilen.length !== 1) return abbruch('validation', 'config_missing', 'keine eindeutigen Dokumenteinstellungen fuer den Kontext');\nconst z = zeilen[0];\nif (z.storage_adapter_id !== e.adapter_id) return abbruch('validation', 'adapter_context_mismatch', 'Speicheradapter des Kontexts ist ' + z.storage_adapter_id);\nconst m = /^env:([A-Z][A-Z0-9_]{3,63})$/.exec(String(z.context_root_ref || ''));\nif (!m) return abbruch('validation', 'config_unresolved', 'Kontextwurzel ohne gueltigen Variablenverweis');\nlet wert = null;\ntry { wert = $vars[m[1]]; } catch (x) { wert = null; }\nwert = (typeof wert === 'string') ? wert.trim() : '';\nif (!/^[A-Za-z0-9_-]{10,200}$/.test(wert)) return abbruch('validation', 'config_unresolved', 'Variable ' + m[1] + ' fehlt oder ist keine reine Ordner-ID');\nconst grenzeMb = e.max_size_mb || Number(z.max_file_size_mb);\nif (!Number.isInteger(grenzeMb) || grenzeMb < 1) return abbruch('validation', 'config_missing', 'Groessengrenze fehlt');\nreturn [{ json: Object.assign({ weiter: true, file_external_id: e.file_external_id, include_content: e.include_content, max_bytes: grenzeMb * 1024 * 1024, root_id: wert }, basis) }];"
+      },
+      "id": "99164356-06d8-496b-b3f7-78f357b6f025",
+      "name": "Konfiguration aufloesen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        896,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.weiter }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "32141a15-01d1-4910-b6a2-cce7450741bb",
+      "name": "Konfiguration ok",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1120,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://www.googleapis.com/drive/v3/files/{{ $json.file_external_id }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleDriveOAuth2Api",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "fields",
+              "value": "id,name,mimeType,size,modifiedTime,parents,trashed,sha256Checksum,driveId"
+            },
+            {
+              "name": "supportsAllDrives",
+              "value": "false"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "e23970ac-f047-4981-ae26-fcba81b98dbf",
+      "name": "Metadaten lesen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1344,
+        80
+      ],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "T9eXpovYsz2Ipp6B",
+          "name": "jv_privat_gdrive"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.all().map(function (x) {\n  const j = Object.assign({}, x.json);\n  delete j.weiter;\n  return { json: j };\n});"
+      },
+      "id": "a971e39b-9feb-4c14-84be-67021ed9115c",
+      "name": "Ergebnis Abbruch",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2688,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Fehler des Speicherdienstes. Wiederholbar nur transient_network, rate_limited, timeout\n// (retry_policy im Register). Die Stufe zeigt, bis wohin gelesen wurde.\nconst e = $('Eingabe pruefen').first().json;\nconst f = $input.first().json || {};\nconst roh = JSON.stringify(f.error || f).slice(0, 2000);\nlet stufe = 'metadata';\ntry {\n  if ($('Wurzel pruefen').isExecuted) stufe = 'content';\n  else if ($('Metadaten pruefen').isExecuted) stufe = 'root';\n} catch (x) { stufe = 'unknown'; }\nconst s = /(?:^|[^0-9])([45][0-9][0-9])(?:[^0-9]|$)/.exec(roh);\nconst status = s ? Number(s[1]) : null;\nlet klasse = 'unknown';\nlet code = 'provider_error';\nlet wiederholbar = false;\nif (/timeout|timed out|ETIMEDOUT|ESOCKETTIMEDOUT|ECONNABORTED/i.test(roh)) { klasse = 'timeout'; code = 'provider_timeout'; wiederholbar = true; }\nelse if (status === 429 || (status === 403 && /rateLimit|RateLimitExceeded|quotaExceeded/i.test(roh))) { klasse = 'rate_limited'; code = 'rate_limited'; wiederholbar = true; }\nelse if (status === 404) { klasse = 'not_found'; code = 'not_found'; }\nelse if (status === 401) { klasse = 'auth_failed'; code = 'auth_failed'; }\nelse if (status === 403) { klasse = 'permission'; code = 'permission_denied'; }\nelse if (status !== null && status >= 500) { klasse = 'transient_network'; code = 'provider_unavailable'; wiederholbar = true; }\nelse if (/ECONNREFUSED|ECONNRESET|ENOTFOUND|EAI_AGAIN|socket hang up/i.test(roh)) { klasse = 'transient_network'; code = 'provider_unreachable'; wiederholbar = true; }\nreturn [{ json: { status: 'error', adapter_id: e.adapter_id, tool_id: e.tool_id, context_id: e.context_id, action_id: e.action_id, write_outcome: 'none', checked_stage: stufe, provider_status: status, error: { error_class: klasse, error_code: code, retryable: wiederholbar, message: roh.slice(0, 300) }, trace_id: e.trace_id } }];"
+      },
+      "id": "ecc4b82a-5fb4-42a5-bb0f-531171c239d7",
+      "name": "Speicherfehler einordnen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2912,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Grundpruefung der Metadaten. Typ und Groesse werden erst nach der Wurzelpruefung\n// bewertet: eine Datei ausserhalb der Wurzel liefert immer outside_context_root.\nconst k = $('Konfiguration aufloesen').first().json;\nconst m = $input.first().json || {};\nconst basis = { adapter_id: k.adapter_id, tool_id: k.tool_id, context_id: k.context_id, action_id: k.action_id, trace_id: k.trace_id };\nconst abbruch = function (klasse, code, text) {\n  return [{ json: Object.assign({ weiter: false, status: 'error', write_outcome: 'none', checked_stage: 'metadata', error: { error_class: klasse, error_code: code, retryable: false, message: text } }, basis) }];\n};\nif (m.id !== k.file_external_id) return abbruch('consistency', 'metadata_mismatch', 'Metadaten gehoeren nicht zur angefragten Datei');\nif (m.driveId) return abbruch('permission', 'outside_context_root', 'Objekt liegt in einer geteilten Ablage');\nconst eltern = Array.isArray(m.parents) ? m.parents : [];\nif (eltern.length !== 1) return abbruch('permission', 'outside_context_root', 'Objekt hat ' + eltern.length + ' Elternordner');\nconst mod = m.modifiedTime ? new Date(m.modifiedTime) : null;\nreturn [{ json: Object.assign({ weiter: true, root_id: k.root_id, max_bytes: k.max_bytes, include_content: k.include_content, parent_id: eltern[0],\n  meta: { file_external_id: m.id, filename: m.name, mime_type: m.mimeType, size_raw: (m.size === undefined ? null : m.size), trashed: m.trashed === true,\n          modified_at: (mod && !isNaN(mod.getTime())) ? mod.toISOString().replace(/[.][0-9]{3}Z$/, 'Z') : null,\n          provider_sha256: m.sha256Checksum ? String(m.sha256Checksum).toLowerCase() : null } }, basis) }];"
+      },
+      "id": "92acc2a8-05d2-4c67-876d-576b295ae1b7",
+      "name": "Metadaten pruefen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1568,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.weiter }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "f300266e-8a58-4584-80e3-2e8293aa7aec",
+      "name": "Metadaten ok",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1792,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://www.googleapis.com/drive/v3/files",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleDriveOAuth2Api",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "q",
+              "value": "mimeType='application/vnd.google-apps.folder' and trashed=false"
+            },
+            {
+              "name": "fields",
+              "value": "nextPageToken,files(id,parents)"
+            },
+            {
+              "name": "pageSize",
+              "value": "1000"
+            },
+            {
+              "name": "spaces",
+              "value": "drive"
+            }
+          ]
+        },
+        "options": {
+          "pagination": {
+            "pagination": {
+              "parameters": {
+                "parameters": [
+                  {
+                    "name": "pageToken",
+                    "value": "={{ $response.body.nextPageToken }}"
+                  }
+                ]
+              },
+              "paginationCompleteWhen": "other",
+              "completeExpression": "={{ !$response.body.nextPageToken }}",
+              "limitPagesFetched": true,
+              "maxRequests": 20
+            }
+          },
+          "timeout": 60000
+        }
+      },
+      "id": "f1e6e4da-9840-4f2e-90cd-38db4e30aaf2",
+      "name": "Ordnerliste lesen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2016,
+        0
+      ],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "T9eXpovYsz2Ipp6B",
+          "name": "jv_privat_gdrive"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// P1-T-22 / 1.1-A11: Aufstieg ueber die Elternordner bis zur Kontextwurzel.\n// Grundlage ist die Ordnerliste des Kontos (nur IDs und Elternverweise, keine Namen).\nconst s = $('Metadaten pruefen').first().json;\nconst basis = { adapter_id: s.adapter_id, tool_id: s.tool_id, context_id: s.context_id, action_id: s.action_id, trace_id: s.trace_id };\nconst abbruch = function (stufe, klasse, code, text) {\n  return [{ json: Object.assign({ weiter: false, status: 'error', write_outcome: 'none', checked_stage: stufe, error: { error_class: klasse, error_code: code, retryable: false, message: text } }, basis) }];\n};\nconst seiten = $input.all().map(function (x) { return x.json || {}; });\nconst eltern = {};\nfor (const sp of seiten) {\n  for (const f of (Array.isArray(sp.files) ? sp.files : [])) {\n    if (f && f.id) eltern[f.id] = Array.isArray(f.parents) ? f.parents : [];\n  }\n}\nconst letzte = seiten.length > 0 ? seiten[seiten.length - 1] : {};\nif (seiten.length === 0 || letzte.nextPageToken) return abbruch('root', 'consistency', 'root_check_incomplete', 'Ordnerliste unvollstaendig, Wurzelpruefung nicht moeglich');\nlet akt = s.parent_id;\nlet innen = false;\nconst gesehen = {};\nfor (let schritt = 0; schritt < 50 && akt; schritt++) {\n  if (akt === s.root_id) { innen = true; break; }\n  if (gesehen[akt]) break;\n  gesehen[akt] = true;\n  const p = eltern[akt];\n  if (!p || p.length !== 1) break;\n  akt = p[0];\n}\nif (!innen) return abbruch('root', 'permission', 'outside_context_root', 'Objekt liegt ausserhalb der Kontextwurzel');\nconst m = s.meta;\nif (m.mime_type === 'application/vnd.google-apps.shortcut') return abbruch('type', 'permission', 'shortcut_not_allowed', 'Verknuepfungen werden nicht aufgeloest');\nif (m.mime_type === 'application/vnd.google-apps.folder') return abbruch('type', 'validation', 'not_a_file', 'Objekt ist ein Ordner');\nif (/^application\\/vnd\\.google-apps\\./.test(String(m.mime_type || ''))) return abbruch('type', 'validation', 'no_binary_content', 'Google-eigenes Format ohne herunterladbare Bytes');\nif (m.trashed) return abbruch('type', 'validation', 'file_trashed', 'Datei liegt im Papierkorb');\nconst groesse = Number(m.size_raw);\nif (m.size_raw === null || !Number.isInteger(groesse) || groesse < 0) return abbruch('type', 'validation', 'size_unknown', 'Dateigroesse nicht verfuegbar');\nif (groesse > s.max_bytes) return abbruch('type', 'validation', 'file_too_large', 'Datei ueberschreitet die Groessengrenze');\nif (String(m.filename || '').length === 0 || String(m.filename).length > 300) return abbruch('type', 'validation', 'filename_invalid', 'Dateiname fehlt oder ist laenger als 300 Zeichen');\nreturn [{ json: Object.assign({ weiter: true, include_content: s.include_content, meta: Object.assign({}, m, { size_bytes: groesse }) }, basis) }];"
+      },
+      "id": "5d49c129-b719-40d4-9be7-4eb6fe46a8eb",
+      "name": "Wurzel pruefen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.weiter }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "dc266f4f-fd5e-48a1-bd0e-2dd1d9d1b4c6",
+      "name": "Wurzel und Typ ok",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2464,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://www.googleapis.com/drive/v3/files/{{ $json.meta.file_external_id }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleDriveOAuth2Api",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "alt",
+              "value": "media"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          },
+          "timeout": 120000
+        }
+      },
+      "id": "d2cdddd3-768e-4908-9f12-ba90575f8e27",
+      "name": "Datei laden",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2688,
+        -80
+      ],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "T9eXpovYsz2Ipp6B",
+          "name": "jv_privat_gdrive"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Inhaltshash selbst bilden (AA-B2), Groesse und Anbieterpruefsumme abgleichen.\n// Der Inhalt bleibt ein n8n-Binaerdatum und wird nirgends gespeichert (AA-B5).\nconst crypto = require('crypto');\nconst s = $('Wurzel pruefen').first().json;\nconst m = s.meta;\nconst basis = { adapter_id: s.adapter_id, tool_id: s.tool_id, context_id: s.context_id, action_id: s.action_id, trace_id: s.trace_id };\nconst fehler = function (code, text) {\n  return [{ json: Object.assign({ status: 'error', write_outcome: 'none', checked_stage: 'content', error: { error_class: 'consistency', error_code: code, retryable: false, message: text } }, basis) }];\n};\nconst it = $input.first();\nif (!it || !it.binary || !it.binary.data) return fehler('content_missing', 'kein Dateiinhalt erhalten');\nconst puffer = await this.helpers.getBinaryDataBuffer(0, 'data');\nif (puffer.length !== m.size_bytes) return fehler('size_mismatch', 'geladene Groesse ' + puffer.length + ' weicht von den Metadaten ab');\nconst hash = crypto.createHash('sha256').update(puffer).digest('hex');\nif (m.provider_sha256 && m.provider_sha256 !== hash) return fehler('checksum_mismatch', 'Pruefsumme des Speicherdienstes weicht ab');\nconst ergebnis = { file_external_id: m.file_external_id, filename: m.filename, mime_type: m.mime_type, size_bytes: m.size_bytes, content_hash: 'sha256:' + hash, provider_status: 200 };\nif (m.modified_at) ergebnis.modified_at = m.modified_at;\nif (s.include_content) ergebnis.content_ref = 'data';\nconst aus = { json: Object.assign({ status: 'ok', write_outcome: 'none', verification_method: 'provider_status', result: ergebnis,\n  observed: { provider_status: 200, content_hash: 'sha256:' + hash, provider_checksum: m.provider_sha256 ? 'match' : 'not_available' } }, basis) };\nif (s.include_content) aus.binary = { data: it.binary.data };\nreturn [aus];"
+      },
+      "id": "a0c5e4c4-ff2e-4182-a815-71e6f0e3b1b4",
+      "name": "Ergebnis bilden",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2912,
+        -80
+      ]
+    }
+  ],
+  "connections": {
+    "Aufruf durch tool_invoke": {
+      "main": [
+        [
+          {
+            "node": "Eingabe pruefen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Eingabe pruefen": {
+      "main": [
+        [
+          {
+            "node": "Weg waehlen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Weg waehlen": {
+      "main": [
+        [
+          {
+            "node": "Einstellungen lesen jarvis_privat",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ergebnis Probelauf",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ergebnis ungueltige Eingabe",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ergebnis ungueltige Eingabe",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Einstellungen lesen jarvis_privat": {
+      "main": [
+        [
+          {
+            "node": "Konfiguration aufloesen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Datenbankfehler einordnen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Konfiguration aufloesen": {
+      "main": [
+        [
+          {
+            "node": "Konfiguration ok",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Konfiguration ok": {
+      "main": [
+        [
+          {
+            "node": "Metadaten lesen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ergebnis Abbruch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Metadaten lesen": {
+      "main": [
+        [
+          {
+            "node": "Metadaten pruefen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Speicherfehler einordnen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Metadaten pruefen": {
+      "main": [
+        [
+          {
+            "node": "Metadaten ok",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Metadaten ok": {
+      "main": [
+        [
+          {
+            "node": "Ordnerliste lesen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ergebnis Abbruch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ordnerliste lesen": {
+      "main": [
+        [
+          {
+            "node": "Wurzel pruefen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Speicherfehler einordnen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wurzel pruefen": {
+      "main": [
+        [
+          {
+            "node": "Wurzel und Typ ok",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wurzel und Typ ok": {
+      "main": [
+        [
+          {
+            "node": "Datei laden",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ergebnis Abbruch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Datei laden": {
+      "main": [
+        [
+          {
+            "node": "Ergebnis bilden",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Speicherfehler einordnen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "saveManualExecutions": false,
+    "saveDataErrorExecution": "none",
+    "saveDataSuccessExecution": "none",
+    "callerPolicy": "workflowsFromAList",
+    "callerIds": "ELs6LnRIWKCv04yc,P5IlT5RlGBK1aqiO"
+  },
+  "meta": {
+    "jarvis_source_workflow_id": "qZpVoKoKuPRyOGg7",
+    "jarvis_phase": "1.0",
+    "jarvis_spec_phase_0": "1.1.0",
+    "jarvis_spec_phase_1": "4.0.2",
+    "jarvis_exported_at": "2026-09-11",
+    "jarvis_required_credentials": [
+      {
+        "id": "T9eXpovYsz2Ipp6B",
+        "name": "jv_privat_gdrive"
+      },
+      {
+        "id": "oCkj27EiMe96vXvU",
+        "name": "jv_privat_postgres"
+      }
+    ]
+  }
+}

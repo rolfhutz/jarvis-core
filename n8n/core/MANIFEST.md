@@ -1,6 +1,6 @@
 # Manifest der JARVIS-Kernworkflows
 
-**Stand:** 11. September 2026, nach Schritt 1.1a (TS-10, Entscheidungen TS10-E1 bis TS10-E3)
+**Stand:** 11. September 2026, nach Schritt 1.1b Teil 1 (Speicheradapter Google Drive, 1.1b-E1, 1.1b-E2, REL-1.1b, TS-27)
 **Instanz:** persoenliches n8n-Projekt `Rolf Hutz` (n8n Cloud)
 **Grundlage:** SPEC_PHASE_0 1.1.0, SPEC_PHASE_1 4.0.2, ADR-002, ADR-003, E-1, E-2, TS10-E1 bis TS10-E3
 
@@ -18,14 +18,15 @@
 | `JV-CORE-ADP-tasks_internal-v1` | `GFTIzQsak9UJVhAj` | **veroeffentlicht**, Aufrufer beschraenkt | ja | Kontexttabelle entfernt, Ausweichausgang auf „Ergebnis ungueltige Eingabe“ |
 | `JV-CORE-ADP-docstore_internal-v1` | `2QdRVAniHgkWjqh2` | **veroeffentlicht**, Aufrufer beschraenkt | ja | wie `tasks_internal` |
 | `JV-CORE-ADP-casestore_internal-v1` | `V1fuepKIR20OwgZp` | **veroeffentlicht**, Aufrufer beschraenkt | ja | wie `tasks_internal` |
+| `JV-CORE-ADP-storage_gdrive-v1` | `qZpVoKoKuPRyOGg7` | **veroeffentlicht**, Aufrufer beschraenkt, Ausfuehrungsdaten nicht gespeichert | ja (lesend, `jv_privat_postgres`) + Drive (`jv_privat_gdrive`) | **neu in 1.1b:** `storage_gdrive.get_file@1.1.0` (`approved`, nur `privat`); Wurzelpruefung vor jedem Download, eigener sha256 mit Abgleich der Anbieterpruefsumme; in `tool_invoke` noch nicht verdrahtet (1.1b-E2) |
 | `JV-CORE-OPS-db_keepalive-v1` | `DTRoxZvPQ5BPhM4o` | **veroeffentlicht** | ja | unveraendert |
-| `JV-CORE-OPS-smoke_test-v1` | `P5IlT5RlGBK1aqiO` | Entwurf, manuell | ja | C05, X01–X11, E03/E04 auf `storage_gdrive.get_file@1.1.0`; 47 Knoten, 116 Pruefungen |
+| `JV-CORE-OPS-smoke_test-v1` | `P5IlT5RlGBK1aqiO` | Entwurf, manuell | ja + Drive (`jv_privat_gdrive`) | 1.1b: Einrichtungspruefung (9 JARVIS-Ordner, TS-27 A), 13 Faelle `storage_gdrive.get_file`, Freigabenachweis; 58 Knoten, 143 Pruefungen |
 
 "Entwurf" heisst in n8n: nicht veroeffentlicht. Seit TS-23 (10.09.2026) sind alle Kern-Subworkflows
 und Adapter veroeffentlicht; nur der Smoke-Test bleibt Entwurf (manueller Ausloeser).
 
 **Adapter:** Aufruferbeschraenkung `callerPolicy: workflowsFromAList`,
-`callerIds: ELs6LnRIWKCv04yc,P5IlT5RlGBK1aqiO` (nur `tool_invoke` und Smoke-Test, A-6).
+`callerIds: ELs6LnRIWKCv04yc,P5IlT5RlGBK1aqiO` (nur `tool_invoke` und Smoke-Test, A-6). Gilt auch fuer `storage_gdrive`.
 **Regel TS-23:** In n8n 2.x sind unveroeffentlichte Entwuerfe fuer Elternworkflows nicht
 sichtbar (Befund 1.0.8, Lauf 22175). Deshalb sind alle `SUB` und `ADP` veroeffentlicht.
 **Eine Aenderung wirkt erst nach erneutem Veroeffentlichen.** Ablauf je Aenderung:
@@ -38,6 +39,7 @@ aendern → veroeffentlichen → pruefen, dass veroeffentlichte Version = aktuel
 |---|---|---|---|
 | `jv_privat_postgres` | `oCkj27EiMe96vXvU` | `jv_privat_login` | `jv_privat_user` |
 | `jv_visolva_postgres` | `7BblU6FbDds3EZBb` | `jv_visolva_login` | `jv_visolva_user` |
+| `jv_privat_gdrive` | `T9eXpovYsz2Ipp6B` | — (privates Google-Konto, V-1) | nur Kontext `privat`, Adapter `storage_gdrive` |
 
 Kennwoerter nur im Passwortmanager und im Credential-Speicher von n8n.
 
