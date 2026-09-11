@@ -1,11 +1,12 @@
 {
-  "config_version": "1.0.0",
-  "generated_note": "Schritt 1.1, Entscheidung 1.1-E4. Enthaelt keine Ordner-IDs, keine Konten, keine Zugangsdaten. Werte der env-Verweise stehen ausschliesslich in n8n-Variablen. Laden nur ueber tools/render_intake_config.py.",
+  "config_version": "1.1.0",
+  "generated_note": "Schritt 1.1, Entscheidungen 1.1-E4 und 1.1b-E1. Enthaelt keine Ordner-IDs, keine Konten, keine Zugangsdaten. Werte der env-Verweise stehen ausschliesslich in n8n-Variablen. Laden nur ueber tools/render_intake_config.py.",
   "contexts": {
     "privat": {
       "document_settings": {
         "storage_adapter_id": "storage_gdrive",
         "storage_container_ref": null,
+        "context_root_ref": "env:JV_PRIVAT_ROOT_FOLDER_ID",
         "inbox_ref": "env:JV_PRIVAT_INBOX_FOLDER_ID",
         "working_ref": "env:JV_PRIVAT_WORKING_FOLDER_ID",
         "archive_root_ref": "env:JV_PRIVAT_ARCHIVE_ROOT_ID",
@@ -37,6 +38,7 @@
       "document_settings": {
         "storage_adapter_id": "storage_sharepoint",
         "storage_container_ref": "env:JV_VISOLVA_SP_DRIVE_ID",
+        "context_root_ref": "env:JV_VISOLVA_ROOT_FOLDER_ID",
         "inbox_ref": "env:JV_VISOLVA_INBOX_FOLDER_ID",
         "working_ref": "env:JV_VISOLVA_WORKING_FOLDER_ID",
         "archive_root_ref": "env:JV_VISOLVA_ARCHIVE_ROOT_ID",

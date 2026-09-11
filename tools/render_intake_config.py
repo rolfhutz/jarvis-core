@@ -18,10 +18,23 @@ Pruefungen vor dem Erzeugen:
     K7  Keine Gleitkommazahl in der Datei
     K8  Der Ort einer probe-Bindung ist nie ein konfigurierter Ordner eines
         Kontexts (der Nachweis K-07 beruehrt keinen produktiven Ordner)
+    K9  Die Kontextwurzel (1.1b-E1) ist keiner der uebrigen Verweise des
+        Kontexts (Eingang, Arbeit, Archiv, Entwuerfe, Berichte, Container)
+    K10 Fuer die config_version der Datei ist eine Migrationsnummer
+        zugeordnet (OUTPUT_BY_VERSION); jede neue Version bekommt eine neue
+        Migration, eine eingespielte Migration wird nie neu erzeugt
+
+Die Pruefung, dass alle Ordnerrollen tatsaechlich unter der Wurzel liegen,
+ist nur zur Laufzeit moeglich (Werte stehen in n8n-Variablen) und erfolgt in
+der Einrichtungspruefung der Speicheradapter.
+
+Historie: Migration 0017 wurde aus config_version 1.0.0 erzeugt (Repo-Stand
+d12f218) und ist durch 0021 abgeloest. 0017 nicht erneut ausfuehren; nach
+0022 scheitert sie an der Pflichtspalte context_root_ref (fail closed).
 
 Aufrufe:
     python3 tools/render_intake_config.py --out db/migrations/
-    python3 tools/render_intake_config.py --check db/migrations/0017_intake_config_seed.sql
+    python3 tools/render_intake_config.py --check db/migrations/0021_intake_config_seed_1_1.sql
     python3 tools/render_intake_config.py --self-test
 
 Das Skript stellt keine Datenbankverbindung her und fuehrt nichts aus.
@@ -42,9 +55,14 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 CONFIG_FILE = ROOT / "config" / "intake_config.json"
 SCHEMA_FILE = ROOT / "config" / "schemas" / "intake_config.schema.json"
 CONTEXT_CONFIG = ROOT / "spec" / "phase-0" / "jarvis-phase-0" / "templates" / "context_config.example.json"
-OUTPUT_NAME = "0017_intake_config_seed.sql"
+# config_version -> (Migrationsnummer, Dateiname). Nur die aktuelle Version;
+# 1.0.0 -> 0017 ist Historie (siehe Kopf).
+OUTPUT_BY_VERSION = {
+    "1.1.0": ("0021", "0021_intake_config_seed_1_1.sql"),
+}
 
-REF_FIELDS = ["storage_container_ref", "inbox_ref", "working_ref", "archive_root_ref", "drafts_ref", "reports_ref"]
+REF_FIELDS = ["storage_container_ref", "context_root_ref", "inbox_ref", "working_ref", "archive_root_ref",
+              "drafts_ref", "reports_ref"]
 
 
 class RenderError(Exception):
@@ -73,6 +91,8 @@ def validate(doc: dict, contexts: set[str]) -> None:
     if errors:
         raise RenderError("K1: " + "; ".join(f"{list(e.path)}: {e.message}" for e in errors[:5]))
     _no_floats(doc)
+    if doc["config_version"] not in OUTPUT_BY_VERSION:
+        raise RenderError(f"K10: keine Migration fuer config_version {doc['config_version']} zugeordnet")
     keys: dict[str, str] = {}
     locations: dict[tuple[str, str], list[tuple[str, str]]] = {}
     ref_owner: dict[str, str] = {}
@@ -81,6 +101,9 @@ def validate(doc: dict, contexts: set[str]) -> None:
             raise RenderError(f"K2: Kontext {ctx!r} steht nicht in der Kontextkonfiguration")
         ds = c["document_settings"]
         refs = [ds[f] for f in REF_FIELDS if ds[f] is not None]
+        others = [ds[f] for f in REF_FIELDS if f != "context_root_ref" and ds[f] is not None]
+        if ds["context_root_ref"] in others:
+            raise RenderError(f"K9: Kontextwurzel von {ctx} ist zugleich ein anderer Ordnerverweis")
         for b in c["source_bindings"]:
             if b["binding_key"] in keys:
                 raise RenderError(f"K3: binding_key {b['binding_key']} doppelt ({keys[b['binding_key']]}, {ctx})")
@@ -128,9 +151,10 @@ def render(raw: bytes, contexts: set[str] | None = None) -> str:
     rel = CONFIG_FILE.relative_to(ROOT).as_posix()
     sha = hashlib.sha256(raw).hexdigest()
     ver = doc["config_version"]
+    mig = OUTPUT_BY_VERSION[ver][0]
     out = [
         "-- =====================================================================",
-        "-- JARVIS Phase 1.1 - Migration 0017 - Laufzeitkonfiguration Eingang",
+        f"-- JARVIS Phase 1.1 - Migration {mig} - Laufzeitkonfiguration Eingang",
         "--",
         "-- ERZEUGT durch tools/render_intake_config.py. Nicht von Hand bearbeiten.",
         f"-- Quelle: {rel} (config_version {ver})",
@@ -149,13 +173,13 @@ def render(raw: bytes, contexts: set[str] | None = None) -> str:
         ds = c["document_settings"]
         out.append(
             "INSERT INTO jarvis_ops.context_document_settings (context_id, config_version, storage_adapter_id, "
-            "storage_container_ref, inbox_ref, working_ref, archive_root_ref, drafts_ref, reports_ref, "
+            "storage_container_ref, context_root_ref, inbox_ref, working_ref, archive_root_ref, drafts_ref, reports_ref, "
             "allowed_mime_types, max_file_size_mb, ocr_provider_allowlist, ocr_min_characters, "
             "ocr_min_mean_confidence, fingerprint_max_hamming, synthetic_marker_required, synthetic_marker_prefix, "
             "quarantine_halt_threshold, quarantine_halt_window_minutes, source_file, source_sha256) VALUES ("
             + ", ".join([
                 sql_text(ctx), sql_text(ver), sql_text(ds["storage_adapter_id"]), sql_text(ds["storage_container_ref"]),
-                sql_text(ds["inbox_ref"]), sql_text(ds["working_ref"]), sql_text(ds["archive_root_ref"]),
+                sql_text(ds["context_root_ref"]), sql_text(ds["inbox_ref"]), sql_text(ds["working_ref"]), sql_text(ds["archive_root_ref"]),
                 sql_text(ds["drafts_ref"]), sql_text(ds["reports_ref"]), sql_array(ds["allowed_mime_types"]),
                 str(int(ds["max_file_size_mb"])), sql_array(ds["ocr_provider_allowlist"]),
                 str(int(ds["ocr_min_characters"])), sql_text(ds["ocr_min_mean_confidence"]) + "::numeric",
@@ -165,7 +189,8 @@ def render(raw: bytes, contexts: set[str] | None = None) -> str:
             ])
             + ")\nON CONFLICT (context_id) DO UPDATE SET "
             + ", ".join(f"{col} = EXCLUDED.{col}" for col in [
-                "config_version", "storage_adapter_id", "storage_container_ref", "inbox_ref", "working_ref",
+                "config_version", "storage_adapter_id", "storage_container_ref", "context_root_ref", "inbox_ref",
+                "working_ref",
                 "archive_root_ref", "drafts_ref", "reports_ref", "allowed_mime_types", "max_file_size_mb",
                 "ocr_provider_allowlist", "ocr_min_characters", "ocr_min_mean_confidence", "fingerprint_max_hamming",
                 "synthetic_marker_required", "synthetic_marker_prefix", "quarantine_halt_threshold",
@@ -246,6 +271,10 @@ def self_test() -> None:
     expect_fail(lambda d: d["contexts"]["privat"]["source_bindings"][0].update(adapter_id="storage_sharepoint"), "K4")
     expect_fail(lambda d: d["contexts"]["arbeitgeber_visolva"]["document_settings"].update(reports_ref="env:JV_PRIVAT_REPORTS_FOLDER_ID"), "K6")
     expect_fail(lambda d: d["contexts"]["privat"]["document_settings"].update(max_file_size_mb=50.5), "K1")
+    expect_fail(lambda d: d["contexts"]["privat"]["document_settings"].pop("context_root_ref"), "K1")
+    expect_fail(lambda d: d["contexts"]["privat"]["document_settings"].update(
+        context_root_ref="env:JV_PRIVAT_INBOX_FOLDER_ID"), "K9")
+    expect_fail(lambda d: d.update(config_version="9.9.9"), "K10")
 
     # K5: zwei Probe-Bindungen auf demselben Ort sind zulaessig (Nachweis K-07) ...
     probe = copy.deepcopy(base)
@@ -267,7 +296,7 @@ def self_test() -> None:
     expect_fail(lambda d: d["contexts"]["privat"]["source_bindings"].append(
         {"binding_key": "privat_zweiter_eingang", "adapter_id": "storage_gdrive", "channel": "drive_inbox",
          "location_ref": "env:JV_PRIVAT_INBOX_FOLDER_ID", "purpose": "probe", "enabled": True}), "K5")
-    print("SELBSTTEST BESTANDEN: Datei gueltig, deterministisch, Probe zulaessig, 8 Gegenproben")
+    print("SELBSTTEST BESTANDEN: Datei gueltig, deterministisch, Probe zulaessig, 11 Gegenproben")
 
 
 def main() -> int:
@@ -289,7 +318,7 @@ def main() -> int:
             return 0
         if a.out:
             a.out.mkdir(parents=True, exist_ok=True)
-            target = a.out / OUTPUT_NAME
+            target = a.out / OUTPUT_BY_VERSION[json.loads(CONFIG_FILE.read_text(encoding="utf-8"))["config_version"]][1]
             target.write_text(sql, encoding="utf-8")
             print(f"geschrieben: {target}")
             return 0

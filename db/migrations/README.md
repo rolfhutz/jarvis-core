@@ -30,6 +30,10 @@ sondern aus Abhaengigkeiten:
 | `0017_intake_config_seed.sql` | **erzeugt** aus `config/intake_config.json` (`tools/render_intake_config.py`), prueft sich selbst | 0016 |
 | `0018_tool_registry_seed_1_1.sql` | **erzeugt** aus dem Registernachtrag 1.1 (`tools/render_tool_registry.py --set 0018`), prueft sich selbst | 0013 |
 | `0019_deprecate_storage_gdrive_get_file_1_0_0.sql` | `storage_gdrive.get_file@1.0.0` auf `deprecated` mit Nachweisverweis 1.1-E1, prueft sich selbst | 0014, 0018 |
+| `0020_context_root_ref.sql` | Spalte `context_root_ref` (noch ohne Pflicht), Rollen-Eindeutigkeit um die Wurzel erweitert (1.1b-E1) | 0016, 0017 |
+| `0021_intake_config_seed_1_1.sql` | **erzeugt** aus `config/intake_config.json` 1.1.0, setzt die Wurzel, prueft sich selbst; loest `0017` ab | 0020 |
+| `0022_context_root_ref_not_null.sql` | Wurzel verpflichtend, bricht ohne vorheriges `0021` ab, prueft sich selbst | 0020, 0021 |
+| `0023_release_storage_gdrive_get_file_1_1_0.sql` | Freigabe `storage_gdrive.get_file@1.1.0` nach 12.1.1; prueft den gespeicherten Nachweis, prueft sich selbst | 0013, 0018 |
 
 Die Rechtevergabe steht bewusst am Ende: `REVOKE ALL ON ALL TABLES IN SCHEMA`
 wirkt nur auf Tabellen, die zu diesem Zeitpunkt bereits vorhanden sind. Wuerde
@@ -69,13 +73,14 @@ done
 (Supabase). Ohne sie kann niemand die Kontextrollen annehmen und die Abnahme
 1.0-A1 bis 1.0-A4 ist nicht pruefbar. Begruendung im Kopf der Datei.
 
-Wiederholbarkeit: `0001`, `0009`, `0010`, `0011`, `0012`, `0014`, `0015`, `0017`, `0018` und `0019` sind ohne Weiteres erneut ausfuehrbar.
-`0017` setzt Konfigurationsfelder auf den Stand der Datei, laesst den Laufzeitzustand (`halted_at`) unberuehrt
+Wiederholbarkeit: `0001`, `0009`, `0010`, `0011`, `0012`, `0014`, `0015`, `0018`, `0019`, `0021`, `0022` und `0023` sind ohne Weiteres erneut ausfuehrbar.
+`0017` ist seit 1.1b Historie (erzeugt aus Konfiguration 1.0.0) und wird nicht erneut ausgefuehrt; nach `0022` scheitert sie an der Pflichtspalte `context_root_ref` (beabsichtigt, fail closed). Massgeblich ist `0021`.
+`0021` (wie zuvor `0017`) setzt Konfigurationsfelder auf den Stand der Datei, laesst den Laufzeitzustand (`halted_at`) unberuehrt
 und deaktiviert Bindungen, die nicht mehr in der Datei stehen.
 `0015` hebt Zaehler nur an, senkt sie nie ab.
 `0014` wird ausschliesslich mit `tools/render_tool_registry.py` erzeugt und bricht ab,
 wenn eine bereits geladene Werkzeugversion eine abweichende Definition haette.
-`0002` bis `0008`, `0013` und `0016` legen Objekte an und scheitern beim zweiten Lauf gegen
+`0002` bis `0008`, `0013`, `0016` und `0020` legen Objekte an und scheitern beim zweiten Lauf gegen
 dieselbe Instanz — beabsichtigt, weil ein stiller zweiter Lauf gefaehrlicher
 waere als ein Fehler.
 

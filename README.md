@@ -38,8 +38,11 @@ Schritt 1.1 (Eingang und Normalisierung) nach der freigegebenen Vorlage
 10.09.2026 in Supabase eingespielt (`docs/evidence/PHASE_1_1A_SUPABASE_2026-09-10.md`).
 Seit 11.09.2026 abgeschlossen: Kontextaufloesung aus der Datenbank, keine Kontextwerte
 mehr im Code der Kern-Workflows (TS-10, `docs/evidence/PHASE_1_1A_TS10_2026-09-11.md`).
-Naechster Bauabschnitt 1.1b (Speicheradapter) nach V-4 und V-1.
-Stand und Uebergabe: `docs/handover/HANDOVER_PHASE_1_1A_REST_2026-09-11.md`.
+Seit 11.09.2026 abgeschlossen (1.1b Teil 1): Kontextwurzel (Migrationen 0020 bis 0022),
+Speicheradapter Google Drive, `storage_gdrive.get_file@1.1.0` freigegeben (0023, nur `privat`),
+Nachweis `docs/evidence/PHASE_1_1B_GDRIVE_2026-09-11.md`. Teil 2 (SharePoint) nach V-3;
+parallel 1.1c (OCR) nach V-5 und V-6.
+Stand und Uebergabe: `docs/handover/HANDOVER_PHASE_1_1B_TEIL1_2026-09-11.md`.
 Kern-Subworkflows sind veroeffentlicht (TS-23); Aenderungsablauf in `n8n/core/README.md`.
 
 ## Verbindliche Regeln

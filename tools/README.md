@@ -7,7 +7,7 @@ Keine Geheimnisse oder echte Dokumentdaten einchecken.
 |---|---|
 | `render_phase1_tables.py` | Rendert die Phase-1-Erweiterungstabellen (Spezifikation 7.2) aus `db/templates/` je Kontext |
 | `render_tool_registry.py` | Validiert beide Registerdateien und erzeugt Migration 0014 fuer `jarvis_ops.tool_registry` |
-| `render_intake_config.py` | Validiert `config/intake_config.json` (Schema und Regeln K1 bis K8) und erzeugt Migration 0017 |
+| `render_intake_config.py` | Validiert `config/intake_config.json` (Schema und Regeln K1 bis K10) und erzeugt die Migration der aktuellen Konfigurationsversion (1.1.0: 0021; 0017 ist Historie) |
 | `normalize_n8n_export.py` | Bereinigt n8n-Exporte fuer `n8n/core/`, prueft Namenskonvention und bricht bei moeglichen Geheimnissen ab |
 
 Das Werkzeug uebernimmt Schemaname, Kontextkennung und Datenbankbenutzer
@@ -39,7 +39,7 @@ Saetze eindeutig; im Satz `0018` muss jeder Schemaverweis aufloesbar sein.
 ```bash
 python3 tools/render_intake_config.py --self-test
 python3 tools/render_intake_config.py --out db/migrations/
-python3 tools/render_intake_config.py --check db/migrations/0017_intake_config_seed.sql
+python3 tools/render_intake_config.py --check db/migrations/0021_intake_config_seed_1_1.sql
 ```
 
 Abhaengigkeiten: `jsonschema==4.26.0`, `referencing==0.37.0`. Der Pruefwert je
