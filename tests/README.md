@@ -30,4 +30,5 @@ Nachweisprotokolle liegen unter `docs/evidence/`.
 
 | Datei | Zweck |
 |---|---|
-| `n8n/check_restore.py` | Abgleich einer frisch wiederhergestellten n8n-Instanz mit `n8n/core/`: IDs, Knoten, Parameter, Verbindungen, Credential-Zuordnung, Subworkflow-Verweise, Aufruferbeschraenkung. Ablauf in `n8n/core/README.md` |
+| `n8n/check_restore.py` | Abgleich einer frisch wiederhergestellten n8n-Instanz mit `n8n/core/`: IDs, Knoten, Parameter, Verbindungen, Credential-Zuordnung, Subworkflow-Verweise, Aufruferbeschraenkung, Binaermodus. Ablauf in `n8n/core/README.md` |
+| `n8n/check_ts10.py` | 1.1-A18 / TS-10: keine Kontext-IDs, Schemanamen, Bindungsschluessel, Credential-Namen oder `env:`-Verweise in Code-, Set- und If-Knoten; jede Kontextweiche mit verbundenem Ausweichausgang. Verbotene Werte aus `config/` und Migration 0009. `--self-test`: 6 Faelle, 4 Gegenproben |

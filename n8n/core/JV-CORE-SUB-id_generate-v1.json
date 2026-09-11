@@ -33,7 +33,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const crypto = require(\"crypto\");\nconst PRAEFIX = {\n  event: \"evt\", task: \"tsk\", action: \"act\", approval: \"apr\",\n  evidence: \"evd\", error: \"err\", document: \"doc\", case: \"cse\", memory: \"mem\"\n};\nconst ALPHABET = \"0123456789ABCDEFGHJKMNPQRSTVWXYZ\";\nconst KONTEXTE = [\"privat\", \"arbeitgeber_visolva\"];\n\nfunction ulid(zeitMs) {\n  let zeit = \"\";\n  let rest = zeitMs;\n  for (let i = 0; i < 10; i++) {\n    zeit = ALPHABET[rest % 32] + zeit;\n    rest = Math.floor(rest / 32);\n  }\n  const roh = crypto.randomBytes(16);\n  let zufall = \"\";\n  for (let i = 0; i < 16; i++) {\n    zufall = zufall + ALPHABET[roh[i] % 32];\n  }\n  return zeit + zufall;\n}\n\nconst ergebnis = [];\nfor (const item of $input.all()) {\n  const art = item.json.object_kind;\n  const kontext = item.json.context_id;\n  const teile = Array.isArray(item.json.idempotency_parts) ? item.json.idempotency_parts : [];\n  let ok = true;\n  let grund = \"\";\n  if (!Object.prototype.hasOwnProperty.call(PRAEFIX, art)) { ok = false; grund = \"object_kind unbekannt: \" + String(art); }\n  else if (KONTEXTE.indexOf(kontext) === -1) { ok = false; grund = \"context_id nicht im Register: \" + String(kontext); }\n  else if (teile.length === 0) { ok = false; grund = \"idempotency_parts fehlt\"; }\n\n  if (!ok) {\n    ergebnis.push({ json: { generated: false, reason: grund, trace_id: item.json.trace_id || null } });\n    continue;\n  }\n\n  const kanonisch = [kontext, art].concat(teile.map(function (t) { return String(t); })).join(\"|\");\n  const schluessel = crypto.createHash(\"sha256\").update(kanonisch, \"utf8\").digest(\"hex\");\n  ergebnis.push({ json: {\n    generated: true,\n    object_kind: art,\n    object_id: PRAEFIX[art] + \"_\" + ulid(Date.now()),\n    idempotency_key: schluessel,\n    canonical_input: kanonisch,\n    context_id: kontext,\n    reason: \"\",\n    trace_id: item.json.trace_id || null\n  } });\n}\nreturn ergebnis;"
+        "jsCode": "const crypto = require(\"crypto\");\nconst PRAEFIX = {\n  event: \"evt\", task: \"tsk\", action: \"act\", approval: \"apr\",\n  evidence: \"evd\", error: \"err\", document: \"doc\", case: \"cse\", memory: \"mem\"\n};\nconst ALPHABET = \"0123456789ABCDEFGHJKMNPQRSTVWXYZ\";\n\nfunction ulid(zeitMs) {\n  let zeit = \"\";\n  let rest = zeitMs;\n  for (let i = 0; i < 10; i++) {\n    zeit = ALPHABET[rest % 32] + zeit;\n    rest = Math.floor(rest / 32);\n  }\n  const roh = crypto.randomBytes(16);\n  let zufall = \"\";\n  for (let i = 0; i < 16; i++) {\n    zufall = zufall + ALPHABET[roh[i] % 32];\n  }\n  return zeit + zufall;\n}\n\nconst ergebnis = [];\nfor (const item of $input.all()) {\n  const art = item.json.object_kind;\n  const kontext = item.json.context_id;\n  const teile = Array.isArray(item.json.idempotency_parts) ? item.json.idempotency_parts : [];\n  let ok = true;\n  let grund = \"\";\n  if (!Object.prototype.hasOwnProperty.call(PRAEFIX, art)) { ok = false; grund = \"object_kind unbekannt: \" + String(art); }\n  else if (!/^[a-z][a-z0-9_]{2,63}$/.test(String(kontext || \"\"))) { ok = false; grund = \"context_id fehlt oder hat kein gueltiges Format\"; }\n  else if (teile.length === 0) { ok = false; grund = \"idempotency_parts fehlt\"; }\n\n  if (!ok) {\n    ergebnis.push({ json: { generated: false, reason: grund, trace_id: item.json.trace_id || null } });\n    continue;\n  }\n\n  const kanonisch = [kontext, art].concat(teile.map(function (t) { return String(t); })).join(\"|\");\n  const schluessel = crypto.createHash(\"sha256\").update(kanonisch, \"utf8\").digest(\"hex\");\n  ergebnis.push({ json: {\n    generated: true,\n    object_kind: art,\n    object_id: PRAEFIX[art] + \"_\" + ulid(Date.now()),\n    idempotency_key: schluessel,\n    canonical_input: kanonisch,\n    context_id: kontext,\n    reason: \"\",\n    trace_id: item.json.trace_id || null\n  } });\n}\nreturn ergebnis;"
       },
       "id": "7d6d5961-1c6f-404d-89ae-d7b8ca63705f",
       "name": "Kennung und Idempotenzschluessel erzeugen",
@@ -157,14 +157,15 @@
     }
   },
   "settings": {
-    "executionOrder": "v1"
+    "executionOrder": "v1",
+    "binaryMode": "separate"
   },
   "meta": {
     "jarvis_source_workflow_id": "ZtUV95YyMA5IlgoE",
     "jarvis_phase": "1.0",
     "jarvis_spec_phase_0": "1.1.0",
     "jarvis_spec_phase_1": "4.0.2",
-    "jarvis_exported_at": "2026-09-10",
+    "jarvis_exported_at": "2026-09-11",
     "jarvis_required_credentials": []
   }
 }

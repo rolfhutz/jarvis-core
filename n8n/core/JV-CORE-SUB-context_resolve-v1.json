@@ -29,14 +29,14 @@
     },
     {
       "parameters": {
-        "jsCode": "const BINDUNGEN = {\n  privat_drive_inbox: \"privat\",\n  privat_mail: \"privat\",\n  privat_manual_upload: \"privat\",\n  visolva_sharepoint_inbox: \"arbeitgeber_visolva\",\n  visolva_mail: \"arbeitgeber_visolva\",\n  visolva_manual_upload: \"arbeitgeber_visolva\"\n};\nconst REGISTER = [\"privat\", \"arbeitgeber_visolva\"];\nconst SCHEMA = { privat: \"jarvis_privat\", arbeitgeber_visolva: \"jarvis_visolva\" };\nconst CREDENTIAL = { privat: \"jv_privat_postgres\", arbeitgeber_visolva: \"jv_visolva_postgres\" };\nconst ergebnis = [];\nfor (const item of $input.all()) {\n  const bindung = item.json.source_binding;\n  const hinweis = item.json.context_id_hint;\n  const aufgeloest = Object.prototype.hasOwnProperty.call(BINDUNGEN, bindung) ? BINDUNGEN[bindung] : null;\n  let ok = true;\n  let grund = \"\";\n  if (!bindung) { ok = false; grund = \"source_binding fehlt\"; }\n  else if (aufgeloest === null) { ok = false; grund = \"source_binding nicht registriert: \" + bindung; }\n  else if (REGISTER.indexOf(aufgeloest) === -1) { ok = false; grund = \"Kontext nicht im Register: \" + aufgeloest; }\n  else if (hinweis && hinweis !== aufgeloest) { ok = false; grund = \"context_id_hint widerspricht der Bindung\"; }\n  ergebnis.push({ json: {\n    resolved: ok,\n    context_id: ok ? aufgeloest : null,\n    db_schema: ok ? SCHEMA[aufgeloest] : null,\n    credential_ref: ok ? CREDENTIAL[aufgeloest] : null,\n    resolution_method: \"source_binding\",\n    source_binding: bindung || null,\n    reason: grund,\n    trace_id: item.json.trace_id || null\n  } });\n}\nreturn ergebnis;"
+        "jsCode": "// TS-10: Keine Bindungen, Kontexte, Schemata oder Credentials im Code.\n// Grundlage ist ausschliesslich die Zeile aus jarvis_ops.source_binding und context_registry.\nconst e = $('Eingabe pruefen').first().json;\nconst zeilen = $input.all();\nif (zeilen.length !== 1) {\n  throw new Error(\"context_resolve_db_error: Bindungsabfrage lieferte \" + zeilen.length + \" Zeilen statt 1\");\n}\nconst b = zeilen[0].json;\nlet code = \"\";\nlet grund = \"\";\nif (e.input_reason) { code = \"input_invalid\"; grund = e.input_reason; }\nelse if (b.found !== true) { code = \"binding_unknown\"; grund = \"source_binding nicht registriert: \" + e.source_binding; }\nelse if (b.enabled !== true) { code = \"binding_disabled\"; grund = \"Bindung deaktiviert: \" + e.source_binding; }\nelse if (b.context_status !== \"active\") { code = \"context_not_active\"; grund = \"Kontext der Bindung nicht aktiv\"; }\nelse if (b.halted === true) { code = \"binding_halted\"; grund = \"Bindung angehalten: \" + e.source_binding; }\nelse if (e.context_id_hint && e.context_id_hint !== b.context_id) { code = \"hint_conflict\"; grund = \"context_id_hint widerspricht der Bindung\"; }\nconst ok = code === \"\";\nreturn [{ json: {\n  resolved: ok,\n  context_id: ok ? b.context_id : null,\n  db_schema: ok ? b.db_schema : null,\n  resolution_method: \"source_binding\",\n  source_binding: e.source_binding,\n  reason_code: code,\n  reason: grund,\n  trace_id: e.trace_id\n} }];"
       },
       "id": "0f4328e7-cae3-4dbc-aa5d-49a2f856da43",
-      "name": "Kontext deterministisch aufloesen",
+      "name": "Kontext bestimmen",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        224,
+        672,
         0
       ]
     },
@@ -68,7 +68,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        448,
+        880,
         0
       ]
     },
@@ -92,47 +92,61 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.5,
       "position": [
-        672,
+        1104,
         -80
       ]
     },
     {
       "parameters": {
-        "errorMessage": "=context_unresolved: {{ $json.reason }}"
+        "errorMessage": "=context_unresolved: {{ $json.reason_code }}: {{ $json.reason }}"
       },
       "id": "8059bded-08fe-4a93-a99e-1288ca364a25",
       "name": "Kontext nicht aufloesbar",
       "type": "n8n-nodes-base.stopAndError",
       "typeVersion": 1,
       "position": [
-        672,
+        1104,
         80
       ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const alle = $input.all();\nif (alle.length !== 1) {\n  throw new Error(\"context_resolve_invalid_input: genau ein Aufruf je Ausfuehrung erwartet, erhalten \" + alle.length);\n}\nconst e = alle[0].json;\nconst bindung = (e.source_binding === undefined || e.source_binding === null) ? \"\" : String(e.source_binding);\nlet grund = \"\";\nif (!bindung) { grund = \"source_binding fehlt\"; }\nelse if (!/^[a-z][a-z0-9_]{2,63}$/.test(bindung)) { grund = \"source_binding hat kein gueltiges Format\"; }\nreturn [{ json: {\n  source_binding: grund ? null : bindung,\n  lookup_key: grund ? \"-\" : bindung,\n  context_id_hint: e.context_id_hint ? String(e.context_id_hint) : \"\",\n  input_reason: grund,\n  trace_id: e.trace_id || null\n} }];"
+      },
+      "id": "443e441a-e524-4cb9-8e5c-35b6f42f251e",
+      "name": "Eingabe pruefen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT (b.binding_key IS NOT NULL) AS found, b.context_id, b.enabled, (b.halted_at IS NOT NULL) AS halted, r.status AS context_status, r.db_schema FROM (SELECT $1::text AS k) AS q LEFT JOIN jarvis_ops.source_binding b ON b.binding_key = q.k LEFT JOIN jarvis_ops.context_registry r ON r.context_id = b.context_id",
+        "options": {
+          "queryReplacement": "={{ $json.lookup_key }}"
+        }
+      },
+      "id": "61ff5684-d5c0-4e30-adee-e62e24c11e9d",
+      "name": "Bindung lesen",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        448,
+        0
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "oCkj27EiMe96vXvU",
+          "name": "jv_privat_postgres"
+        }
+      }
     }
   ],
   "connections": {
-    "Aufruf durch Elternworkflow": {
-      "main": [
-        [
-          {
-            "node": "Kontext deterministisch aufloesen",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Kontext deterministisch aufloesen": {
-      "main": [
-        [
-          {
-            "node": "Kontext eindeutig?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Kontext eindeutig?": {
       "main": [
         [
@@ -150,17 +164,67 @@
           }
         ]
       ]
+    },
+    "Kontext bestimmen": {
+      "main": [
+        [
+          {
+            "node": "Kontext eindeutig?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aufruf durch Elternworkflow": {
+      "main": [
+        [
+          {
+            "node": "Eingabe pruefen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Eingabe pruefen": {
+      "main": [
+        [
+          {
+            "node": "Bindung lesen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Bindung lesen": {
+      "main": [
+        [
+          {
+            "node": "Kontext bestimmen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "settings": {
-    "executionOrder": "v1"
+    "executionOrder": "v1",
+    "binaryMode": "separate"
   },
   "meta": {
     "jarvis_source_workflow_id": "5IyWf1dH3huijkKG",
     "jarvis_phase": "1.0",
     "jarvis_spec_phase_0": "1.1.0",
     "jarvis_spec_phase_1": "4.0.2",
-    "jarvis_exported_at": "2026-09-10",
-    "jarvis_required_credentials": []
+    "jarvis_exported_at": "2026-09-11",
+    "jarvis_required_credentials": [
+      {
+        "id": "oCkj27EiMe96vXvU",
+        "name": "jv_privat_postgres"
+      }
+    ]
   }
 }

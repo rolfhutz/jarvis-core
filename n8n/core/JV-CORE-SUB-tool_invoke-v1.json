@@ -114,7 +114,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const KONTEXTE = [\"privat\", \"arbeitgeber_visolva\"];\nconst alle = $input.all();\nif (alle.length !== 1) {\n  throw new Error(\"tool_invoke_invalid_input: genau ein Aufruf je Ausfuehrung erwartet, erhalten \" + alle.length);\n}\nconst e = alle[0].json;\nif (KONTEXTE.indexOf(e.context_id) === -1) {\n  throw new Error(\"tool_invoke_invalid_input: context_id nicht im Register\");\n}\nif (!/^[a-z][a-z0-9_]*\\.[a-z][a-z0-9_]*$/.test(String(e.tool_id || \"\"))) {\n  throw new Error(\"tool_invoke_invalid_input: tool_id fehlt oder ist ungueltig\");\n}\nif (!/^[0-9]+\\.[0-9]+\\.[0-9]+$/.test(String(e.tool_version || \"\"))) {\n  throw new Error(\"tool_invoke_invalid_input: tool_version fehlt oder ist ungueltig\");\n}\nif (e.action_id !== undefined && e.action_id !== null && e.action_id !== '' && !/^act_[A-Za-z0-9_]{6,64}$/.test(String(e.action_id))) {\n  throw new Error(\"tool_invoke_invalid_input: action_id ist ungueltig\");\n}\nreturn [{ json: {\n  context_id: e.context_id,\n  tool_id: e.tool_id,\n  tool_version: e.tool_version,\n  risk_class: e.risk_class || \"\",\n  approval_id: e.approval_id || null,\n  approval_status: e.approval_status || null,\n  payload: e.payload || {},\n  action_id: e.action_id || null,\n  dry_run: e.dry_run === true,\n  trace_id: e.trace_id || null\n} }];"
+        "jsCode": "const alle = $input.all();\nif (alle.length !== 1) {\n  throw new Error(\"tool_invoke_invalid_input: genau ein Aufruf je Ausfuehrung erwartet, erhalten \" + alle.length);\n}\nconst e = alle[0].json;\nif (!/^[a-z][a-z0-9_]{2,63}$/.test(String(e.context_id || \"\"))) {\n  throw new Error(\"tool_invoke_invalid_input: context_id fehlt oder hat kein gueltiges Format\");\n}\nif (!/^[a-z][a-z0-9_]*\\.[a-z][a-z0-9_]*$/.test(String(e.tool_id || \"\"))) {\n  throw new Error(\"tool_invoke_invalid_input: tool_id fehlt oder ist ungueltig\");\n}\nif (!/^[0-9]+\\.[0-9]+\\.[0-9]+$/.test(String(e.tool_version || \"\"))) {\n  throw new Error(\"tool_invoke_invalid_input: tool_version fehlt oder ist ungueltig\");\n}\nif (e.action_id !== undefined && e.action_id !== null && e.action_id !== '' && !/^act_[A-Za-z0-9_]{6,64}$/.test(String(e.action_id))) {\n  throw new Error(\"tool_invoke_invalid_input: action_id ist ungueltig\");\n}\nreturn [{ json: {\n  context_id: e.context_id,\n  tool_id: e.tool_id,\n  tool_version: e.tool_version,\n  risk_class: e.risk_class || \"\",\n  approval_id: e.approval_id || null,\n  approval_status: e.approval_status || null,\n  payload: e.payload || {},\n  action_id: e.action_id || null,\n  dry_run: e.dry_run === true,\n  trace_id: e.trace_id || null\n} }];"
       },
       "id": "216c941b-55ba-4fef-aeea-a27650e9c038",
       "name": "Eingabe pruefen",
@@ -173,7 +173,10 @@
             }
           ]
         },
-        "options": {}
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "unbekannt"
+        }
       },
       "id": "0b89e04f-63d8-4ce3-a521-3f8e7e518b8f",
       "name": "Kontext waehlen",
@@ -665,6 +668,19 @@
         1776,
         -240
       ]
+    },
+    {
+      "parameters": {
+        "errorMessage": "=tool_invoke_invalid_input: context_id ohne Kontextweiche: {{ $json.context_id }}"
+      },
+      "id": "c19bd98e-35cb-4917-9f18-039ad88d03b7",
+      "name": "Kontext ohne Weiche",
+      "type": "n8n-nodes-base.stopAndError",
+      "typeVersion": 1,
+      "position": [
+        672,
+        320
+      ]
     }
   ],
   "connections": {
@@ -720,6 +736,13 @@
         [
           {
             "node": "Register lesen als jv_visolva_user",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Kontext ohne Weiche",
             "type": "main",
             "index": 0
           }
@@ -826,14 +849,15 @@
     }
   },
   "settings": {
-    "executionOrder": "v1"
+    "executionOrder": "v1",
+    "binaryMode": "separate"
   },
   "meta": {
     "jarvis_source_workflow_id": "ELs6LnRIWKCv04yc",
     "jarvis_phase": "1.0",
     "jarvis_spec_phase_0": "1.1.0",
     "jarvis_spec_phase_1": "4.0.2",
-    "jarvis_exported_at": "2026-09-10",
+    "jarvis_exported_at": "2026-09-11",
     "jarvis_required_credentials": [
       {
         "id": "7BblU6FbDds3EZBb",

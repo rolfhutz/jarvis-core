@@ -39,7 +39,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const KONTEXTE = [\"privat\", \"arbeitgeber_visolva\"];\nconst ergebnis = [];\nfor (const item of $input.all()) {\n  const kontext = item.json.context_id;\n  const schluessel = String(item.json.idempotency_key || \"\");\n  let grund = \"\";\n  if (KONTEXTE.indexOf(kontext) === -1) { grund = \"context_id nicht im Register\"; }\n  else if (!/^[a-f0-9]{64}$/.test(schluessel)) { grund = \"idempotency_key ist kein SHA-256-Hex\"; }\n  else if (!item.json.action_id) { grund = \"action_id fehlt\"; }\n  else if (!item.json.claimed_by) { grund = \"claimed_by fehlt\"; }\n  if (grund) {\n    throw new Error(\"idempotency_guard_invalid_input: \" + grund);\n  }\n  ergebnis.push({ json: {\n    context_id: kontext,\n    action_id: item.json.action_id,\n    idempotency_key: schluessel,\n    claimed_by: item.json.claimed_by,\n    ttl_minutes: item.json.ttl_minutes || 5,\n    trace_id: item.json.trace_id || null\n  } });\n}\nreturn ergebnis;"
+        "jsCode": "const ergebnis = [];\nfor (const item of $input.all()) {\n  const kontext = item.json.context_id;\n  const schluessel = String(item.json.idempotency_key || \"\");\n  let grund = \"\";\n  if (!/^[a-z][a-z0-9_]{2,63}$/.test(String(kontext || \"\"))) { grund = \"context_id fehlt oder hat kein gueltiges Format\"; }\n  else if (!/^[a-f0-9]{64}$/.test(schluessel)) { grund = \"idempotency_key ist kein SHA-256-Hex\"; }\n  else if (!item.json.action_id) { grund = \"action_id fehlt\"; }\n  else if (!item.json.claimed_by) { grund = \"claimed_by fehlt\"; }\n  if (grund) {\n    throw new Error(\"idempotency_guard_invalid_input: \" + grund);\n  }\n  ergebnis.push({ json: {\n    context_id: kontext,\n    action_id: item.json.action_id,\n    idempotency_key: schluessel,\n    claimed_by: item.json.claimed_by,\n    ttl_minutes: item.json.ttl_minutes || 5,\n    trace_id: item.json.trace_id || null\n  } });\n}\nreturn ergebnis;"
       },
       "id": "eb3ce6f5-609c-4358-915c-720e6b7ecd5e",
       "name": "Eingabe pruefen",
@@ -98,7 +98,10 @@
             }
           ]
         },
-        "options": {}
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "unbekannt"
+        }
       },
       "id": "6d918a3f-8815-4d47-a76d-afe8816ec55e",
       "name": "Kontext waehlen",
@@ -185,6 +188,19 @@
         624,
         -320
       ]
+    },
+    {
+      "parameters": {
+        "errorMessage": "=idempotency_guard_invalid_input: context_id ohne Kontextweiche: {{ $json.context_id }}"
+      },
+      "id": "9cbe6e15-c4ac-4c1d-91a6-7db2ea742dcb",
+      "name": "Kontext ohne Weiche",
+      "type": "n8n-nodes-base.stopAndError",
+      "typeVersion": 1,
+      "position": [
+        672,
+        320
+      ]
     }
   ],
   "connections": {
@@ -225,6 +241,13 @@
             "type": "main",
             "index": 0
           }
+        ],
+        [
+          {
+            "node": "Kontext ohne Weiche",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
@@ -252,14 +275,15 @@
     }
   },
   "settings": {
-    "executionOrder": "v1"
+    "executionOrder": "v1",
+    "binaryMode": "separate"
   },
   "meta": {
     "jarvis_source_workflow_id": "bpC5dlK2Ez0sVhUj",
     "jarvis_phase": "1.0",
     "jarvis_spec_phase_0": "1.1.0",
     "jarvis_spec_phase_1": "4.0.2",
-    "jarvis_exported_at": "2026-09-10",
+    "jarvis_exported_at": "2026-09-11",
     "jarvis_required_credentials": [
       {
         "id": "7BblU6FbDds3EZBb",

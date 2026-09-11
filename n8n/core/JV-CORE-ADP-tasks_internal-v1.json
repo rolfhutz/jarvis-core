@@ -40,7 +40,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const WERKZEUG = 'tasks_internal.create_task';\nconst ADAPTER_ID = 'tasks_internal';\nconst SCHEMA = { privat: 'jarvis_privat', arbeitgeber_visolva: 'jarvis_visolva' };\nconst ULID = '[0-9A-HJKMNP-TV-Z]{26}';\nconst alle = $input.all();\nif (alle.length !== 1) {\n  throw new Error('adp_tasks_internal_invalid_input: genau ein Aufruf je Ausfuehrung erwartet, erhalten ' + alle.length);\n}\nconst e = alle[0].json;\nconst p = (e.payload && typeof e.payload === 'object' && !Array.isArray(e.payload)) ? e.payload : null;\nconst fehler = [];\nconst txt = function (v, min, max) { return typeof v === 'string' && v.length >= min && v.length <= max; };\nconst zeit = function (v) { return typeof v === 'string' && /Z$/.test(v) && !isNaN(Date.parse(v)); };\nconst norm = function (v) { return (v === undefined || v === null || v === '') ? null : new Date(v).toISOString().replace(/[.][0-9]{3}Z$/, 'Z'); };\nconst oder = function (v) { return (v === undefined || v === '') ? null : v; };\nconst obj = function (v) { return v && typeof v === 'object' && !Array.isArray(v); };\nif (!SCHEMA[e.context_id]) fehler.push('context_id unbekannt');\nif (e.tool_id !== WERKZEUG) fehler.push('tool_id passt nicht zu diesem Adapter');\nif (!/^act_[A-Za-z0-9_]{6,64}$/.test(String(e.action_id || ''))) fehler.push('action_id fehlt oder ist ungueltig');\nif (!p) {\n  fehler.push('payload fehlt');\n} else {\n  if (p.context_id !== e.context_id) fehler.push('context_mismatch: payload.context_id weicht vom Aufrufkontext ab');\n  if (!/^[0-9]+[.][0-9]+[.][0-9]+$/.test(String(p.schema_version || ''))) fehler.push('schema_version ungueltig');\n  if (!zeit(p.created_at)) fehler.push('created_at fehlt oder ist kein UTC-Zeitstempel');\n  if (!(obj(p.producer) && p.producer.producer_type && p.producer.producer_id)) fehler.push('producer unvollstaendig');\n  if (!new RegExp('^tsk_' + ULID + '$').test(String(p.task_id || ''))) fehler.push('task_id ungueltig');\n  if (!txt(p.title, 3, 200)) fehler.push('title fehlt oder Laenge unzulaessig');\n  if (!txt(p.success_criterion, 3, 1000)) fehler.push('success_criterion fehlt oder Laenge unzulaessig');\n  if (['jarvis', 'rolf', 'mitarbeiter', 'externer'].indexOf(p.actor) === -1) fehler.push('actor unzulaessig');\n  if (p.actor && p.actor !== 'jarvis' && !obj(p.assignee)) fehler.push('assignee fehlt fuer menschlichen Verantwortlichen');\n  if (['open', 'in_progress', 'blocked', 'waiting_external', 'done', 'cancelled', 'superseded'].indexOf(p.status) === -1) fehler.push('status unzulaessig');\n  if (p.status === 'done' && (!zeit(p.closed_at) || !Array.isArray(p.closing_evidence_ids) || p.closing_evidence_ids.length === 0)) fehler.push('done verlangt closed_at und closing_evidence_ids');\n  if (['low', 'normal', 'high', 'critical'].indexOf(p.priority) === -1) fehler.push('priority unzulaessig');\n  if (!/^[a-f0-9]{64}$/.test(String(p.idempotency_key || ''))) fehler.push('idempotency_key ist kein SHA-256');\n  if (!obj(p.origin)) fehler.push('origin fehlt');\n  if (p.due_at !== undefined && p.due_at !== null && !zeit(p.due_at)) fehler.push('due_at ist kein UTC-Zeitstempel');\n}\nlet zeile = null;\nlet erwartet = null;\nif (fehler.length === 0) {\n  zeile = { task_id: p.task_id, schema_version: p.schema_version, context_id: p.context_id, title: p.title, success_criterion: p.success_criterion, actor: p.actor, status: p.status, priority: p.priority, due_at: oder(p.due_at), idempotency_key: p.idempotency_key, body: p };\n  erwartet = { context_id: p.context_id, title: p.title, success_criterion: p.success_criterion, actor: p.actor, status: p.status, priority: p.priority, due_at: norm(p.due_at), idempotency_key: p.idempotency_key };\n}\nconst basis = { adapter_id: ADAPTER_ID, tool_id: WERKZEUG, context_id: e.context_id || null, action_id: e.action_id || null, trace_id: e.trace_id || null };\nif (fehler.length > 0) {\n  return [{ json: Object.assign({ route: 'invalid', fehler: fehler }, basis) }];\n}\nreturn [{ json: Object.assign({ route: e.dry_run === true ? 'dry_run' : e.context_id, requested_id: p.task_id, zeile_b64: Buffer.from(JSON.stringify(zeile), 'utf8').toString('base64'), expected: erwartet }, basis) }];"
+        "jsCode": "const WERKZEUG = 'tasks_internal.create_task';\nconst ADAPTER_ID = 'tasks_internal';\nconst ULID = '[0-9A-HJKMNP-TV-Z]{26}';\nconst alle = $input.all();\nif (alle.length !== 1) {\n  throw new Error('adp_tasks_internal_invalid_input: genau ein Aufruf je Ausfuehrung erwartet, erhalten ' + alle.length);\n}\nconst e = alle[0].json;\nconst p = (e.payload && typeof e.payload === 'object' && !Array.isArray(e.payload)) ? e.payload : null;\nconst fehler = [];\nconst txt = function (v, min, max) { return typeof v === 'string' && v.length >= min && v.length <= max; };\nconst zeit = function (v) { return typeof v === 'string' && /Z$/.test(v) && !isNaN(Date.parse(v)); };\nconst norm = function (v) { return (v === undefined || v === null || v === '') ? null : new Date(v).toISOString().replace(/[.][0-9]{3}Z$/, 'Z'); };\nconst oder = function (v) { return (v === undefined || v === '') ? null : v; };\nconst obj = function (v) { return v && typeof v === 'object' && !Array.isArray(v); };\nif (!/^[a-z][a-z0-9_]{2,63}$/.test(String(e.context_id || ''))) fehler.push('context_id fehlt oder hat kein gueltiges Format');\nif (e.tool_id !== WERKZEUG) fehler.push('tool_id passt nicht zu diesem Adapter');\nif (!/^act_[A-Za-z0-9_]{6,64}$/.test(String(e.action_id || ''))) fehler.push('action_id fehlt oder ist ungueltig');\nif (!p) {\n  fehler.push('payload fehlt');\n} else {\n  if (p.context_id !== e.context_id) fehler.push('context_mismatch: payload.context_id weicht vom Aufrufkontext ab');\n  if (!/^[0-9]+[.][0-9]+[.][0-9]+$/.test(String(p.schema_version || ''))) fehler.push('schema_version ungueltig');\n  if (!zeit(p.created_at)) fehler.push('created_at fehlt oder ist kein UTC-Zeitstempel');\n  if (!(obj(p.producer) && p.producer.producer_type && p.producer.producer_id)) fehler.push('producer unvollstaendig');\n  if (!new RegExp('^tsk_' + ULID + '$').test(String(p.task_id || ''))) fehler.push('task_id ungueltig');\n  if (!txt(p.title, 3, 200)) fehler.push('title fehlt oder Laenge unzulaessig');\n  if (!txt(p.success_criterion, 3, 1000)) fehler.push('success_criterion fehlt oder Laenge unzulaessig');\n  if (['jarvis', 'rolf', 'mitarbeiter', 'externer'].indexOf(p.actor) === -1) fehler.push('actor unzulaessig');\n  if (p.actor && p.actor !== 'jarvis' && !obj(p.assignee)) fehler.push('assignee fehlt fuer menschlichen Verantwortlichen');\n  if (['open', 'in_progress', 'blocked', 'waiting_external', 'done', 'cancelled', 'superseded'].indexOf(p.status) === -1) fehler.push('status unzulaessig');\n  if (p.status === 'done' && (!zeit(p.closed_at) || !Array.isArray(p.closing_evidence_ids) || p.closing_evidence_ids.length === 0)) fehler.push('done verlangt closed_at und closing_evidence_ids');\n  if (['low', 'normal', 'high', 'critical'].indexOf(p.priority) === -1) fehler.push('priority unzulaessig');\n  if (!/^[a-f0-9]{64}$/.test(String(p.idempotency_key || ''))) fehler.push('idempotency_key ist kein SHA-256');\n  if (!obj(p.origin)) fehler.push('origin fehlt');\n  if (p.due_at !== undefined && p.due_at !== null && !zeit(p.due_at)) fehler.push('due_at ist kein UTC-Zeitstempel');\n}\nlet zeile = null;\nlet erwartet = null;\nif (fehler.length === 0) {\n  zeile = { task_id: p.task_id, schema_version: p.schema_version, context_id: p.context_id, title: p.title, success_criterion: p.success_criterion, actor: p.actor, status: p.status, priority: p.priority, due_at: oder(p.due_at), idempotency_key: p.idempotency_key, body: p };\n  erwartet = { context_id: p.context_id, title: p.title, success_criterion: p.success_criterion, actor: p.actor, status: p.status, priority: p.priority, due_at: norm(p.due_at), idempotency_key: p.idempotency_key };\n}\nconst basis = { adapter_id: ADAPTER_ID, tool_id: WERKZEUG, context_id: e.context_id || null, action_id: e.action_id || null, trace_id: e.trace_id || null };\nif (fehler.length > 0) {\n  return [{ json: Object.assign({ route: 'invalid', fehler: fehler }, basis) }];\n}\nreturn [{ json: Object.assign({ route: e.dry_run === true ? 'dry_run' : e.context_id, requested_id: p.task_id, zeile_b64: Buffer.from(JSON.stringify(zeile), 'utf8').toString('base64'), expected: erwartet }, basis) }];"
       },
       "id": "136b31d3-b4d4-4534-80d8-80c50a3c88c3",
       "name": "Eingabe pruefen",
@@ -141,7 +141,10 @@
             }
           ]
         },
-        "options": {}
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "unbekannt"
+        }
       },
       "id": "b5c5b6ec-ea44-4b8d-860d-6ec8f0c173b7",
       "name": "Weg waehlen",
@@ -276,7 +279,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const e = $input.first().json;\nreturn [{ json: { status: 'error', adapter_id: e.adapter_id, tool_id: e.tool_id, context_id: e.context_id, action_id: e.action_id, write_outcome: 'none', error: { error_class: 'validation', error_code: 'invalid_input', retryable: false, message: e.fehler.join('; ') }, trace_id: e.trace_id } }];"
+        "jsCode": "const e = $input.first().json;\n// TS-10: Ohne Fehlerliste kommt der Eintrag aus dem Ausweichausgang der Kontextweiche.\nconst fehler = (Array.isArray(e.fehler) && e.fehler.length > 0) ? e.fehler : ['context_id ohne Kontextweiche'];\nreturn [{ json: { status: 'error', adapter_id: e.adapter_id, tool_id: e.tool_id, context_id: e.context_id, action_id: e.action_id, write_outcome: 'none', error: { error_class: 'validation', error_code: 'invalid_input', retryable: false, message: fehler.join('; ') }, trace_id: e.trace_id } }];"
       },
       "id": "2c034d7c-36b6-418b-af8d-40a7446e3fbd",
       "name": "Ergebnis ungueltige Eingabe",
@@ -343,6 +346,13 @@
         [
           {
             "node": "Ergebnis Probelauf",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ergebnis ungueltige Eingabe",
             "type": "main",
             "index": 0
           }
@@ -431,6 +441,7 @@
   },
   "settings": {
     "executionOrder": "v1",
+    "binaryMode": "separate",
     "callerPolicy": "workflowsFromAList",
     "callerIds": "ELs6LnRIWKCv04yc,P5IlT5RlGBK1aqiO"
   },
@@ -439,7 +450,7 @@
     "jarvis_phase": "1.0",
     "jarvis_spec_phase_0": "1.1.0",
     "jarvis_spec_phase_1": "4.0.2",
-    "jarvis_exported_at": "2026-09-10",
+    "jarvis_exported_at": "2026-09-11",
     "jarvis_required_credentials": [
       {
         "id": "7BblU6FbDds3EZBb",

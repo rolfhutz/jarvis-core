@@ -50,7 +50,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Werte werden als ein base64-kodierter JSON-Block an die Datenbank uebergeben (Befund Smoke-Test 21865).\nconst MUSTER = [\n  [/(?:)\\b(api[_-]?key|apikey|token|secret|password|passwort|pwd|authorization|bearer|credential|client[_-]?secret)\\b\\s*[:=]?\\s*\\S+/gi, \"[entfernt]\"],\n  [/eyJ[A-Za-z0-9_-]{5,}\\.[A-Za-z0-9_-]{5,}\\.[A-Za-z0-9_-]{5,}/g, \"[entfernt]\"],\n  [/(token|key|secret|password)=[^&\\s]+/gi, \"[entfernt]\"],\n  [/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}/g, \"[entfernt]\"],\n  [/postgres(?:ql)?:\\/\\/[^\\s]+/gi, \"[entfernt]\"]\n];\nconst TRANSIENT = [408, 425, 429, 500, 502, 503, 504];\nconst KONTEXTE = [\"privat\", \"arbeitgeber_visolva\"];\nfunction b64(o) {\n  const s = JSON.stringify(o);\n  return (typeof Buffer !== \"undefined\") ? Buffer.from(s, \"utf8\").toString(\"base64\") : btoa(unescape(encodeURIComponent(s)));\n}\nconst ergebnis = [];\nfor (const item of $input.all()) {\n  const kontext = item.json.context_id;\n  if (KONTEXTE.indexOf(kontext) === -1) {\n    throw new Error(\"error_handler_invalid_input: context_id nicht im Register\");\n  }\n  if (!item.json.error_id) {\n    throw new Error(\"error_handler_invalid_input: error_id fehlt\");\n  }\n  let text = String(item.json.error_message_raw || \"\");\n  const rohNiedrig = text.toLowerCase();\n  for (const paar of MUSTER) {\n    text = text.replace(paar[0], paar[1]);\n  }\n  if (text.length > 500) {\n    text = text.slice(0, 497) + \"...\";\n  }\n  const code = (item.json.status_code === undefined || item.json.status_code === null || item.json.status_code === \"\") ? null : Number(item.json.status_code);\n  const versuch = Number(item.json.attempt) || 1;\n  const maximal = Number(item.json.max_attempts) || 3;\n  let klasse = \"permanent\";\n  if (rohNiedrig.indexOf(\"append_only_violation\") !== -1 ||\n      rohNiedrig.indexOf(\"permission denied\") !== -1 ||\n      code === 401 || code === 403) {\n    klasse = \"security\";\n  } else if (rohNiedrig.indexOf(\"_chk\") !== -1 ||\n             rohNiedrig.indexOf(\"violates check constraint\") !== -1 ||\n             rohNiedrig.indexOf(\"schema\") !== -1 ||\n             rohNiedrig.indexOf(\"contract\") !== -1) {\n    klasse = \"contract\";\n  } else if (code !== null && TRANSIENT.indexOf(code) !== -1) {\n    klasse = \"transient\";\n  }\n  const wiederholbar = klasse === \"transient\" && versuch < maximal;\n  let stufe = \"log_only\";\n  if (klasse === \"security\") { stufe = \"halt_and_notify\"; }\n  else if (klasse === \"contract\") { stufe = \"notify\"; }\n  else if (klasse === \"permanent\") { stufe = \"notify\"; }\n  else if (klasse === \"transient\" && !wiederholbar) { stufe = \"notify\"; }\n  const status = wiederholbar ? \"retry_scheduled\" : \"open\";\n  const zeile = {\n    error_id: item.json.error_id,\n    action_id: item.json.action_id || null,\n    event_id: item.json.event_id || null,\n    error_class: klasse,\n    escalation_level: stufe,\n    attempt: versuch,\n    resolution_status: status,\n    body: { status_code: code, attempt: versuch, max_attempts: maximal, message_safe: text }\n  };\n  ergebnis.push({ json: {\n    context_id: kontext,\n    error_id: zeile.error_id,\n    action_id: zeile.action_id,\n    error_class: klasse,\n    escalation_level: stufe,\n    retry_allowed: wiederholbar,\n    next_attempt_delay_s: wiederholbar ? 30 * Math.pow(2, versuch - 1) : null,\n    attempt: versuch,\n    resolution_status: status,\n    message_safe: text,\n    trace_id: item.json.trace_id || null,\n    row_b64: b64(zeile)\n  } });\n}\nreturn ergebnis;"
+        "jsCode": "// Werte werden als ein base64-kodierter JSON-Block an die Datenbank uebergeben (Befund Smoke-Test 21865).\nconst MUSTER = [\n  [/(?:)\\b(api[_-]?key|apikey|token|secret|password|passwort|pwd|authorization|bearer|credential|client[_-]?secret)\\b\\s*[:=]?\\s*\\S+/gi, \"[entfernt]\"],\n  [/eyJ[A-Za-z0-9_-]{5,}\\.[A-Za-z0-9_-]{5,}\\.[A-Za-z0-9_-]{5,}/g, \"[entfernt]\"],\n  [/(token|key|secret|password)=[^&\\s]+/gi, \"[entfernt]\"],\n  [/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}/g, \"[entfernt]\"],\n  [/postgres(?:ql)?:\\/\\/[^\\s]+/gi, \"[entfernt]\"]\n];\nconst TRANSIENT = [408, 425, 429, 500, 502, 503, 504];\nfunction b64(o) {\n  const s = JSON.stringify(o);\n  return (typeof Buffer !== \"undefined\") ? Buffer.from(s, \"utf8\").toString(\"base64\") : btoa(unescape(encodeURIComponent(s)));\n}\nconst ergebnis = [];\nfor (const item of $input.all()) {\n  const kontext = item.json.context_id;\n  if (!/^[a-z][a-z0-9_]{2,63}$/.test(String(kontext || \"\"))) {\n    throw new Error(\"error_handler_invalid_input: context_id fehlt oder hat kein gueltiges Format\");\n  }\n  if (!item.json.error_id) {\n    throw new Error(\"error_handler_invalid_input: error_id fehlt\");\n  }\n  let text = String(item.json.error_message_raw || \"\");\n  const rohNiedrig = text.toLowerCase();\n  for (const paar of MUSTER) {\n    text = text.replace(paar[0], paar[1]);\n  }\n  if (text.length > 500) {\n    text = text.slice(0, 497) + \"...\";\n  }\n  const code = (item.json.status_code === undefined || item.json.status_code === null || item.json.status_code === \"\") ? null : Number(item.json.status_code);\n  const versuch = Number(item.json.attempt) || 1;\n  const maximal = Number(item.json.max_attempts) || 3;\n  let klasse = \"permanent\";\n  if (rohNiedrig.indexOf(\"append_only_violation\") !== -1 ||\n      rohNiedrig.indexOf(\"permission denied\") !== -1 ||\n      code === 401 || code === 403) {\n    klasse = \"security\";\n  } else if (rohNiedrig.indexOf(\"_chk\") !== -1 ||\n             rohNiedrig.indexOf(\"violates check constraint\") !== -1 ||\n             rohNiedrig.indexOf(\"schema\") !== -1 ||\n             rohNiedrig.indexOf(\"contract\") !== -1) {\n    klasse = \"contract\";\n  } else if (code !== null && TRANSIENT.indexOf(code) !== -1) {\n    klasse = \"transient\";\n  }\n  const wiederholbar = klasse === \"transient\" && versuch < maximal;\n  let stufe = \"log_only\";\n  if (klasse === \"security\") { stufe = \"halt_and_notify\"; }\n  else if (klasse === \"contract\") { stufe = \"notify\"; }\n  else if (klasse === \"permanent\") { stufe = \"notify\"; }\n  else if (klasse === \"transient\" && !wiederholbar) { stufe = \"notify\"; }\n  const status = wiederholbar ? \"retry_scheduled\" : \"open\";\n  const zeile = {\n    error_id: item.json.error_id,\n    action_id: item.json.action_id || null,\n    event_id: item.json.event_id || null,\n    error_class: klasse,\n    escalation_level: stufe,\n    attempt: versuch,\n    resolution_status: status,\n    body: { status_code: code, attempt: versuch, max_attempts: maximal, message_safe: text }\n  };\n  ergebnis.push({ json: {\n    context_id: kontext,\n    error_id: zeile.error_id,\n    action_id: zeile.action_id,\n    error_class: klasse,\n    escalation_level: stufe,\n    retry_allowed: wiederholbar,\n    next_attempt_delay_s: wiederholbar ? 30 * Math.pow(2, versuch - 1) : null,\n    attempt: versuch,\n    resolution_status: status,\n    message_safe: text,\n    trace_id: item.json.trace_id || null,\n    row_b64: b64(zeile)\n  } });\n}\nreturn ergebnis;"
       },
       "id": "0c778179-c3c8-4d2e-bbfc-76431b3867b8",
       "name": "Fehler klassifizieren und bereinigen",
@@ -109,7 +109,10 @@
             }
           ]
         },
-        "options": {}
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "unbekannt"
+        }
       },
       "id": "762371bd-3512-44ba-85e1-3c7bb7aed7e5",
       "name": "Kontext waehlen",
@@ -194,6 +197,19 @@
         880,
         0
       ]
+    },
+    {
+      "parameters": {
+        "errorMessage": "=error_handler_invalid_input: context_id ohne Kontextweiche: {{ $json.context_id }}"
+      },
+      "id": "b53306cf-cd61-4b14-a397-cfd78a324f30",
+      "name": "Kontext ohne Weiche",
+      "type": "n8n-nodes-base.stopAndError",
+      "typeVersion": 1,
+      "position": [
+        672,
+        320
+      ]
     }
   ],
   "connections": {
@@ -234,6 +250,13 @@
             "type": "main",
             "index": 0
           }
+        ],
+        [
+          {
+            "node": "Kontext ohne Weiche",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
@@ -261,14 +284,15 @@
     }
   },
   "settings": {
-    "executionOrder": "v1"
+    "executionOrder": "v1",
+    "binaryMode": "separate"
   },
   "meta": {
     "jarvis_source_workflow_id": "HOTikshdbkz6dk9q",
     "jarvis_phase": "1.0",
     "jarvis_spec_phase_0": "1.1.0",
     "jarvis_spec_phase_1": "4.0.2",
-    "jarvis_exported_at": "2026-09-10",
+    "jarvis_exported_at": "2026-09-11",
     "jarvis_required_credentials": [
       {
         "id": "7BblU6FbDds3EZBb",

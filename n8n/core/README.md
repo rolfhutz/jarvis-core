@@ -43,12 +43,14 @@ drei interne Adapter (`JV-CORE-ADP-*`, seit 1.0.8) und zwei Betriebsworkflows (`
    `n8n export:workflow --all --separate --output=<ordner>` und
    `n8n export:credentials --all --output=<datei>`, dann
    `python3 tests/n8n/check_restore.py --src n8n/core --out <ordner> --creds <datei>`
-   Erwartet (Stand 1.0.8): 14 Workflows, 155 Knoten, 38 Credential-Zuordnungen,
-   20 Subworkflow-Verweise, 6 Aufruferregeln, `ERGEBNIS: BESTANDEN`.
+   Erwartet (Stand 1.1a): 14 Workflows, 164 Knoten, 39 Credential-Zuordnungen,
+   20 Subworkflow-Verweise, 6 Aufruferregeln, 13 × `binaryMode`, `ERGEBNIS: BESTANDEN`.
+   Zusaetzlich `python3 tests/n8n/check_ts10.py --src n8n/core` (keine Kontextwerte im Code,
+   Kontextweichen mit Ausweichausgang; 1.1-A18).
 4. Veroeffentlichen: alle `JV-CORE-SUB-*`, alle `JV-CORE-ADP-*` und
    `JV-CORE-OPS-db_keepalive-v1` (Regel TS-23). Nur `JV-CORE-OPS-smoke_test-v1` bleibt
    unveroeffentlicht. Unveroeffentlichte Entwuerfe sind fuer Elternworkflows nicht sichtbar.
-5. `JV-CORE-OPS-smoke_test-v1` einmal manuell ausfuehren. Erwartet: 104 von 104.
+5. `JV-CORE-OPS-smoke_test-v1` einmal manuell ausfuehren. Erwartet: 116 von 116.
    Achtung: Der Lauf schreibt synthetische Daten in den Fachbestand und verbraucht
    echte Vorgangsnummern (TS-18).
 
@@ -59,4 +61,4 @@ drei interne Adapter (`JV-CORE-ADP-*`, seit 1.0.8) und zwei Betriebsworkflows (`
 3. Pruefen, dass die veroeffentlichte Version dem aktuellen Stand entspricht
    (`versionId` = `activeVersionId`, per MCP `get_workflow_details`).
 4. Smoke-Test ausfuehren, erwartet: alle Pruefungen bestanden.
-5. Exportieren, normalisieren, per Pull Request ins Repo.
+5. Exportieren, normalisieren, `tests/n8n/check_ts10.py` ausfuehren, per Pull Request ins Repo.
