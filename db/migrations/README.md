@@ -34,6 +34,9 @@ sondern aus Abhaengigkeiten:
 | `0021_intake_config_seed_1_1.sql` | **erzeugt** aus `config/intake_config.json` 1.1.0, setzt die Wurzel, prueft sich selbst; loest `0017` ab | 0020 |
 | `0022_context_root_ref_not_null.sql` | Wurzel verpflichtend, bricht ohne vorheriges `0021` ab, prueft sich selbst | 0020, 0021 |
 | `0023_release_storage_gdrive_get_file_1_1_0.sql` | Freigabe `storage_gdrive.get_file@1.1.0` nach 12.1.1; prueft den gespeicherten Nachweis, prueft sich selbst | 0013, 0018 |
+| `0024_tool_registry_seed_1_1b.sql` | **erzeugt** aus `spec/phase-1/nachtrag-1.1b/registry/tool_registry_phase1_1b.json`; registriert `storage_gdrive.get_file@1.2.0` (draft, beide Kontexte), prueft sich selbst | 0013 |
+| `0025_intake_config_seed_1_2.sql` | **erzeugt** aus `config/intake_config.json` 1.2.0 (1.1b-E3: Visolva auf `storage_gdrive`), prueft sich selbst; loest `0021` ab | 0020, 0022 |
+| `0026_release_storage_gdrive_get_file_1_2_0.sql` | Freigabe `storage_gdrive.get_file@1.2.0` nach 12.1.1, 1.1.0 auf `deprecated`; prueft den gespeicherten Nachweis, prueft sich selbst | 0013, 0023, 0024 |
 
 Die Rechtevergabe steht bewusst am Ende: `REVOKE ALL ON ALL TABLES IN SCHEMA`
 wirkt nur auf Tabellen, die zu diesem Zeitpunkt bereits vorhanden sind. Wuerde
@@ -73,9 +76,9 @@ done
 (Supabase). Ohne sie kann niemand die Kontextrollen annehmen und die Abnahme
 1.0-A1 bis 1.0-A4 ist nicht pruefbar. Begruendung im Kopf der Datei.
 
-Wiederholbarkeit: `0001`, `0009`, `0010`, `0011`, `0012`, `0014`, `0015`, `0018`, `0019`, `0021`, `0022` und `0023` sind ohne Weiteres erneut ausfuehrbar.
-`0017` ist seit 1.1b Historie (erzeugt aus Konfiguration 1.0.0) und wird nicht erneut ausgefuehrt; nach `0022` scheitert sie an der Pflichtspalte `context_root_ref` (beabsichtigt, fail closed). Massgeblich ist `0021`.
-`0021` (wie zuvor `0017`) setzt Konfigurationsfelder auf den Stand der Datei, laesst den Laufzeitzustand (`halted_at`) unberuehrt
+Wiederholbarkeit: `0001`, `0009`, `0010`, `0011`, `0012`, `0014`, `0015`, `0018`, `0019`, `0021`, `0022`, `0023`, `0024`, `0025` und `0026` sind ohne Weiteres erneut ausfuehrbar.
+`0017` ist seit 1.1b Historie (erzeugt aus Konfiguration 1.0.0) und wird nicht erneut ausgefuehrt; nach `0022` scheitert sie an der Pflichtspalte `context_root_ref` (beabsichtigt, fail closed). Seit 1.1b Teil 2 ist `0021` ebenfalls Historie (Konfiguration 1.1.0); massgeblich ist `0025`.
+`0025` (wie zuvor `0021` und `0017`) setzt Konfigurationsfelder auf den Stand der Datei, laesst den Laufzeitzustand (`halted_at`) unberuehrt
 und deaktiviert Bindungen, die nicht mehr in der Datei stehen.
 `0015` hebt Zaehler nur an, senkt sie nie ab.
 `0014` wird ausschliesslich mit `tools/render_tool_registry.py` erzeugt und bricht ab,

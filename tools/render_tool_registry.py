@@ -50,6 +50,7 @@ PHASE0 = ROOT / "spec" / "phase-0" / "jarvis-phase-0"
 PHASE1 = ROOT / "spec" / "phase-1" / "jarvis-phase-1"
 SCHEMA_DIR = PHASE0 / "schemas"
 NACHTRAG_1_1 = ROOT / "spec" / "phase-1" / "nachtrag-1.1"
+NACHTRAG_1_1B = ROOT / "spec" / "phase-1" / "nachtrag-1.1b"
 SETS = {
     "0014": {
         "files": [
@@ -67,6 +68,12 @@ SETS = {
         "files": [NACHTRAG_1_1 / "registry" / "tool_registry_phase1_1.json"],
         "output": "0018_tool_registry_seed_1_1.sql",
         "title": "JARVIS Phase 1.1 - Migration 0018 - Werkzeugregister Nachtrag 1.1 (ADR-001, 1.1-E1)",
+        "check_refs": True,
+    },
+    "0024": {
+        "files": [NACHTRAG_1_1B / "registry" / "tool_registry_phase1_1b.json"],
+        "output": "0024_tool_registry_seed_1_1b.sql",
+        "title": "JARVIS Phase 1.1b - Migration 0024 - Werkzeugregister Nachtrag 1.1b (1.1b-E3)",
         "check_refs": True,
     },
 }

@@ -1,6 +1,6 @@
 {
-  "config_version": "1.1.0",
-  "generated_note": "Schritt 1.1, Entscheidungen 1.1-E4 und 1.1b-E1. Enthaelt keine Ordner-IDs, keine Konten, keine Zugangsdaten. Werte der env-Verweise stehen ausschliesslich in n8n-Variablen. Laden nur ueber tools/render_intake_config.py.",
+  "config_version": "1.2.0",
+  "generated_note": "Schritt 1.1, Entscheidungen 1.1-E4, 1.1b-E1 und 1.1b-E3. Enthaelt keine Ordner-IDs, keine Konten, keine Zugangsdaten. Werte der env-Verweise stehen ausschliesslich in n8n-Variablen. Laden nur ueber tools/render_intake_config.py.",
   "contexts": {
     "privat": {
       "document_settings": {
@@ -36,8 +36,8 @@
     },
     "arbeitgeber_visolva": {
       "document_settings": {
-        "storage_adapter_id": "storage_sharepoint",
-        "storage_container_ref": "env:JV_VISOLVA_SP_DRIVE_ID",
+        "storage_adapter_id": "storage_gdrive",
+        "storage_container_ref": null,
         "context_root_ref": "env:JV_VISOLVA_ROOT_FOLDER_ID",
         "inbox_ref": "env:JV_VISOLVA_INBOX_FOLDER_ID",
         "working_ref": "env:JV_VISOLVA_WORKING_FOLDER_ID",
@@ -57,8 +57,8 @@
       },
       "source_bindings": [
         {
-          "binding_key": "visolva_sharepoint_inbox",
-          "adapter_id": "storage_sharepoint",
+          "binding_key": "visolva_drive_inbox",
+          "adapter_id": "storage_gdrive",
           "channel": "drive_inbox",
           "location_ref": "env:JV_VISOLVA_INBOX_FOLDER_ID",
           "purpose": "intake",

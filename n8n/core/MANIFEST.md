@@ -1,6 +1,6 @@
 # Manifest der JARVIS-Kernworkflows
 
-**Stand:** 11. September 2026, nach Schritt 1.1b Teil 1 (Speicheradapter Google Drive, 1.1b-E1, 1.1b-E2, REL-1.1b, TS-27)
+**Stand:** 13. September 2026, nach Schritt 1.1b Teil 2 (Speicheradapter Visolva, 1.1b-E3, 1.1b-E4, REL-1.1b-2, TS-33a)
 **Instanz:** persoenliches n8n-Projekt `Rolf Hutz` (n8n Cloud)
 **Grundlage:** SPEC_PHASE_0 1.1.0, SPEC_PHASE_1 4.0.2, ADR-002, ADR-003, E-1, E-2, TS10-E1 bis TS10-E3
 
@@ -18,9 +18,10 @@
 | `JV-CORE-ADP-tasks_internal-v1` | `GFTIzQsak9UJVhAj` | **veroeffentlicht**, Aufrufer beschraenkt | ja | Kontexttabelle entfernt, Ausweichausgang auf „Ergebnis ungueltige Eingabe“ |
 | `JV-CORE-ADP-docstore_internal-v1` | `2QdRVAniHgkWjqh2` | **veroeffentlicht**, Aufrufer beschraenkt | ja | wie `tasks_internal` |
 | `JV-CORE-ADP-casestore_internal-v1` | `V1fuepKIR20OwgZp` | **veroeffentlicht**, Aufrufer beschraenkt | ja | wie `tasks_internal` |
-| `JV-CORE-ADP-storage_gdrive-v1` | `qZpVoKoKuPRyOGg7` | **veroeffentlicht**, Aufrufer beschraenkt, Ausfuehrungsdaten nicht gespeichert | ja (lesend, `jv_privat_postgres`) + Drive (`jv_privat_gdrive`) | **neu in 1.1b:** `storage_gdrive.get_file@1.1.0` (`approved`, nur `privat`); Wurzelpruefung vor jedem Download, eigener sha256 mit Abgleich der Anbieterpruefsumme; in `tool_invoke` noch nicht verdrahtet (1.1b-E2) |
+| `JV-CORE-ADP-storage_gdrive-v1` | `qZpVoKoKuPRyOGg7` | **veroeffentlicht**, Aufrufer beschraenkt, Ausfuehrungsdaten nicht gespeichert | ja (lesend, `jv_privat_postgres`) + Drive (`jv_privat_gdrive`) | Kontext `privat`. Wurzelpruefung vor jedem Download, eigener sha256 mit Abgleich der Anbieterpruefsumme; in `tool_invoke` noch nicht verdrahtet (1.1b-E2). Werkzeug seit 1.1b Teil 2: `storage_gdrive.get_file@1.2.0` (`approved`, beide Kontexte), 1.1.0 `deprecated` |
+| `JV-CORE-ADP-storage_gdrive_visolva-v1` | `IHdbJYSAs2HtMzK6` | **veroeffentlicht**, Aufrufer beschraenkt, Ausfuehrungsdaten nicht gespeichert | ja (lesend, `jv_visolva_postgres`) + Drive (`jv_visolva_gdrive`) | **neu in 1.1b Teil 2 (1.1b-E3/E4 A):** Kontext `arbeitgeber_visolva`. Geprueft gleiche Kopie des privaten Adapters; Unterschiede nur in Kontextweiche, drei Google-Knoten und der Einstellungsabfrage. Logik doppelt gepflegt (TS-32) |
 | `JV-CORE-OPS-db_keepalive-v1` | `DTRoxZvPQ5BPhM4o` | **veroeffentlicht** | ja | unveraendert |
-| `JV-CORE-OPS-smoke_test-v1` | `P5IlT5RlGBK1aqiO` | Entwurf, manuell | ja + Drive (`jv_privat_gdrive`) | 1.1b: Einrichtungspruefung (9 JARVIS-Ordner, TS-27 A), 13 Faelle `storage_gdrive.get_file`, Freigabenachweis; 58 Knoten, 143 Pruefungen |
+| `JV-CORE-OPS-smoke_test-v1` | `P5IlT5RlGBK1aqiO` | Entwurf, manuell | ja (beide Kontexte) + Drive (`jv_privat_gdrive`, `jv_visolva_gdrive`) | 1.1b Teil 2: Einrichtungspruefung beider Kontexte (9 private und 8 Visolva-Ordner, TS-27 A), Faelle `storage_gdrive.get_file` je Kontext, Freigabenachweis; 69 Knoten, 168 Pruefungen |
 
 "Entwurf" heisst in n8n: nicht veroeffentlicht. Seit TS-23 (10.09.2026) sind alle Kern-Subworkflows
 und Adapter veroeffentlicht; nur der Smoke-Test bleibt Entwurf (manueller Ausloeser).
@@ -32,6 +33,10 @@ sichtbar (Befund 1.0.8, Lauf 22175). Deshalb sind alle `SUB` und `ADP` veroeffen
 **Eine Aenderung wirkt erst nach erneutem Veroeffentlichen.** Ablauf je Aenderung:
 aendern → veroeffentlichen → pruefen, dass veroeffentlichte Version = aktueller Stand
 (`versionId` = `activeVersionId`) → Smoke-Test → Export ins Repo.
+**Export ins Repo (TS-33a, 13.09.2026):** Die Dateien in `n8n/core/` stammen aus dem
+`Download` der n8n-Oberflaeche und sind mit `tools/normalize_n8n_export.py` normalisiert.
+Handgepflegte Dateien sind nicht zulaessig: sie fuehren zu erfundenen Knoten-IDs und
+unvollstaendiger Credential-Liste und machen die Wiederherstellung nachweisuntauglich.
 
 ## Credentials
 
@@ -40,6 +45,7 @@ aendern → veroeffentlichen → pruefen, dass veroeffentlichte Version = aktuel
 | `jv_privat_postgres` | `oCkj27EiMe96vXvU` | `jv_privat_login` | `jv_privat_user` |
 | `jv_visolva_postgres` | `7BblU6FbDds3EZBb` | `jv_visolva_login` | `jv_visolva_user` |
 | `jv_privat_gdrive` | `T9eXpovYsz2Ipp6B` | — (privates Google-Konto, V-1) | nur Kontext `privat`, Adapter `storage_gdrive` |
+| `jv_visolva_gdrive` | `r79T8YvgoloadnXV` | — (Arbeitskonto `rolf@visolva.pro`, 1.1b-E3) | nur Kontext `arbeitgeber_visolva`, Adapter `storage_gdrive_visolva`; weiter Zugriffsumfang, Schuld TS-31 |
 
 Kennwoerter nur im Passwortmanager und im Credential-Speicher von n8n.
 
@@ -74,6 +80,7 @@ Schuld TS-26: vor dem Arbeitgeber-Pilot eigenen Betriebszugang pruefen.
 | Phase-1.0-Gate | `docs/evidence/PHASE_1_0_GATE_2026-09-10.md` |
 | TS-23: Smoke-Test nach Veroeffentlichung aller SUB, 104/104 (22371) | `docs/decisions/DECISION_LOG.md` |
 | 1.1a TS-10: Smoke-Test 105/105 (22616), 116/116 (22715); statische Pruefung; Wiederherstellung 14 Workflows | `docs/evidence/PHASE_1_1A_TS10_2026-09-11.md` |
+| 1.1b Teil 2: Speicheradapter Visolva, Smoke-Test 168/168 (23802), Exportabgleich TS-33a | `docs/evidence/PHASE_1_1B_TEIL2_VISOLVA_2026-09-13.md` |
 
 ## Bekannte Grenzen
 
@@ -84,3 +91,9 @@ Schuld TS-26: vor dem Arbeitgeber-Pilot eigenen Betriebszugang pruefen.
 - Der Keep-Alive meldet Fehlschlaege nicht aktiv; Meldekanal ab Phase 2 (TS-12).
 - Adapter klassifizieren Fehler nur; die Wiederholung folgt mit 1.1 (TS-19).
 - Jeder Smoke-Lauf verbraucht echte Vorgangsnummern (TS-18).
+- Adapterlogik liegt doppelt vor (privat und Visolva); Aenderungen immer in beiden
+  Workflows nachziehen (TS-32).
+- Die Wiederherstellung aus `n8n/core/` ist seit 1.1a nicht erneut geprueft; `check_restore.py`
+  braucht eine leere Instanz mit n8n-CLI, die es auf n8n Cloud nicht gibt (TS-33b).
+- `jv_visolva_gdrive` hat vollen Drive-Zugriff auf `rolf@visolva.pro`; Grenze ist allein die
+  Wurzelpruefung (TS-31).
