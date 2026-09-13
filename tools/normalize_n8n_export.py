@@ -21,6 +21,7 @@ aussieht (Verbindungszeichenfolge, Kennwort, Token, API-Schluessel).
 
 Aufruf:
     python3 tools/normalize_n8n_export.py --in <ordner_mit_downloads> --out n8n/core --date 2026-09-10
+    python3 tools/normalize_n8n_export.py --in <ordner> --out n8n/core --date 2026-09-13 --phase 1.1b
     python3 tools/normalize_n8n_export.py --self-test
 """
 
@@ -50,7 +51,7 @@ class ExportError(Exception):
     pass
 
 
-def normalize(raw: dict, export_date: str, spec0: str = "1.1.0", spec1: str = "4.0.2") -> dict:
+def normalize(raw: dict, export_date: str, phase: str = "1.0", spec0: str = "1.1.0", spec1: str = "4.0.2") -> dict:
     name = raw.get("name", "")
     if not NAME_PATTERN.match(name):
         raise ExportError(f"Workflowname entspricht nicht der Konvention: {name!r}")
@@ -80,7 +81,7 @@ def normalize(raw: dict, export_date: str, spec0: str = "1.1.0", spec1: str = "4
         "settings": settings,
         "meta": {
             "jarvis_source_workflow_id": raw.get("id"),
-            "jarvis_phase": "1.0",
+            "jarvis_phase": phase,
             "jarvis_spec_phase_0": spec0,
             "jarvis_spec_phase_1": spec1,
             "jarvis_exported_at": export_date,
@@ -120,6 +121,9 @@ def self_test() -> None:
     binw = dict(raw, name="JV-P1-SUB-demo-v1", settings={"executionOrder": "v1", "binaryMode": "separate",
                                                         "availableInMCP": True})
     assert normalize(binw, "2026-09-10")["settings"] == {"executionOrder": "v1", "binaryMode": "separate"}
+    assert out["meta"]["jarvis_phase"] == "1.0"
+    # E-1 (13.09.2026): Bauabschnitt frei waehlbar, Standard bleibt 1.0.
+    assert normalize(raw, "2026-09-13", "1.1b")["meta"]["jarvis_phase"] == "1.1b"
     assert "instanceId" not in json.dumps(out)
     bad = dict(raw, nodes=[{"name": "X", "parameters": {"url": "postgres://u:p@h/db"}}])
     try:
@@ -132,7 +136,7 @@ def self_test() -> None:
         raise AssertionError("Namenskonvention nicht geprueft")
     except ExportError:
         pass
-    print("SELBSTTEST BESTANDEN: 5 Pruefungen, 2 Gegenproben")
+    print("SELBSTTEST BESTANDEN: 7 Pruefungen, 2 Gegenproben")
 
 
 def main() -> int:
@@ -140,6 +144,7 @@ def main() -> int:
     ap.add_argument("--in", dest="inp", type=pathlib.Path)
     ap.add_argument("--out", type=pathlib.Path)
     ap.add_argument("--date")
+    ap.add_argument("--phase", default="1.0", help="Wert fuer meta.jarvis_phase, Standard 1.0")
     ap.add_argument("--self-test", action="store_true")
     a = ap.parse_args()
     if a.self_test:
@@ -150,7 +155,7 @@ def main() -> int:
     a.out.mkdir(parents=True, exist_ok=True)
     try:
         for f in sorted(a.inp.glob("*.json")):
-            out = normalize(json.loads(f.read_text(encoding="utf-8")), a.date)
+            out = normalize(json.loads(f.read_text(encoding="utf-8")), a.date, a.phase)
             target = a.out / f"{out['name']}.json"
             target.write_text(json.dumps(out, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
             print(f"{f.name} -> {target}")

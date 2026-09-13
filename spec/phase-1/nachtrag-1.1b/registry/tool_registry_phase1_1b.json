@@ -1,0 +1,66 @@
+{
+ "registry_version": "1.0.0",
+ "tools": [
+  {
+   "tool_id": "storage_gdrive.get_file",
+   "version": "1.2.0",
+   "display_name": "Datei lesen",
+   "purpose": "Originaldatei und ihre Metadaten aus dem kontextbezogenen Speicher lesen. Gegenueber 1.1.0 zusaetzlich fuer arbeitgeber_visolva zugelassen (1.1b-E3).",
+   "adapter_id": "storage_gdrive",
+   "operation": "read",
+   "allowed_contexts": [
+    "privat",
+    "arbeitgeber_visolva"
+   ],
+   "input_schema_ref": "schemas/tools/storage_gdrive.get_file.input.json",
+   "output_schema_ref": "schemas/tools/storage_gdrive.get_file.output.json",
+   "required_permissions": [
+    "Datei lesen",
+    "Metadaten lesen"
+   ],
+   "side_effects": "Keine. Reine Leseoperation.",
+   "external_effect": "none",
+   "risk_class_default": "A",
+   "reversibility": "reversible",
+   "undo_tool_id": null,
+   "idempotency": {
+    "key_fields": [
+     "context_id",
+     "source_ref",
+     "action_type",
+     "target_system",
+     "target_object_ref"
+    ],
+    "strategy": "db_unique_constraint",
+    "native_support": false,
+    "extra_dedup": null
+   },
+   "evidence": {
+    "readback_supported": false,
+    "accepted_methods": [
+     "provider_status"
+    ],
+    "required_types": [
+     "provider_status"
+    ],
+    "verify_delay_seconds": 0,
+    "limitation": "Leseoperation ohne Zustandsaenderung. Der Nachweis belegt die erfolgreiche Antwort des Speicherdienstes einschliesslich Pruefsumme, nicht eine Veraenderung in der Welt.",
+    "deferred_check_after_hours": null
+   },
+   "retry_policy": {
+    "retryable_error_classes": [
+     "transient_network",
+     "rate_limited",
+     "timeout"
+    ],
+    "max_attempts": 3,
+    "backoff": "exponential_1m_factor5_jitter"
+   },
+   "timeout_seconds": 120,
+   "rate_limit": null,
+   "dry_run_supported": true,
+   "status": "draft",
+   "owner": "rolf"
+  }
+ ]
+}

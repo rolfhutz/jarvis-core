@@ -28,7 +28,10 @@ Die Pruefung, dass alle Ordnerrollen tatsaechlich unter der Wurzel liegen,
 ist nur zur Laufzeit moeglich (Werte stehen in n8n-Variablen) und erfolgt in
 der Einrichtungspruefung der Speicheradapter.
 
-Historie: Migration 0017 wurde aus config_version 1.0.0 erzeugt (Repo-Stand
+Historie: Migration 0021 wurde aus config_version 1.1.0 erzeugt (Repo-Stand
+b763ea9) und ist durch 0025 abgeloest (1.1b-E3: arbeitgeber_visolva laeuft
+vorlaeufig ueber storage_gdrive). 0021 nicht erneut ausfuehren.
+Migration 0017 wurde aus config_version 1.0.0 erzeugt (Repo-Stand
 d12f218) und ist durch 0021 abgeloest. 0017 nicht erneut ausfuehren; nach
 0022 scheitert sie an der Pflichtspalte context_root_ref (fail closed).
 
@@ -58,7 +61,7 @@ CONTEXT_CONFIG = ROOT / "spec" / "phase-0" / "jarvis-phase-0" / "templates" / "c
 # config_version -> (Migrationsnummer, Dateiname). Nur die aktuelle Version;
 # 1.0.0 -> 0017 ist Historie (siehe Kopf).
 OUTPUT_BY_VERSION = {
-    "1.1.0": ("0021", "0021_intake_config_seed_1_1.sql"),
+    "1.2.0": ("0025", "0025_intake_config_seed_1_2.sql"),
 }
 
 REF_FIELDS = ["storage_container_ref", "context_root_ref", "inbox_ref", "working_ref", "archive_root_ref",

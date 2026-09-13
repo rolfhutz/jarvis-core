@@ -28,7 +28,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const L = $('Lauf vorbereiten').first().json;\nconst f = (id, inp, expect) => ({ json: Object.assign({ case_id: id, expect: expect }, inp, { trace_id: L.trace_id }) });\nreturn [\n f('C01', { source_binding: 'privat_drive_inbox', context_id_hint: '' }, { fields: { resolved: true, context_id: 'privat' } }),\n f('C02', { source_binding: 'visolva_sharepoint_inbox', context_id_hint: '' }, { fields: { context_id: 'arbeitgeber_visolva' } }),\n f('C03', { source_binding: 'unbekannt_inbox', context_id_hint: '' }, { error: 'context_unresolved' }),\n f('C04', { source_binding: 'privat_drive_inbox', context_id_hint: 'arbeitgeber_visolva' }, { error: 'widerspricht' }),\n f('C05', { source_binding: 'privat_mail', context_id_hint: '' }, { error: 'binding_unknown' })\n];"
+        "jsCode": "const L = $('Lauf vorbereiten').first().json;\nconst f = (id, inp, expect) => ({ json: Object.assign({ case_id: id, expect: expect }, inp, { trace_id: L.trace_id }) });\nreturn [\n f('C01', { source_binding: 'privat_drive_inbox', context_id_hint: '' }, { fields: { resolved: true, context_id: 'privat' } }),\n f('C02', { source_binding: 'visolva_drive_inbox', context_id_hint: '' }, { fields: { context_id: 'arbeitgeber_visolva' } }),\n f('C02b', { source_binding: 'visolva_sharepoint_inbox', context_id_hint: '' }, { error: 'binding_disabled' }),\n f('C03', { source_binding: 'unbekannt_inbox', context_id_hint: '' }, { error: 'context_unresolved' }),\n f('C04', { source_binding: 'privat_drive_inbox', context_id_hint: 'arbeitgeber_visolva' }, { error: 'widerspricht' }),\n f('C05', { source_binding: 'privat_mail', context_id_hint: '' }, { error: 'binding_unknown' })\n];"
       },
       "id": "28504139-26e5-4dad-b7cb-db0785c77e63",
       "name": "Faelle Kontext",
@@ -1189,7 +1189,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const L = $('Lauf vorbereiten').first().json;\nconst gruppen = [['Faelle Kontext','Ruf context_resolve'],['Faelle Kennung','Ruf id_generate'],['Faelle Klasse','Ruf action_classify'],['Faelle Vertragstor','Ruf tool_invoke'],['Faelle Nachweis','Ruf evidence_verify'],['Faelle Sperre','Ruf idempotency_guard'],['Faelle Fachprotokoll','Ruf fach_log_write'],['Faelle Technikprotokoll','Ruf tech_log_write'],['Faelle Fehler','Ruf error_handler'],['Faelle Klasse Werkzeuge','Ruf action_classify W'],['Faelle Sperre Werkzeuge','Ruf idempotency_guard W'],['Faelle ADP casestore','Ruf ADP casestore'],['Faelle ADP docstore','Ruf ADP docstore'],['Faelle ADP tasks','Ruf ADP tasks'],['Faelle Nachweis Werkzeuge','Ruf evidence_verify W'],['Faelle Werkzeugaufruf','Ruf tool_invoke W'],['Faelle Fachprotokoll Werkzeuge','Ruf fach_log_write W']];\nconst erg = []; const byId = {}; const paare = {};\nfor (const g of gruppen) {\n  let fs, rs;\n  try { fs = $(g[0]).all(); rs = $(g[1]).all(); } catch (x) { erg.push({ case_id: g[1], pass: false, detail: 'nicht ausgefuehrt: ' + x.message }); continue; }\n  if (fs.length !== rs.length) erg.push({ case_id: g[1], pass: false, detail: 'Faelle ' + fs.length + ' ungleich Ergebnisse ' + rs.length });\n  for (let i = 0; i < fs.length; i++) {\n    const c = fs[i].json; const j = rs[i] ? rs[i].json : {}; const ex = c.expect || {};\n    byId[c.case_id] = j;\n    const txt = JSON.stringify(j); const istFehler = j && j.error !== undefined;\n    let pass = true; let d = '';\n    if (ex.error) { pass = istFehler && txt.indexOf(ex.error) !== -1; d = pass ? 'erwartet abgewiesen' : 'Abweisung fehlt: ' + txt.slice(0, 300); }\n    else if (istFehler) { pass = false; d = 'unerwarteter Fehler: ' + txt.slice(0, 300); }\n    else {\n      const fl = ex.fields || {};\n      for (const k of Object.keys(fl)) { if (JSON.stringify(j[k]) !== JSON.stringify(fl[k])) { pass = false; d += k + '=' + JSON.stringify(j[k]) + ' erwartet ' + JSON.stringify(fl[k]) + '; '; } }\n      const mt = ex.match || {};\n      for (const k of Object.keys(mt)) { if (!new RegExp(mt[k]).test(String(j[k]))) { pass = false; d += k + ' passt nicht zum Muster; '; } }\n      if (ex.same_key_as && (!byId[ex.same_key_as] || j.idempotency_key !== byId[ex.same_key_as].idempotency_key)) { pass = false; d += 'Schluessel nicht deterministisch; '; }\n      if (ex.limitation === 'present' && !(j.verification && j.verification.limitation)) { pass = false; d += 'limitation fehlt; '; }\n      if (ex.limitation === 'absent' && j.verification && j.verification.limitation) { pass = false; d += 'limitation unerwartet; '; }\n      if (ex.pair) { paare[ex.pair] = (paare[ex.pair] || []).concat([j.decision]); }\n      if (!d) d = 'ok';\n    }\n    erg.push({ case_id: c.case_id, pass: pass, detail: d });\n  }\n}\nfor (const p of Object.keys(paare)) { const s = paare[p].slice().sort().join(','); erg.push({ case_id: p + '-parallel', pass: s === 'proceed,skip_duplicate', detail: 'Entscheidungen: ' + s }); }\nconst summary = 'trc_smoke Lauf ' + L.run_id + ': Test, mit Kommas, und Umlauten äöü';\nfor (const x of [['privat', 'Readback jarvis_privat'], ['visolva', 'Readback jarvis_visolva']]) {\n  let r; try { r = $(x[1]).first().json; } catch (e) { erg.push({ case_id: 'RB-' + x[0], pass: false, detail: 'Readback nicht ausgefuehrt' }); continue; }\n  const fach = r.fach || []; const tech = r.tech || []; const err = r.err || [];\n  erg.push({ case_id: 'RB-' + x[0] + '-fachprotokoll', pass: fach.length === 1 && fach[0].summary_de === summary && fach[0].b === 'x, y', detail: JSON.stringify(fach).slice(0, 300) });\n  const ms = tech[0] ? String(tech[0].message_safe) : '';\n  erg.push({ case_id: 'RB-' + x[0] + '-technikprotokoll', pass: tech.length === 1 && ms.indexOf('SMOKE_FAKE_123') === -1 && ms.indexOf('test@example.com') === -1 && ms.indexOf('Smoke-Test, mit Komma') === 0, detail: JSON.stringify(tech).slice(0, 300) });\n  erg.push({ case_id: 'RB-' + x[0] + '-fehlerereignis', pass: err.length === 1, detail: JSON.stringify(err).slice(0, 300) });\n  erg.push({ case_id: 'RB-' + x[0] + '-sperren', pass: r.locks === 1, detail: 'Sperren je Aktion=' + r.locks });\n}\nfor (const x of [['privat', 'Readback Werkzeuge jarvis_privat', 1], ['visolva', 'Readback Werkzeuge jarvis_visolva', 0]]) {\n  let r; try { r = $(x[1]).first().json; } catch (e) { erg.push({ case_id: 'RBW-' + x[0], pass: false, detail: 'Readback Werkzeuge nicht ausgefuehrt' }); continue; }\n  const n = r.nachweise || {};\n  erg.push({ case_id: 'RBW-' + x[0] + '-einmalig', pass: r.faelle === 1 && r.dokumente === 1 && r.aufgaben === 1, detail: 'faelle=' + r.faelle + ' dokumente=' + r.dokumente + ' aufgaben=' + r.aufgaben });\n  erg.push({ case_id: 'RBW-' + x[0] + '-verknuepft', pass: r.verknuepft === 1, detail: 'verknuepft=' + r.verknuepft });\n  erg.push({ case_id: 'RBW-' + x[0] + '-nachweise', pass: n.confirmed === 3 && (n.not_confirmed || 0) === x[2], detail: JSON.stringify(n) });\n  erg.push({ case_id: 'RBW-' + x[0] + '-fachprotokoll', pass: r.fach === 1, detail: 'fach=' + r.fach });\n}\ntry { for (const p of ($('Speicher auswerten').first().json.pruefungen || [])) erg.push(p); } catch (x) { erg.push({ case_id: 'SG-speicherteil', pass: false, detail: 'Speicherteil nicht ausgefuehrt: ' + x.message }); }\nconst fehl = erg.filter(e => !e.pass);\nreturn [{ json: { gesamtergebnis: fehl.length === 0 ? 'BESTANDEN' : 'NICHT BESTANDEN', lauf: L.run_id, trace_id: L.trace_id, bestanden: erg.length - fehl.length, gesamt: erg.length, nicht_bestanden: fehl, pruefungen: erg } }];"
+        "jsCode": "const L = $('Lauf vorbereiten').first().json;\nconst gruppen = [['Faelle Kontext','Ruf context_resolve'],['Faelle Kennung','Ruf id_generate'],['Faelle Klasse','Ruf action_classify'],['Faelle Vertragstor','Ruf tool_invoke'],['Faelle Nachweis','Ruf evidence_verify'],['Faelle Sperre','Ruf idempotency_guard'],['Faelle Fachprotokoll','Ruf fach_log_write'],['Faelle Technikprotokoll','Ruf tech_log_write'],['Faelle Fehler','Ruf error_handler'],['Faelle Klasse Werkzeuge','Ruf action_classify W'],['Faelle Sperre Werkzeuge','Ruf idempotency_guard W'],['Faelle ADP casestore','Ruf ADP casestore'],['Faelle ADP docstore','Ruf ADP docstore'],['Faelle ADP tasks','Ruf ADP tasks'],['Faelle Nachweis Werkzeuge','Ruf evidence_verify W'],['Faelle Werkzeugaufruf','Ruf tool_invoke W'],['Faelle Fachprotokoll Werkzeuge','Ruf fach_log_write W']];\nconst erg = []; const byId = {}; const paare = {};\nfor (const g of gruppen) {\n  let fs, rs;\n  try { fs = $(g[0]).all(); rs = $(g[1]).all(); } catch (x) { erg.push({ case_id: g[1], pass: false, detail: 'nicht ausgefuehrt: ' + x.message }); continue; }\n  if (fs.length !== rs.length) erg.push({ case_id: g[1], pass: false, detail: 'Faelle ' + fs.length + ' ungleich Ergebnisse ' + rs.length });\n  for (let i = 0; i < fs.length; i++) {\n    const c = fs[i].json; const j = rs[i] ? rs[i].json : {}; const ex = c.expect || {};\n    byId[c.case_id] = j;\n    const txt = JSON.stringify(j); const istFehler = j && j.error !== undefined;\n    let pass = true; let d = '';\n    if (ex.error) { pass = istFehler && txt.indexOf(ex.error) !== -1; d = pass ? 'erwartet abgewiesen' : 'Abweisung fehlt: ' + txt.slice(0, 300); }\n    else if (istFehler) { pass = false; d = 'unerwarteter Fehler: ' + txt.slice(0, 300); }\n    else {\n      const fl = ex.fields || {};\n      for (const k of Object.keys(fl)) { if (JSON.stringify(j[k]) !== JSON.stringify(fl[k])) { pass = false; d += k + '=' + JSON.stringify(j[k]) + ' erwartet ' + JSON.stringify(fl[k]) + '; '; } }\n      const mt = ex.match || {};\n      for (const k of Object.keys(mt)) { if (!new RegExp(mt[k]).test(String(j[k]))) { pass = false; d += k + ' passt nicht zum Muster; '; } }\n      if (ex.same_key_as && (!byId[ex.same_key_as] || j.idempotency_key !== byId[ex.same_key_as].idempotency_key)) { pass = false; d += 'Schluessel nicht deterministisch; '; }\n      if (ex.limitation === 'present' && !(j.verification && j.verification.limitation)) { pass = false; d += 'limitation fehlt; '; }\n      if (ex.limitation === 'absent' && j.verification && j.verification.limitation) { pass = false; d += 'limitation unerwartet; '; }\n      if (ex.pair) { paare[ex.pair] = (paare[ex.pair] || []).concat([j.decision]); }\n      if (!d) d = 'ok';\n    }\n    erg.push({ case_id: c.case_id, pass: pass, detail: d });\n  }\n}\nfor (const p of Object.keys(paare)) { const s = paare[p].slice().sort().join(','); erg.push({ case_id: p + '-parallel', pass: s === 'proceed,skip_duplicate', detail: 'Entscheidungen: ' + s }); }\nconst summary = 'trc_smoke Lauf ' + L.run_id + ': Test, mit Kommas, und Umlauten äöü';\nfor (const x of [['privat', 'Readback jarvis_privat'], ['visolva', 'Readback jarvis_visolva']]) {\n  let r; try { r = $(x[1]).first().json; } catch (e) { erg.push({ case_id: 'RB-' + x[0], pass: false, detail: 'Readback nicht ausgefuehrt' }); continue; }\n  const fach = r.fach || []; const tech = r.tech || []; const err = r.err || [];\n  erg.push({ case_id: 'RB-' + x[0] + '-fachprotokoll', pass: fach.length === 1 && fach[0].summary_de === summary && fach[0].b === 'x, y', detail: JSON.stringify(fach).slice(0, 300) });\n  const ms = tech[0] ? String(tech[0].message_safe) : '';\n  erg.push({ case_id: 'RB-' + x[0] + '-technikprotokoll', pass: tech.length === 1 && ms.indexOf('SMOKE_FAKE_123') === -1 && ms.indexOf('test@example.com') === -1 && ms.indexOf('Smoke-Test, mit Komma') === 0, detail: JSON.stringify(tech).slice(0, 300) });\n  erg.push({ case_id: 'RB-' + x[0] + '-fehlerereignis', pass: err.length === 1, detail: JSON.stringify(err).slice(0, 300) });\n  erg.push({ case_id: 'RB-' + x[0] + '-sperren', pass: r.locks === 1, detail: 'Sperren je Aktion=' + r.locks });\n}\nfor (const x of [['privat', 'Readback Werkzeuge jarvis_privat', 1], ['visolva', 'Readback Werkzeuge jarvis_visolva', 0]]) {\n  let r; try { r = $(x[1]).first().json; } catch (e) { erg.push({ case_id: 'RBW-' + x[0], pass: false, detail: 'Readback Werkzeuge nicht ausgefuehrt' }); continue; }\n  const n = r.nachweise || {};\n  erg.push({ case_id: 'RBW-' + x[0] + '-einmalig', pass: r.faelle === 1 && r.dokumente === 1 && r.aufgaben === 1, detail: 'faelle=' + r.faelle + ' dokumente=' + r.dokumente + ' aufgaben=' + r.aufgaben });\n  erg.push({ case_id: 'RBW-' + x[0] + '-verknuepft', pass: r.verknuepft === 1, detail: 'verknuepft=' + r.verknuepft });\n  erg.push({ case_id: 'RBW-' + x[0] + '-nachweise', pass: n.confirmed === 3 && (n.not_confirmed || 0) === x[2], detail: JSON.stringify(n) });\n  erg.push({ case_id: 'RBW-' + x[0] + '-fachprotokoll', pass: r.fach === 1, detail: 'fach=' + r.fach });\n}\ntry { for (const p of ($('Speicher auswerten').first().json.pruefungen || [])) erg.push(p); } catch (x) { erg.push({ case_id: 'SG-speicherteil', pass: false, detail: 'Speicherteil nicht ausgefuehrt: ' + x.message }); }\ntry { for (const p of ($('Speicher auswerten Visolva').first().json.pruefungen || [])) erg.push(p); } catch (x) { erg.push({ case_id: 'SV-speicherteil', pass: false, detail: 'Speicherteil Visolva nicht ausgefuehrt: ' + x.message }); }\nconst fehl = erg.filter(e => !e.pass);\nreturn [{ json: { gesamtergebnis: fehl.length === 0 ? 'BESTANDEN' : 'NICHT BESTANDEN', lauf: L.run_id, trace_id: L.trace_id, bestanden: erg.length - fehl.length, gesamt: erg.length, nicht_bestanden: fehl, pruefungen: erg } }];"
       },
       "id": "3152abe3-fb7c-4810-8e26-17f1ad217f52",
       "name": "Auswertung",
@@ -2695,6 +2695,440 @@
         }
       },
       "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT storage_adapter_id, context_root_ref, inbox_ref, working_ref, archive_root_ref, drafts_ref, reports_ref, config_version\nFROM jarvis_ops.context_document_settings\nWHERE context_id = 'arbeitgeber_visolva'",
+        "options": {}
+      },
+      "id": "e9c6fc12-aa55-477f-91f2-15fa7e8ccb45",
+      "name": "Speicherkonfiguration lesen jarvis_visolva",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        10304,
+        560
+      ],
+      "executeOnce": true,
+      "credentials": {
+        "postgres": {
+          "id": "7BblU6FbDds3EZBb",
+          "name": "jv_visolva_postgres"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1.1b Teil 2 (1.1b-E3): die acht Ordner der Visolva-Einrichtungspruefung, aufgeloest aus Konfiguration und Variablen.\nconst cfg = $input.first().json || {};\nconst wert = function (n) { const w = $vars[n]; return (typeof w === 'string') ? w.trim() : ''; };\nconst aufl = function (ref) { const m = /^env:(JV_[A-Z0-9_]+)$/.exec(String(ref || '')); return m ? wert(m[1]) : ''; };\nconst idOk = function (v) { return typeof v === 'string' && /^[A-Za-z0-9_-]{10,200}$/.test(v); };\nconst liste = [['wurzel', aufl(cfg.context_root_ref)], ['eingang', aufl(cfg.inbox_ref)], ['arbeit', aufl(cfg.working_ref)], ['archiv', aufl(cfg.archive_root_ref)],\n  ['entwuerfe', aufl(cfg.drafts_ref)], ['berichte', aufl(cfg.reports_ref)], ['test_innen', wert('JV_VISOLVA_TEST_INSIDE_FOLDER_ID')],\n  ['test_aussen', wert('JV_VISOLVA_TEST_OUTSIDE_FOLDER_ID')]];\nreturn liste.map(function (x) { return { json: { rolle: x[0], ordner_id: idOk(x[1]) ? x[1] : 'JVsmokeUngueltig000' + x[0].length, gueltig: idOk(x[1]), adapter: cfg.storage_adapter_id || null, config_version: cfg.config_version || null } }; });\n"
+      },
+      "id": "9dd40ec2-7eeb-4c60-8927-a6860d63ec87",
+      "name": "Einrichtungsordner Visolva",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        10528,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://www.googleapis.com/drive/v3/files/{{ $json.ordner_id }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleDriveOAuth2Api",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "fields",
+              "value": "id,parents,mimeType,trashed"
+            },
+            {
+              "name": "supportsAllDrives",
+              "value": "false"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "1e8a66ba-191f-4d72-b587-7577b219b6d0",
+      "name": "Ordnermetadaten Einrichtung Visolva",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        10640,
+        720
+      ],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "r79T8YvgoloadnXV",
+          "name": "jv_visolva_gdrive"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "url": "https://www.googleapis.com/drive/v3/files",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleDriveOAuth2Api",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "q",
+              "value": "={{ \"'\" + $vars.JV_VISOLVA_TEST_INSIDE_FOLDER_ID + \"' in parents and trashed=false\" }}"
+            },
+            {
+              "name": "fields",
+              "value": "files(id,name,mimeType)"
+            },
+            {
+              "name": "pageSize",
+              "value": "50"
+            },
+            {
+              "name": "spaces",
+              "value": "drive"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "8ec304c4-2334-48fe-afb8-3f83057b039b",
+      "name": "Testordner innen lesen Visolva",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        10752,
+        560
+      ],
+      "executeOnce": true,
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "r79T8YvgoloadnXV",
+          "name": "jv_visolva_gdrive"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "url": "https://www.googleapis.com/drive/v3/files",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleDriveOAuth2Api",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "q",
+              "value": "={{ \"'\" + $vars.JV_VISOLVA_TEST_OUTSIDE_FOLDER_ID + \"' in parents and trashed=false\" }}"
+            },
+            {
+              "name": "fields",
+              "value": "files(id,name,mimeType)"
+            },
+            {
+              "name": "pageSize",
+              "value": "50"
+            },
+            {
+              "name": "spaces",
+              "value": "drive"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "379250c5-d2c1-4282-81c7-8c829407a8ce",
+      "name": "Testordner aussen lesen Visolva",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        10976,
+        560
+      ],
+      "executeOnce": true,
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "r79T8YvgoloadnXV",
+          "name": "jv_visolva_gdrive"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO jarvis_visolva.action (action_id, schema_version, action_type, tool_id, tool_version, risk_class, risk_class_source, status, priority, idempotency_key, body)\nVALUES ('act_smoke_' || $1 || '_v_gf', '1.0.0', 'smoke.tool_release', 'storage_gdrive.get_file', '1.2.0', 'A', 'tool_default', 'planned', 'low',\n        encode(sha256(convert_to('smk_' || $1 || '_visolva_gf', 'UTF8')), 'hex'), jsonb_build_object('zweck', 'Smoke-Test Werkzeugfreigabe 1.1b Teil 2'))\nRETURNING action_id",
+        "options": {
+          "queryReplacement": "={{ $('Lauf vorbereiten').first().json.ts }}"
+        }
+      },
+      "id": "4c0ba4c6-30bc-4121-a971-2440b1e3eb24",
+      "name": "Werkzeugaktion Speicher jarvis_visolva",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        11088,
+        352
+      ],
+      "executeOnce": true,
+      "credentials": {
+        "postgres": {
+          "id": "7BblU6FbDds3EZBb",
+          "name": "jv_visolva_postgres"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1.1b Teil 2 (1.1b-E3): Einrichtungspruefung Visolva (S-A1) und Faelle fuer storage_gdrive.get_file@1.2.0 im Kontext arbeitgeber_visolva.\n// Keine Ordner- oder Datei-IDs in den Pruefungstexten.\nconst L = $('Lauf vorbereiten').first().json;\nconst ein = $('Einrichtungsordner Visolva').all().map(function (x) { return x.json || {}; });\nconst met = $('Ordnermetadaten Einrichtung Visolva').all().map(function (x) { return x.json || {}; });\nconst innenRoh = $('Testordner innen lesen Visolva').first().json || {};\nconst aussenRoh = $('Testordner aussen lesen Visolva').first().json || {};\nconst innen = Array.isArray(innenRoh.files) ? innenRoh.files : [];\nconst aussen = Array.isArray(aussenRoh.files) ? aussenRoh.files : [];\nconst idOk = function (v) { return typeof v === 'string' && /^[A-Za-z0-9_-]{10,200}$/.test(v); };\nconst M = {};\nein.forEach(function (e, i) { M[e.rolle] = { id: e.ordner_id, gueltig: e.gueltig === true, meta: met[i] || {} }; });\nconst lesbar = function (r) { const x = M[r]; return !!(x && x.gueltig && x.meta.id === x.id && x.meta.mimeType === 'application/vnd.google-apps.folder' && x.meta.trashed !== true); };\nconst eltern = function (r) { const x = M[r]; return (x && Array.isArray(x.meta.parents) && x.meta.parents.length === 1) ? x.meta.parents[0] : null; };\nconst rollen = ['wurzel', 'eingang', 'arbeit', 'archiv', 'entwuerfe', 'berichte', 'test_innen', 'test_aussen'];\nconst pruef = [];\nconst P = function (id, ok, detail) { pruef.push({ case_id: id, pass: !!ok, detail: detail }); };\nP('SV-00-adapter-gdrive', ein.length > 0 && ein[0].adapter === 'storage_gdrive' && ein[0].config_version === '1.2.0', 'Adapter=' + (ein[0] ? ein[0].adapter : '?') + ' Konfiguration=' + (ein[0] ? ein[0].config_version : '?'));\nconst schlecht = rollen.filter(function (r) { return !(M[r] && M[r].gueltig); });\nP('SV-01-variablen-reine-ids', schlecht.length === 0, schlecht.length ? 'keine reine ID: ' + schlecht.join(', ') : 'alle 8 Variablen sind reine IDs');\nconst verschieden = new Set(rollen.map(function (r) { return M[r] ? M[r].id : r; })).size;\nP('SV-02-ordner-verschieden', verschieden === rollen.length, verschieden + ' von ' + rollen.length + ' Ordnern verschieden');\nconst unlesbar = rollen.filter(function (r) { return !lesbar(r); });\nP('SV-03-ordner-lesbar', unlesbar.length === 0, unlesbar.length ? 'nicht lesbar oder kein Ordner: ' + unlesbar.join(', ') : 'alle 8 Ordner lesbar');\nP('SV-04-wurzel-bekannt', lesbar('wurzel'), 'Wurzel lesbar');\nconst wurzel = M.wurzel ? M.wurzel.id : null;\nfor (const k of ['eingang', 'arbeit', 'archiv', 'entwuerfe', 'berichte']) P('SV-05-' + k + '-unter-wurzel', lesbar(k) && eltern(k) === wurzel, k + ' direkt unter der Wurzel');\nP('SV-06-test-innen-unter-wurzel', lesbar('test_innen') && eltern('test_innen') === wurzel, 'Testordner innen direkt unter der Wurzel');\nconst ebene = eltern('wurzel');\nP('SV-07-test-aussen-ausserhalb', lesbar('test_aussen') && ebene !== null && eltern('test_aussen') === ebene, 'Testordner aussen neben der Wurzel');\n// Trennung zur privaten Ablage: keine Visolva-Ordner-ID darf mit einer privaten Variablen zusammenfallen.\nconst privVars = ['JV_PRIVAT_ROOT_FOLDER_ID', 'JV_PRIVAT_INBOX_FOLDER_ID', 'JV_PRIVAT_WORKING_FOLDER_ID', 'JV_PRIVAT_ARCHIVE_ROOT_ID', 'JV_PRIVAT_DRAFTS_FOLDER_ID', 'JV_PRIVAT_REPORTS_FOLDER_ID', 'JV_PRIVAT_TEST_INSIDE_FOLDER_ID', 'JV_PRIVAT_TEST_OUTSIDE_FOLDER_ID'];\nconst privIds = new Set(privVars.map(function (v) { const w = $vars[v]; return (typeof w === 'string') ? w.trim() : ''; }).filter(idOk));\nconst kollision = rollen.filter(function (r) { return M[r] && privIds.has(M[r].id); });\nP('SV-08-trennung-zu-privat', kollision.length === 0, kollision.length ? 'gleiche Ordner-ID wie privat: ' + kollision.join(', ') : 'keine Ordner-ID mit privat gemeinsam');\nconst testInnen = M.test_innen ? M.test_innen.id : '';\nconst pdfInnen = innen.find(function (f) { return f.name === 'SYNTH_test_innen.pdf' && f.mimeType === 'application/pdf'; });\nconst pdfAussen = aussen.find(function (f) { return f.name === 'SYNTH_test_aussen.pdf' && f.mimeType === 'application/pdf'; });\nconst fremd = innen.concat(aussen).filter(function (f) { return !/^SYNTH_/.test(String(f.name || '')); });\nP('SV-09-testobjekte', !!(pdfInnen && pdfAussen) && fremd.length === 0, 'innen PDF: ' + !!pdfInnen + ' | aussen PDF: ' + !!pdfAussen + (fremd.length ? ' | Objekte ohne SYNTH_: ' + fremd.length : '') + (innenRoh.error || aussenRoh.error ? ' | Lesefehler Testordner' : ''));\nconst T = 'storage_gdrive.get_file';\nconst A = $('Werkzeugaktion Speicher jarvis_visolva').first().json.action_id;\nconst leer = 'JVsmokeFehlt00000';\nconst pl = function (id, extra) { return Object.assign({ context_id: 'arbeitgeber_visolva', adapter_id: 'storage_gdrive', file_external_id: id }, extra || {}); };\nconst fall = function (cid, inp, erw) { return { json: Object.assign({ case_id: cid, erwartet: erw, context_id: 'arbeitgeber_visolva', action_id: A, tool_id: T, dry_run: false, trace_id: L.trace_id }, inp) }; };\nconst innenId = pdfInnen ? pdfInnen.id : leer;\nconst aus = [];\naus.push(fall('SVG-01-normal', { payload: pl(innenId) }, { status: 'ok', binaer: true, pruefsumme: 'match' }));\naus.push(fall('SVG-02-nur-metadaten', { payload: pl(innenId, { include_content: false }) }, { status: 'ok', binaer: false, gleicher_hash_wie: 'SVG-01-normal' }));\naus.push(fall('SVG-03-ausserhalb', { payload: pl(pdfAussen ? pdfAussen.id : leer) }, { fehler: 'outside_context_root', stufe: 'root' }));\naus.push(fall('SVG-04-ordner', { payload: pl(idOk(testInnen) ? testInnen : leer) }, { fehler: 'not_a_file', stufe: 'type' }));\naus.push(fall('SVG-05-unbekannte-datei', { payload: pl('JVsmokeUnbekannt000000000') }, { fehler: 'not_found', stufe: 'metadata' }));\naus.push(fall('SVG-06-fremder-kontext', { context_id: 'privat', payload: pl(innenId, { context_id: 'privat' }) }, { fehler: 'context_id ohne Kontextweiche', stufe: 'input' }));\naus.push(fall('SVG-07-falsches-werkzeug', { tool_id: 'storage_gdrive.move_file', payload: pl(innenId) }, { fehler: 'tool_id passt nicht', stufe: 'input' }));\naus.push(fall('SVG-08-probelauf', { dry_run: true, payload: pl(innenId) }, { status: 'dry_run', binaer: false }));\naus.push(fall('SVG-09-zusatzfeld', { payload: pl(innenId, { parent_path: '/x' }) }, { fehler: 'unzulaessige Felder', stufe: 'input' }));\naus[0].json.einrichtung = pruef;\nreturn aus;\n"
+      },
+      "id": "51cc093c-c875-4cfe-b971-b06b203a7aa6",
+      "name": "Faelle Speicher Visolva",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        11200,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "IHdbJYSAs2HtMzK6"
+        },
+        "workflowInputs": {
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false,
+          "mappingMode": "defineBelow",
+          "matchingColumns": [],
+          "schema": [
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "context_id",
+              "id": "context_id",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "action_id",
+              "id": "action_id",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "tool_id",
+              "id": "tool_id",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "payload",
+              "id": "payload",
+              "required": false,
+              "type": "object"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "dry_run",
+              "id": "dry_run",
+              "required": false,
+              "type": "boolean"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "trace_id",
+              "id": "trace_id",
+              "required": false,
+              "type": "string"
+            }
+          ],
+          "value": {
+            "action_id": "={{ $json.action_id }}",
+            "context_id": "={{ $json.context_id }}",
+            "dry_run": "={{ $json.dry_run }}",
+            "payload": "={{ $json.payload }}",
+            "tool_id": "={{ $json.tool_id }}",
+            "trace_id": "={{ $json.trace_id }}"
+          }
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "04020c45-0102-490e-9250-b4bb538ba490",
+      "name": "Ruf ADP storage_gdrive_visolva",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        11424,
+        560
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1.1b Teil 2 Freigabenachweis (12.1.1 Schritt 4): Ergebnis von SVG-01 gegen den Vertrag 1.2.0 pruefen.\nconst L = $('Lauf vorbereiten').first().json;\nconst fs = $('Faelle Speicher Visolva').all();\nconst rs = $('Ruf ADP storage_gdrive_visolva').all();\nconst i = fs.findIndex(function (x) { return x.json.case_id === 'SVG-01-normal'; });\nconst c = i >= 0 ? fs[i].json : {};\nconst r = (i >= 0 && rs[i]) ? (rs[i].json || {}) : {};\nreturn [{ json: { case_id: 'SNV-01-freigabenachweis', context_id: 'arbeitgeber_visolva', action_id: c.action_id, contract_tool_id: 'storage_gdrive.get_file', contract_version: '1.2.0', verification_method: r.verification_method || 'provider_status', observed: r.observed || {}, expected: { provider_status: 200, provider_checksum: 'match' }, trace_id: L.trace_id } }];\n"
+      },
+      "id": "d30537fc-2dc8-4d4b-a9fb-2eb5ee7fd7cd",
+      "name": "Faelle Nachweis Speicher Visolva",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        11536,
+        352
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "UKcnRE0eJzyl8T1V"
+        },
+        "workflowInputs": {
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false,
+          "mappingMode": "defineBelow",
+          "matchingColumns": [],
+          "schema": [
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "context_id",
+              "id": "context_id",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "action_id",
+              "id": "action_id",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "contract_tool_id",
+              "id": "contract_tool_id",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "contract_version",
+              "id": "contract_version",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "verification_method",
+              "id": "verification_method",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "observed",
+              "id": "observed",
+              "required": false,
+              "type": "object"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "expected",
+              "id": "expected",
+              "required": false,
+              "type": "object"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "trace_id",
+              "id": "trace_id",
+              "required": false,
+              "type": "string"
+            }
+          ],
+          "value": {
+            "action_id": "={{ $json.action_id }}",
+            "context_id": "={{ $json.context_id }}",
+            "contract_tool_id": "={{ $json.contract_tool_id }}",
+            "contract_version": "={{ $json.contract_version }}",
+            "expected": "={{ $json.expected }}",
+            "observed": "={{ $json.observed }}",
+            "trace_id": "={{ $json.trace_id }}",
+            "verification_method": "={{ $json.verification_method }}"
+          }
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "18b4cfb9-90fa-486c-995e-1cf4f281a2ea",
+      "name": "Ruf evidence_verify SV",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        11760,
+        352
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const fs = $('Faelle Speicher Visolva').all();\nconst rs = $('Ruf ADP storage_gdrive_visolva').all();\nconst erg = [];\nfor (const p of (fs.length ? (fs[0].json.einrichtung || []) : [])) erg.push(p);\nif (fs.length !== rs.length) erg.push({ case_id: 'SVG-anzahl', pass: false, detail: 'Faelle ' + fs.length + ' ungleich Ergebnisse ' + rs.length });\nconst byId = {};\nfor (let i = 0; i < fs.length; i++) {\n  const c = fs[i].json; const r = rs[i] || {}; const j = r.json || {}; const x = c.erwartet || {};\n  byId[c.case_id] = j;\n  const binaer = !!(r.binary && r.binary.data);\n  let ok = true; const d = [];\n  if (x.fehler) {\n    if (j.status !== 'error' || JSON.stringify(j.error || {}).indexOf(x.fehler) === -1) { ok = false; d.push('erwartet ' + x.fehler + ', erhalten ' + JSON.stringify({ status: j.status, error: j.error, stage: j.checked_stage }).slice(0, 250)); }\n    if (x.stufe && j.checked_stage !== x.stufe) { ok = false; d.push('Stufe ' + j.checked_stage + ' statt ' + x.stufe); }\n    if (binaer) { ok = false; d.push('Binaerdatum trotz Abweisung'); }\n  } else {\n    if (j.status !== x.status) { ok = false; d.push('status ' + j.status + ' statt ' + x.status + ' ' + JSON.stringify(j.error || {}).slice(0, 250)); }\n    if (x.binaer !== undefined && binaer !== x.binaer) { ok = false; d.push('Binaerdatum ' + binaer + ' statt ' + x.binaer); }\n    if (x.status === 'ok') {\n      const res = j.result || {};\n      if (!/^sha256:[a-f0-9]{64}$/.test(String(res.content_hash))) { ok = false; d.push('content_hash fehlt'); }\n      if (res.provider_status !== 200) { ok = false; d.push('provider_status fehlt'); }\n      if (!(res.size_bytes > 0)) { ok = false; d.push('Groesse unerwartet'); }\n      if (x.binaer === true && res.content_ref !== 'data') { ok = false; d.push('content_ref fehlt'); }\n      if (x.binaer === false && res.content_ref !== undefined) { ok = false; d.push('content_ref unerwartet'); }\n      if (x.pruefsumme && !(j.observed && j.observed.provider_checksum === x.pruefsumme)) { ok = false; d.push('Anbieterpruefsumme ' + (j.observed ? j.observed.provider_checksum : 'fehlt')); }\n      if (x.gleicher_hash_wie) { const v = byId[x.gleicher_hash_wie]; if (!v || !v.result || v.result.content_hash !== res.content_hash) { ok = false; d.push('Hash weicht von ' + x.gleicher_hash_wie + ' ab'); } }\n    }\n  }\n  erg.push({ case_id: c.case_id, pass: ok, detail: d.length ? d.join('; ') : 'ok' });\n}\ntry {\n  const n = $('Ruf evidence_verify SV').first().json;\n  erg.push({ case_id: 'SNV-01-freigabenachweis', pass: n.verification_passed === true && n.gate_code === 'verified' && n.evidence_stored === true && !!(n.verification && n.verification.limitation) && /^evd_/.test(String(n.evidence_id)),\n    detail: 'gate=' + n.gate_code + ' gespeichert=' + n.evidence_stored + ' evidence_id=' + n.evidence_id });\n} catch (x) { erg.push({ case_id: 'SNV-01-freigabenachweis', pass: false, detail: 'nicht ausgefuehrt: ' + x.message }); }\nreturn [{ json: { pruefungen: erg } }];"
+      },
+      "id": "924202e0-9f2a-4058-aa33-2485466d1842",
+      "name": "Speicher auswerten Visolva",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        11648,
+        560
+      ]
     }
   ],
   "connections": {
@@ -3226,17 +3660,6 @@
         ]
       ]
     },
-    "Speicher auswerten": {
-      "main": [
-        [
-          {
-            "node": "Auswertung",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Testordner aussen lesen": {
       "main": [
         [
@@ -3324,6 +3747,138 @@
           }
         ]
       ]
+    },
+    "Speicher auswerten": {
+      "main": [
+        [
+          {
+            "node": "Speicherkonfiguration lesen jarvis_visolva",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Speicherkonfiguration lesen jarvis_visolva": {
+      "main": [
+        [
+          {
+            "node": "Einrichtungsordner Visolva",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Einrichtungsordner Visolva": {
+      "main": [
+        [
+          {
+            "node": "Ordnermetadaten Einrichtung Visolva",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ordnermetadaten Einrichtung Visolva": {
+      "main": [
+        [
+          {
+            "node": "Testordner innen lesen Visolva",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Testordner innen lesen Visolva": {
+      "main": [
+        [
+          {
+            "node": "Testordner aussen lesen Visolva",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Testordner aussen lesen Visolva": {
+      "main": [
+        [
+          {
+            "node": "Werkzeugaktion Speicher jarvis_visolva",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Werkzeugaktion Speicher jarvis_visolva": {
+      "main": [
+        [
+          {
+            "node": "Faelle Speicher Visolva",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Faelle Speicher Visolva": {
+      "main": [
+        [
+          {
+            "node": "Ruf ADP storage_gdrive_visolva",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ruf ADP storage_gdrive_visolva": {
+      "main": [
+        [
+          {
+            "node": "Faelle Nachweis Speicher Visolva",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Faelle Nachweis Speicher Visolva": {
+      "main": [
+        [
+          {
+            "node": "Ruf evidence_verify SV",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ruf evidence_verify SV": {
+      "main": [
+        [
+          {
+            "node": "Speicher auswerten Visolva",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Speicher auswerten Visolva": {
+      "main": [
+        [
+          {
+            "node": "Auswertung",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "settings": {
@@ -3335,7 +3890,7 @@
     "jarvis_phase": "1.0",
     "jarvis_spec_phase_0": "1.1.0",
     "jarvis_spec_phase_1": "4.0.2",
-    "jarvis_exported_at": "2026-09-11",
+    "jarvis_exported_at": "2026-09-13",
     "jarvis_required_credentials": [
       {
         "id": "7BblU6FbDds3EZBb",
@@ -3348,6 +3903,10 @@
       {
         "id": "oCkj27EiMe96vXvU",
         "name": "jv_privat_postgres"
+      },
+      {
+        "id": "r79T8YvgoloadnXV",
+        "name": "jv_visolva_gdrive"
       }
     ]
   }
