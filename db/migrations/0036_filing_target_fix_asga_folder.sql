@@ -1,0 +1,5 @@
+-- Datentrennung DT-1 (Rolf, 23.10.2026): Die Datenkorrektur am persönlichen Ablageregister liegen nicht im öffentlichen Repository.
+-- Private Ergänzung: Claude-Projekt «JARVIS – Persönlicher KI-Assistent», Datei claude/privat_daten/0036_filing_target_fix_asga_folder.privat.sql
+-- Wiederherstellung: zuerst diese Datei, danach die private Ergänzung. In der Datenbank eingespielt ist die
+-- Gesamtfassung (Migrationshistorie, Name 0036_filing_target_fix_asga_folder).
+-- Diese Migration enthält ausschliesslich persönliche Daten; im Repository bleibt nur dieser Verweis.
