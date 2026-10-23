@@ -19,9 +19,16 @@ keine Geheimnisse; Kennwoerter stehen nie im Export.
 Das Skript bricht ab, wenn in einem Export etwas steht, das wie ein Geheimnis
 aussieht (Verbindungszeichenfolge, Kennwort, Token, API-Schluessel).
 
+DT-1 (23.10.2026): Webhook-Pfade sind bei Oberflaechen ohne Anmeldung (CR-02 E3 B)
+der einzige Zugangsschutz und gelten deshalb als geheim. Sie werden im Repository
+durch einen Platzhalter ersetzt; die echten Pfade schreibt das Skript nur in die
+Datei --secrets-out (ausserhalb des Repositorys, privat ablegen). Ohne
+--secrets-out bricht das Skript ab, sobald ein Webhook-Pfad vorkommt.
+
 Aufruf:
     python3 tools/normalize_n8n_export.py --in <ordner_mit_downloads> --out n8n/core --date 2026-09-10
     python3 tools/normalize_n8n_export.py --in <ordner> --out n8n/core --date 2026-09-13 --phase 1.1b
+    python3 tools/normalize_n8n_export.py --in <ordner> --out n8n/phase-1 --date 2026-10-23 --phase cr-16 --secrets-out <privat>/webhook_pfade.json
     python3 tools/normalize_n8n_export.py --self-test
 """
 
@@ -45,13 +52,16 @@ KEEP_SETTINGS = {"executionOrder", "callerPolicy", "callerIds", "errorWorkflow",
                  # TS-24 (Schritt 1.1): Umgang mit Binaerdaten muss die Wiederherstellung ueberleben.
                  "binaryMode"}
 DROP_NODE_KEYS = {"webhookId"}
+WEBHOOK_TYPES = {"n8n-nodes-base.webhook", "n8n-nodes-base.formTrigger"}
+WEBHOOK_PLATZHALTER = "JV_GEHEIM_WEBHOOK_PFAD"
 
 
 class ExportError(Exception):
     pass
 
 
-def normalize(raw: dict, export_date: str, phase: str = "1.0", spec0: str = "1.1.0", spec1: str = "4.0.2") -> dict:
+def normalize(raw: dict, export_date: str, phase: str = "1.0", spec0: str = "1.1.0", spec1: str = "4.0.2",
+              secrets: dict | None = None) -> dict:
     name = raw.get("name", "")
     if not NAME_PATTERN.match(name):
         raise ExportError(f"Workflowname entspricht nicht der Konvention: {name!r}")
@@ -59,6 +69,12 @@ def normalize(raw: dict, export_date: str, phase: str = "1.0", spec0: str = "1.1
     creds_needed = set()
     for n in raw.get("nodes", []):
         node = {k: v for k, v in n.items() if k not in DROP_NODE_KEYS}
+        params = node.get("parameters") or {}
+        if node.get("type") in WEBHOOK_TYPES and isinstance(params.get("path"), str) and params["path"] and params["path"] != WEBHOOK_PLATZHALTER:
+            if secrets is None:
+                raise ExportError(f"{name}: Webhook-Pfad am Knoten {node.get('name')!r} ist geheim (DT-1) - --secrets-out angeben")
+            secrets.setdefault(name, {})[node.get("name")] = params["path"]
+            node["parameters"] = dict(params, path=WEBHOOK_PLATZHALTER)
         if "credentials" in node:
             clean = {}
             for ctype, ref in node["credentials"].items():
@@ -89,6 +105,9 @@ def normalize(raw: dict, export_date: str, phase: str = "1.0", spec0: str = "1.1
         },
     }
     text = json.dumps(out, ensure_ascii=False)
+    for pfad in (secrets or {}).get(name, {}).values():
+        if pfad in text:
+            raise ExportError(f"{name}: geheimer Webhook-Pfad kommt ausserhalb des Webhook-Knotens vor")
     for pat in SECRET_PATTERNS:
         for m in pat.finditer(text):
             # Synthetische Testwerte sind ausdruecklich als SMOKE_FAKE gekennzeichnet.
@@ -136,7 +155,19 @@ def self_test() -> None:
         raise AssertionError("Namenskonvention nicht geprueft")
     except ExportError:
         pass
-    print("SELBSTTEST BESTANDEN: 7 Pruefungen, 2 Gegenproben")
+    # DT-1: Webhook-Pfad wird ersetzt und nur in secrets gefuehrt; ohne secrets Abbruch.
+    wh = dict(raw, name="JV-P1-MAIN-demo-v1", nodes=[{"name": "Seite", "type": "n8n-nodes-base.webhook",
+                                                     "parameters": {"path": "geheim-123abc", "httpMethod": "GET"}, "webhookId": "w1"}])
+    sec: dict = {}
+    wout = normalize(wh, "2026-10-23", "cr-16", secrets=sec)
+    assert wout["nodes"][0]["parameters"]["path"] == WEBHOOK_PLATZHALTER and "geheim-123abc" not in json.dumps(wout)
+    assert sec == {"JV-P1-MAIN-demo-v1": {"Seite": "geheim-123abc"}}
+    try:
+        normalize(wh, "2026-10-23")
+        raise AssertionError("Webhook-Pfad ohne secrets nicht erkannt")
+    except ExportError:
+        pass
+    print("SELBSTTEST BESTANDEN: 9 Pruefungen, 3 Gegenproben")
 
 
 def main() -> int:
@@ -145,6 +176,7 @@ def main() -> int:
     ap.add_argument("--out", type=pathlib.Path)
     ap.add_argument("--date")
     ap.add_argument("--phase", default="1.0", help="Wert fuer meta.jarvis_phase, Standard 1.0")
+    ap.add_argument("--secrets-out", type=pathlib.Path, help="Datei fuer geheime Webhook-Pfade (ausserhalb des Repositorys)")
     ap.add_argument("--self-test", action="store_true")
     a = ap.parse_args()
     if a.self_test:
@@ -153,12 +185,19 @@ def main() -> int:
     if not (a.inp and a.out and a.date):
         ap.error("--in, --out und --date sind erforderlich")
     a.out.mkdir(parents=True, exist_ok=True)
+    secrets: dict | None = {} if a.secrets_out else None
+    if a.secrets_out and a.secrets_out.resolve().is_relative_to(pathlib.Path(__file__).resolve().parent.parent):
+        print("ABBRUCH: --secrets-out darf nicht im Repository liegen", file=sys.stderr)
+        return 2
     try:
         for f in sorted(a.inp.glob("*.json")):
-            out = normalize(json.loads(f.read_text(encoding="utf-8")), a.date, a.phase)
+            out = normalize(json.loads(f.read_text(encoding="utf-8")), a.date, a.phase, secrets=secrets)
             target = a.out / f"{out['name']}.json"
             target.write_text(json.dumps(out, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
             print(f"{f.name} -> {target}")
+        if a.secrets_out is not None:
+            a.secrets_out.write_text(json.dumps(secrets, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+            print(f"Geheime Webhook-Pfade -> {a.secrets_out} (privat ablegen, nicht ins Repository)")
     except ExportError as exc:
         print(f"ABBRUCH: {exc}", file=sys.stderr)
         return 2

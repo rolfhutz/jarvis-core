@@ -1,0 +1,5 @@
+-- Datentrennung DT-1 (Rolf, 23.10.2026): Die persönlichen Finanz-Startdaten (Konten, Budget, Regeln) liegen nicht im öffentlichen Repository.
+-- Private Ergänzung: Claude-Projekt «JARVIS – Persönlicher KI-Assistent», Datei claude/privat_daten/0033_finance_privat_seed.privat.sql
+-- Wiederherstellung: zuerst diese Datei, danach die private Ergänzung. In der Datenbank eingespielt ist die
+-- Gesamtfassung (Migrationshistorie, Name 0033_finance_privat_seed).
+-- Diese Migration enthält ausschliesslich persönliche Daten; im Repository bleibt nur dieser Verweis.

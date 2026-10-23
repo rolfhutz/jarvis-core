@@ -1,0 +1,3221 @@
+{
+  "id": "2RX9Uj9qtP8xL0Al",
+  "name": "JV-P1-MAIN-auftrag_desk-v1",
+  "nodes": [
+    {
+      "id": "87620a36-4be7-4a79-b907-5a1e6a111f9b",
+      "name": "API Auftrag",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        1376
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "JV_GEHEIM_WEBHOOK_PFAD",
+        "responseMode": "responseNode",
+        "options": {}
+      }
+    },
+    {
+      "id": "116a9250-8abd-407c-8ebc-8d676b7f8757",
+      "name": "Anfrage pruefen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        1376
+      ],
+      "parameters": {
+        "jsCode": "const crypto = require('crypto');\nconst it = $input.first();\nconst roh = (it.json && it.json.body && typeof it.json.body === 'object') ? it.json.body : {};\nconst fehler = function (t) { return [{ json: { route: 'fehler', antwort: { ok: false, fehler: t } } }]; };\nlet p = null;\ntry { p = JSON.parse(String(roh.p || '{}')); } catch (x) { return fehler('Anfrage nicht lesbar.'); }\nif (!p || typeof p !== 'object' || Array.isArray(p)) return fehler('Anfrage nicht lesbar.');\nconst ID_RE = /^doc_[0-9A-HJKMNP-TV-Z]{26}$/;\nconst TSK_RE = /^tsk_[0-9A-HJKMNP-TV-Z]{26}$/;\nconst MAIL_RE = /^[^ @<>,;]+@[^ @<>,;]+[.][A-Za-z]{2,}$/;\nconst a = String(p.aktion || '');\nif (a === 'status') {\n  if (!ID_RE.test(String(p.document_id || ''))) return fehler('Dokument-ID ungültig.');\n  return [{ json: { route: 'status', document_id: p.document_id } }];\n}\nif (a === 'erteilen') {\n  if (!ID_RE.test(String(p.document_id || ''))) return fehler('Dokument-ID ungültig.');\n  const art = String(p.art || '');\n  if (!/^[a-z][a-z_]{2,29}$/.test(art)) return fehler('Auftragsart ungültig.');\n  const hinweis = String(p.hinweis || '').replace(/[<>]/g, '').trim().slice(0, 500);\n  const seite = String(p.seite || '');\n  if (!/^https:[/][/][a-z0-9.-]+[/]webhook[/][a-z0-9-]{8,80}$/.test(seite)) return fehler('Seitenadresse ungültig. Bitte die Seite neu laden.');\n  const idem = crypto.createHash('sha256').update('auftrag|privat|' + p.document_id + '|' + art).digest('hex');\n  return [{ json: { route: 'erteilen', document_id: p.document_id, art: art, hinweis: hinweis, seite: seite, idem: idem, neu_fassen: p.ueberarbeiten === true } }];\n}\nif (a === 'schliessen') {\n  if (!TSK_RE.test(String(p.task_id || ''))) return fehler('Aufgaben-ID ungültig.');\n  return [{ json: { route: 'schliessen', task_id: p.task_id } }];\n}\nif (a === 'versendet') {\n  if (!TSK_RE.test(String(p.task_id || ''))) return fehler('Aufgaben-ID ungültig.');\n  return [{ json: { route: 'versendet', task_id: p.task_id } }];\n}\nif (a === 'adresse_vorschlag') {\n  if (!TSK_RE.test(String(p.task_id || ''))) return fehler('Aufgaben-ID ungültig.');\n  return [{ json: { route: 'adr_vorschlag', task_id: p.task_id } }];\n}\nif (a === 'adresse_setzen') {\n  if (!TSK_RE.test(String(p.task_id || ''))) return fehler('Aufgaben-ID ungültig.');\n  const email = String(p.email || '').trim().slice(0, 200);\n  if (!MAIL_RE.test(email)) return fehler('Die E-Mail-Adresse ist ungültig.');\n  const quelle = String(p.quelle || '');\n  if (['rolf', 'web', 'register'].indexOf(quelle) === -1) return fehler('Herkunft der Adresse ungültig.');\n  let url = String(p.quelle_url || '').trim().slice(0, 500);\n  if (url && !/^https:[/][/][^ <>]+$/.test(url)) url = '';\n  if (quelle === 'web' && !url) return fehler('Für eine Adresse aus dem Web fehlt die Quelle.');\n  return [{ json: { route: 'adr_setzen', task_id: p.task_id, email: email, quelle: quelle, quelle_url: url || null } }];\n}\nreturn fehler('Unbekannte Aktion.');"
+      }
+    },
+    {
+      "id": "8c5d326d-f9c4-4e17-ba94-d53094f52ef5",
+      "name": "Aktion waehlen",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        448,
+        1344
+      ],
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "outputKey": "status",
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.route }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "status"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "outputKey": "erteilen",
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.route }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "erteilen"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "outputKey": "versendet",
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.route }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "versendet"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "outputKey": "schliessen",
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.route }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "schliessen"
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "fehler"
+        }
+      }
+    },
+    {
+      "id": "b3364d3c-c538-4c87-9aee-c0cd6f98f28f",
+      "name": "Auftraege lesen",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        5376,
+        0
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT t.task_id, t.title, t.status, t.due_at, t.body\nFROM jarvis_privat.task t\nWHERE t.body->>'document_id' = $1 AND t.body->>'quelle' = 'auftrag_rolf'\nORDER BY t.created_at",
+        "options": {
+          "queryReplacement": "={{ $json.document_id }}"
+        }
+      },
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "postgres": {
+          "id": "oCkj27EiMe96vXvU",
+          "name": "jv_privat_postgres"
+        }
+      }
+    },
+    {
+      "id": "a3d396eb-997b-47e5-b568-3db4dae19144",
+      "name": "Auftraege bilden",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5600,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const sicht = function (t) {\n  const b = (t && t.body) || {}; const e = b.entwurf || {}; const td = b.todo || {};\n  const alt = e.state === 'running' && e.started_at && (Date.now() - new Date(e.started_at).getTime() > 15 * 60 * 1000);\n  const fehlerText = alt ? 'Die Erstellung wurde unterbrochen. Bitte erneut erstellen.' : (e.state === 'failed' ? ((e.fehler && e.fehler.text) || 'Der letzte Versuch ist fehlgeschlagen.') : null);\n  return { task_id: t.task_id, titel: t.title, status: t.status, art: b.art || null, hinweis: b.hinweis || null, versandform: b.versandform || null, brief: b.brief || null,\n    frist: t.due_at ? new Date(t.due_at).toISOString().slice(0, 10) : null,\n    entwurf: { state: alt ? 'failed' : (e.state || null), betreff: e.betreff || null, text: e.text || null, empfaenger_email: e.empfaenger_email || null,\n      empfaenger_quelle: e.empfaenger_quelle || null, empfaenger_quelle_url: e.empfaenger_quelle_url || null,\n      web_link: e.web_link || null, formvorschrift: e.formvorschrift || null, formvorschrift_beleg: e.formvorschrift_beleg || null,\n      kuendigung_zum: e.kuendigung_zum || null, kuendigung_zum_beleg: e.kuendigung_zum_beleg || null, spaetester_versand: e.spaetester_versand || null,\n      fehlende_angaben: Array.isArray(e.fehlende_angaben) ? e.fehlende_angaben : [], hinweise: Array.isArray(e.hinweise) ? e.hinweise : [], fehler: fehlerText,\n      nicht_machbar: !alt && e.state === 'failed' && !!(e.fehler && e.fehler.code === 'nicht_machbar'),\n      vertragspartner: e.vertragspartner || null, anhang: e.anhang || null },\n    zahlung: b.zahlung || null, todo_state: td.state || null, versand: b.versand || null };\n};\nconst rows = $input.all().map(function (x) { return x.json; });\nif (rows.some(function (r) { return r && r.error; })) return [{ json: { antwort: { ok: false, fehler: 'Aufträge konnten nicht gelesen werden.' } } }];\nreturn [{ json: { antwort: { ok: true, auftraege: rows.filter(function (r) { return r && r.task_id; }).map(sicht) } } }];"
+      }
+    },
+    {
+      "id": "79ca2a9c-48eb-4f18-8b76-83aa485b0250",
+      "name": "Antwort senden",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        5824,
+        1664
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json.antwort) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Cache-Control",
+                "value": "no-store"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "927ea35b-237f-495b-b1f4-774cdb5b80f1",
+      "name": "Dokument lesen",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        672,
+        1152
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT d.document_id, d.status, d.original_filename, d.mime_type, d.source_external_id, d.received_at, d.size_bytes,\n  d.body->'filing'->>'file_name' AS ablage_name,\n  (SELECT to_jsonb(bp) FROM jarvis_privat.betreute_person bp\n   WHERE bp.aktiv AND bp.person_key = COALESCE(CASE WHEN d.status <> 'filed' THEN a.body->'vorschlag'->>'person_key' END, d.person_key)) AS person,\n  a.body AS analyse,\n  (SELECT to_jsonb(f) FROM jarvis_privat.document_fall f WHERE f.fall_key = $3 AND f.active AND f.gruppe IN ('entwurf', 'aufgabe')) AS fall,\n  (SELECT to_jsonb(t) FROM jarvis_privat.task t WHERE t.idempotency_key = $2) AS task,\n  (SELECT s.todo_list_name FROM jarvis_ops.context_document_settings s WHERE s.context_id = 'privat') AS todo_liste,\n  (SELECT m.body FROM jarvis_privat.memory_entry m\n   WHERE m.memory_store = 'profile' AND m.entry_type = 'private_address' AND m.status = 'active' AND (m.valid_to IS NULL OR m.valid_to > now())\n   ORDER BY m.valid_from DESC NULLS LAST LIMIT 1) AS privatadresse\nFROM jarvis_privat.document d\nLEFT JOIN LATERAL (\n  SELECT x.body FROM jarvis_privat.document_analysis x\n  WHERE x.document_id = d.document_id\n  ORDER BY x.analyzed_at DESC, x.analysis_id DESC LIMIT 1\n) a ON true\nWHERE d.document_id = $1 AND d.intake_adapter_id = 'web_desk_s1'",
+        "options": {
+          "queryReplacement": "={{ $json.document_id }},{{ $json.idem }},{{ $json.art }}"
+        }
+      },
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "postgres": {
+          "id": "oCkj27EiMe96vXvU",
+          "name": "jv_privat_postgres"
+        }
+      }
+    },
+    {
+      "id": "e7e98fad-b743-4673-9b6a-ce4dcb0dd8f7",
+      "name": "Auftrag vorbereiten",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        896,
+        1152
+      ],
+      "parameters": {
+        "jsCode": "const sicht = function (t) {\n  const b = (t && t.body) || {}; const e = b.entwurf || {}; const td = b.todo || {};\n  const alt = e.state === 'running' && e.started_at && (Date.now() - new Date(e.started_at).getTime() > 15 * 60 * 1000);\n  const fehlerText = alt ? 'Die Erstellung wurde unterbrochen. Bitte erneut erstellen.' : (e.state === 'failed' ? ((e.fehler && e.fehler.text) || 'Der letzte Versuch ist fehlgeschlagen.') : null);\n  return { task_id: t.task_id, titel: t.title, status: t.status, art: b.art || null, hinweis: b.hinweis || null,\n    frist: t.due_at ? new Date(t.due_at).toISOString().slice(0, 10) : null,\n    entwurf: { state: alt ? 'failed' : (e.state || null), betreff: e.betreff || null, text: e.text || null, empfaenger_email: e.empfaenger_email || null,\n      web_link: e.web_link || null, formvorschrift: e.formvorschrift || null, formvorschrift_beleg: e.formvorschrift_beleg || null,\n      kuendigung_zum: e.kuendigung_zum || null, kuendigung_zum_beleg: e.kuendigung_zum_beleg || null, spaetester_versand: e.spaetester_versand || null,\n      fehlende_angaben: Array.isArray(e.fehlende_angaben) ? e.fehlende_angaben : [], hinweise: Array.isArray(e.hinweise) ? e.hinweise : [], fehler: fehlerText },\n    todo_state: td.state || null, versand: b.versand || null };\n};\nconst crypto = require('crypto');\nconst q = $('Anfrage pruefen').first().json;\nconst rows = $input.all().map(function (x) { return x.json; });\nconst nein = function (t) { return [{ json: { weiter: false, antwort: { ok: false, fehler: t } } }]; };\nif (rows.some(function (r) { return r && r.error; })) return nein('Datenbank nicht erreichbar.');\nconst r = rows.filter(function (x) { return x && x.document_id; })[0];\nif (!r) return nein('Dokument nicht gefunden.');\nif (!r.analyse || !r.analyse.ki) return nein('Das Dokument hat noch keine Analyse. Bitte zuerst „Analyse wiederholen“ klicken.');\nconst fall = (r.fall && typeof r.fall === 'object') ? r.fall : null;\nif (!fall) return nein('Diese Auftragsart ist nicht verfügbar.');\nconst label = String(fall.label_de || q.art);\nif (fall.hinweis_pflicht === true && !q.hinweis) return nein('Für «' + label + '» bitte im Hinweis angeben: ' + String(fall.hinweis_platzhalter || 'Empfänger und Zweck'));\nif (fall.gruppe === 'aufgabe') {\n  const zz = r.analyse.ki.zahlung;\n  if (zz === undefined) return nein('Die Analyse ist älter als die Zahlungserkennung. Bitte zuerst „Analyse wiederholen“ klicken.');\n  if (!zz) return nein('Im Dokument ist kein offener Zahlbetrag erkannt. Bitte das Dokument prüfen oder „Analyse wiederholen“ klicken.');\n}\nif (['application/pdf', 'image/jpeg', 'image/png'].indexOf(r.mime_type) === -1) return nein('Dateityp nicht unterstützt.');\nif (!/^[A-Za-z0-9_-]{10,200}$/.test(String(r.source_external_id || ''))) return nein('Original nicht auffindbar.');\n// CR-15: betreute Person – Entwurf in ihrem Namen (Rolf mit Vollmacht), Aufgabe in ihrer Liste.\nconst pers = (r.person && typeof r.person === 'object') ? r.person : null;\nif (!pers) return nein('Die Person des Dokuments ist nicht konfiguriert.');\nconst fremd = pers.ist_selbst !== true;\nif (fremd && !(pers.anschrift && pers.anschrift.strasse && pers.anschrift.ort)) return nein('Für ' + pers.anzeigename + ' ist keine Anschrift hinterlegt.');\nconst t = r.task || null;\nconst tb = (t && t.body) || {};\nconst e = tb.entwurf || {};\nconst neuWunsch = q.neu_fassen === true;\nif (t && t.status === 'cancelled') return nein('Der Auftrag «' + label + '» wurde geschlossen. Für dieses Dokument bitte einen anderen Fall wählen.');\nif (t && t.status === 'done' && neuWunsch) return nein('Der Auftrag «' + label + '» ist bereits erledigt.');\nif (t && e.state === 'done' && !neuWunsch) return [{ json: { weiter: false, antwort: { ok: true, hinweis: 'Für dieses Dokument gibt es den Auftrag «' + label + '» bereits.', auftrag: sicht(t) } } }];\nif (t && e.state === 'running' && e.started_at && (Date.now() - new Date(e.started_at).getTime() < 15 * 60 * 1000)) return nein('Der Entwurf wird gerade erstellt. Bitte in einer Minute aktualisieren.');\nconst neuFassen = !!t && ((neuWunsch && e.state === 'done') || (e.neu_fassen_offen === true && e.state !== 'done'));\n// CR-11 E2: Empfänger des bisherigen Entwurfs, damit der Nachweis die Herkunft eines Outlook-Empfängers erkennt.\nconst vorEmpf = e.empfaenger_email ? { email: e.empfaenger_email, beleg: e.empfaenger_email_beleg || null, quelle: e.empfaenger_quelle || null, quelle_url: e.empfaenger_quelle_url || null, bestaetigt_at: e.empfaenger_bestaetigt_at || null } : null;\nconst altEmpf = (e.empfaenger_bestaetigt_at && e.empfaenger_email) ? { email: e.empfaenger_email, quelle: e.empfaenger_quelle || null, quelle_url: e.empfaenger_quelle_url || null, bestaetigt_at: e.empfaenger_bestaetigt_at } : null;\nconst B32 = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';\nconst ulid = function () { let z = Date.now(); let id = ''; for (let i = 0; i < 10; i++) { id = B32[z % 32] + id; z = Math.floor(z / 32); } const rb = crypto.randomBytes(16); for (let i = 0; i < 16; i++) { id += B32[rb[i] % 32]; } return id; };\nconst task_id = t ? t.task_id : 'tsk_' + ulid();\nconst action_id = e.action_id || ('act_' + ulid());\nconst ki = r.analyse.ki;\nconst name = String(ki.absender_kurz || ki.absender || 'Absender').slice(0, 60);\nconst zname = (fall.gruppe === 'aufgabe' && ki.zahlung && ki.zahlung.empfaenger) ? String(ki.zahlung.empfaenger).slice(0, 60) : name;\nconst titel = t ? t.title : String(fall.titel_vorlage || (label + ' {name}')).replace('{name}', zname).replace('{dokument}', String(ki.dokumentart || 'Dokument').slice(0, 60)).slice(0, 120);\nconst erfolg = fall.gruppe === 'aufgabe' ? ('Rechnung an ' + zname + ' ist bezahlt und von Rolf als erledigt bestätigt.') : ('Auftrag «' + label + '» ist versendet und von Rolf als versendet bestätigt.');\nconst body = { quelle: 'auftrag_rolf', art: q.art, document_id: r.document_id, hinweis: q.hinweis || null, seite: q.seite,\n  begruendung: 'Auftrag von Rolf: ' + label + (fall.gruppe === 'aufgabe' ? ', Aufgabe mit Zahlungsangaben anlegen.' : ', E-Mail-Entwurf im privaten Postfach vorbereiten.'), frist: null, frist_quelle: null };\nconst p64 = Buffer.from(JSON.stringify({ person_key: pers.person_key, task_id: task_id, action_id: action_id, idem: q.idem, titel: titel, erfolg: erfolg, body: body, neu_fassen: neuFassen }), 'utf8').toString('base64');\nreturn [{ json: { weiter: true, art: q.art, gruppe: fall.gruppe, fall: fall, ablage_name: r.ablage_name || null, task_id: task_id, action_id: action_id, document_id: r.document_id, drive_id: r.source_external_id, mime_type: r.mime_type,\n  original_filename: r.original_filename, ki: ki, hinweis: q.hinweis || '', seite: q.seite, titel: titel, todo_liste: (fremd && pers.todo_list_name) ? pers.todo_list_name : (r.todo_liste || null),\n  fuer: fremd ? { name: String(pers.anzeigename), anschrift: pers.anschrift, vollmacht: pers.vollmacht === true } : null,\n  todo_ok: !!(tb.todo && tb.todo.state === 'ok'), neu_fassen: neuFassen, alt_empf: altEmpf, vor_empf: vorEmpf, privatadresse: r.privatadresse || null, p64: p64 } }];"
+      }
+    },
+    {
+      "id": "bc691d17-91ab-47c6-bdd7-e19b65c98de1",
+      "name": "Auftrag erlaubt?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1120,
+        1152
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.weiter }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "d8137cd9-9446-4f5c-bd78-72b92ea00963",
+      "name": "Auftrag sichern",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1344,
+        1088
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH p AS (SELECT convert_from(decode($1, 'base64'), 'UTF8')::jsonb AS j),\nins AS (\n  INSERT INTO jarvis_privat.task (task_id, person_key, schema_version, context_id, title, success_criterion, actor, status, priority, due_at, idempotency_key, body, created_at, updated_at)\n  SELECT p.j->>'task_id', p.j->>'person_key', '1.0.0', 'privat', p.j->>'titel', p.j->>'erfolg', 'rolf', 'open', 'high', NULL, p.j->>'idem',\n    (p.j->'body') || jsonb_build_object('entwurf', jsonb_build_object('state', 'running', 'action_id', p.j->>'action_id', 'started_at', now())), now(), now()\n  FROM p\n  ON CONFLICT (idempotency_key) DO NOTHING\n  RETURNING task_id\n),\nupd AS (\n  UPDATE jarvis_privat.task t\n  SET body = t.body || jsonb_build_object('hinweis', p.j->'body'->'hinweis', 'versandform', p.j->'body'->'versandform', 'versandform_quelle', p.j->'body'->'versandform_quelle', 'entwurf', COALESCE(t.body->'entwurf', '{}'::jsonb) || jsonb_build_object('state', 'running', 'action_id', p.j->>'action_id', 'started_at', now(), 'neu_fassen_offen', COALESCE((p.j->>'neu_fassen')::boolean, false))),\n      updated_at = now()\n  FROM p\n  WHERE t.idempotency_key = p.j->>'idem' AND NOT EXISTS (SELECT 1 FROM ins)\n    AND (COALESCE(t.body->'entwurf'->>'state', '') <> 'done' OR (COALESCE((p.j->>'neu_fassen')::boolean, false) AND t.status <> 'done'))\n    AND NOT (t.body->'entwurf'->>'state' = 'running' AND (t.body->'entwurf'->>'started_at')::timestamptz > now() - interval '15 minutes')\n  RETURNING t.task_id\n),\nl AS (\n  INSERT INTO jarvis_privat.action_log (entry_kind, actor, task_id, action_id, summary_de, body)\n  SELECT 'task_created', 'rolf', ins.task_id, p.j->>'action_id', 'Auftrag erteilt: ' || (p.j->>'titel'),\n    jsonb_build_object('document_id', p.j->'body'->>'document_id', 'art', p.j->'body'->>'art', 'quelle', 'auftrag_rolf')\n  FROM ins, p\n  RETURNING log_id\n)\nSELECT ((SELECT count(*) FROM ins) + (SELECT count(*) FROM upd))::int AS gesichert, (SELECT count(*) FROM l)::int AS protokolliert",
+        "options": {
+          "queryReplacement": "={{ $json.p64 }}"
+        }
+      },
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "postgres": {
+          "id": "oCkj27EiMe96vXvU",
+          "name": "jv_privat_postgres"
+        }
+      }
+    },
+    {
+      "id": "e6f3b22f-3baa-48c9-b073-7fad55e9d88b",
+      "name": "Gesichert?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1568,
+        1088
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.gesichert }}",
+              "rightValue": 1,
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "494eb517-3492-47e7-925e-8184c068b971",
+      "name": "Original laden",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1792,
+        1008
+      ],
+      "parameters": {
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleDriveOAuth2Api",
+        "method": "GET",
+        "url": "=https://www.googleapis.com/drive/v3/files/{{ $('Auftrag vorbereiten').first().json.drive_id }}?alt=media",
+        "options": {
+          "timeout": 120000,
+          "response": {
+            "response": {
+              "responseFormat": "file",
+              "outputPropertyName": "data"
+            }
+          }
+        }
+      },
+      "onError": "continueErrorOutput",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "T9eXpovYsz2Ipp6B",
+          "name": "jv_privat_gdrive"
+        }
+      }
+    },
+    {
+      "id": "1b8a0401-92b0-43fd-bffd-6123d7a453f4",
+      "name": "KI-Anfrage bilden",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2016,
+        944
+      ],
+      "parameters": {
+        "jsCode": "// CR-09: Entwurf für alle Auftragsarten aus dem Fall-Katalog (jarvis_privat.document_fall). Allgemeine Regeln hier, Auftragsregeln aus entwurf_regeln.\nconst v = $('Auftrag vorbereiten').first().json;\nconst it = $input.first();\nif (!it || !it.binary || !it.binary.data) throw new Error('Das Original konnte nicht aus Google Drive geladen werden.');\nconst buf = await this.helpers.getBinaryDataBuffer(0, 'data');\nif (v.mime_type !== 'application/pdf' && buf.length > 5 * 1024 * 1024) throw new Error('Das Foto ist für die KI zu gross (über 5 MB).');\nif (buf.length > 20 * 1024 * 1024) throw new Error('Die Datei ist für die KI zu gross.');\nconst f = v.fall || {};\nif (!f.auftrag_satz || !f.entwurf_regeln) throw new Error('Für diese Auftragsart fehlt die Vorlage im Fall-Katalog.');\nlet modell = '';\ntry { modell = $vars.JV_MODEL_REASONING; } catch (x) { modell = ''; }\nmodell = (typeof modell === 'string') ? modell.trim() : '';\nif (!/^[a-z0-9][a-z0-9.-]{2,80}$/.test(modell)) modell = 'claude-sonnet-5';\nconst NL = String.fromCharCode(10);\nconst heute = new Date().toISOString().slice(0, 10);\nconst system = [\n  'Du bist der Schreibassistent von JARVIS im Kontext \"privat\" von Rolf Hutz. Rolf hat dir den Auftrag gegeben, ' + f.auftrag_satz + '.',\n  'Erstelle einen E-Mail-Entwurf, den Rolf selbst prüft und versendet. Antworte ausschliesslich über das Werkzeug entwurf.',\n  'Allgemeine Regeln:',\n  '1. Erfinde nichts. Namen, Adressen, Vertrags-, Policen-, Kunden- und Rechnungsnummern, Aktenzeichen, Daten, Beträge und E-Mail-Adressen nur, wenn sie im Dokument stehen, Rolf sie im Hinweis nennt oder sie unten als aktuelle Anschrift von Rolf angegeben sind. Fehlt etwas, setze null und nenne es unter fehlende_angaben.',\n  '2. empfaenger_email: nur eine im Dokument oder im Hinweis von Rolf genannte E-Mail-Adresse des Empfängers. Keine Adresse raten oder aus Domains ableiten. Gib den wörtlichen Beleg an.',\n  '3. empfaenger_name: Organisation oder Person, an die das Schreiben geht. bezug: die wichtigste Nummer, auf die sich das Schreiben bezieht (Vertrags-, Policen-, Kunden-, Rechnungsnummer oder Aktenzeichen), sonst null.',\n  '4. text: vollständiger E-Mail-Text, sachlich, höflich, kurz, mit Anrede und Grussformel mit Name und Anschrift von Rolf. Ist unten eine aktuelle Anschrift von Rolf angegeben, verwende in der Grussformel genau diese, mehrzeilig (sie hat Vorrang vor der Adresse im Dokument); sonst die Adresse wie im Dokument. Für fehlende Pflichtangaben den Platzhalter [bitte ergänzen: ...] verwenden.',\n  '5. betreff: kurz und eindeutig, mit der Bezugsnummer, falls vorhanden, höchstens 120 Zeichen.',\n  '6. termin, spaetester_versand und formvorschrift nur ausfüllen, wenn die Auftragsregeln es vorsehen und Dokument oder Hinweis es belegen; sonst null bzw. keine_angabe. Daten immer im Format JJJJ-MM-TT.',\n  '7. Deutsch in Schweizer Rechtschreibung (ss statt ß), ausser das Dokument ist in einer anderen Sprache.',\n  '8. hinweise: kurze Hinweise für Rolf, die für den Versand wichtig sind. fehlende_angaben: was Rolf vor dem Versand ergänzen muss.',\n  '9. machbar = false nur, wenn der Auftrag mit diesem Dokument offensichtlich nicht ausführbar ist; dann grund angeben.',\n  (v.fuer ? '10. Das Schreiben erfolgt im Namen von ' + v.fuer.name + ', vertreten durch Rolf Hutz. Absender und Grussformel: «' + v.fuer.name + '», darunter «vertreten durch Rolf Hutz», darunter die unten angegebene Anschrift von ' + v.fuer.name + ' mehrzeilig (sie hat Vorrang vor Rolfs Anschrift und vor der Adresse im Dokument und darf verwendet werden). Nimm in den Text einen Satz auf, dass Rolf Hutz im Auftrag von ' + v.fuer.name + ' handelt und eine Vollmacht beiliegt. ' + (v.fuer.vollmacht ? 'Nenne unter hinweise: «Vollmacht von ' + v.fuer.name + ' beilegen».' : 'Nenne unter fehlende_angaben: «Vollmacht von ' + v.fuer.name + '».') : '10. Das Schreiben erfolgt im Namen von Rolf Hutz.'),\n  'Auftragsregeln für «' + f.label_de + '» (sie gehen den allgemeinen Regeln vor):',\n  String(f.entwurf_regeln),\n  'Heutiges Datum: ' + heute + '.'\n].join(NL);\nconst S = { type: 'string' };\nconst SN = { type: ['string', 'null'] };\nconst schema = { type: 'object', additionalProperties: false,\n  required: ['machbar', 'grund', 'empfaenger_name', 'bezug', 'empfaenger_email', 'empfaenger_email_beleg', 'betreff', 'text', 'termin', 'termin_beleg', 'spaetester_versand', 'formvorschrift', 'formvorschrift_beleg', 'fehlende_angaben', 'hinweise'],\n  properties: { machbar: { type: 'boolean' }, grund: SN, empfaenger_name: SN, bezug: SN, empfaenger_email: SN, empfaenger_email_beleg: SN, betreff: S, text: S,\n    termin: SN, termin_beleg: SN, spaetester_versand: SN, formvorschrift: { type: 'string', enum: ['keine_angabe', 'schriftlich', 'eingeschrieben'] }, formvorschrift_beleg: SN,\n    fehlende_angaben: { type: 'array', items: S }, hinweise: { type: 'array', items: S } } };\nconst ki = v.ki || {};\nconst hilfe = { dokumentart: ki.dokumentart || null, kernvorgang: ki.kernvorgang || null, absender: ki.absender || null, empfaenger: ki.empfaenger || null,\n  betrifft_person: ki.betrifft_person || null, dokumentdatum: ki.dokumentdatum || null, kennungen: ki.kennungen || [], fristen: ki.fristen || [], betraege: ki.betraege || [] };\nconst quelle = v.mime_type === 'application/pdf'\n  ? { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: buf.toString('base64') } }\n  : { type: 'image', source: { type: 'base64', media_type: v.mime_type, data: buf.toString('base64') } };\nconst pa = (v.privatadresse && typeof v.privatadresse === 'object') ? v.privatadresse : null;\nconst paText = (pa && pa.strasse && pa.ort) ? [String(pa.strasse), (String(pa.plz || '') + ' ' + String(pa.ort)).trim(), String(pa.land || '')].filter(function (x) { return x; }).join(', ').slice(0, 300) : '';\nconst auftrag = 'Auftrag von Rolf: ' + f.label_de + '. ' + (v.hinweis ? 'Hinweis von Rolf: ' + v.hinweis : 'Kein zusätzlicher Hinweis.') + NL\n  + 'Aktuelle Anschrift von Rolf: ' + (paText || 'nicht hinterlegt') + NL\n  + (v.fuer ? 'Das Dokument und das Schreiben betreffen ' + v.fuer.name + '. Anschrift von ' + v.fuer.name + ': ' + [v.fuer.anschrift.strasse, (String(v.fuer.anschrift.plz || '') + ' ' + v.fuer.anschrift.ort).trim(), v.fuer.anschrift.land].filter(function (x) { return x; }).join(', ') + NL : '')\n  + 'Bisherige Analyse als Hilfe (das Dokument hat Vorrang): ' + JSON.stringify(hilfe);\nconst anfrage = { model: modell, max_tokens: 3000, system: system,\n  tools: [{ name: 'entwurf', description: 'E-Mail-Entwurf für Rolf', input_schema: schema }],\n  tool_choice: { type: 'tool', name: 'entwurf' },\n  messages: [{ role: 'user', content: [quelle, { type: 'text', text: auftrag }] }] };\n// Anhang (Einreichen): Original bis 2,5 MB direkt am Entwurf, sonst Hinweis an Rolf.\nlet anhang = null;\nif (f.mit_anhang === true) {\n  // CR-11 B6a: Endung bleibt beim Kürzen erhalten und passt zum Dateityp.\n  const END = { 'application/pdf': '.pdf', 'image/jpeg': '.jpg', 'image/png': '.png' }[v.mime_type] || '.pdf';\n  const roh = String(v.ablage_name || v.original_filename || 'Dokument').replace(/[^A-Za-z0-9._ -]+/g, '_').replace(/[.](pdf|jpe?g|png)$/i, '');\n  const name = (roh.replace(/[ ._-]+$/, '').slice(0, 120 - END.length).replace(/[ ._-]+$/, '') || 'Dokument') + END;\n  anhang = buf.length <= 2.5 * 1024 * 1024\n    ? { name: name, contentType: v.mime_type, contentBytes: buf.toString('base64'), groesse: buf.length, zu_gross: false }\n    : { name: name, groesse: buf.length, zu_gross: true };\n}\nreturn [{ json: { anfrage: anfrage, anhang: anhang } }];"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "cf9330fa-fa77-4ac0-ab85-b459337e667b",
+      "name": "KI entwirft",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2240,
+        864
+      ],
+      "parameters": {
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "anthropicApi",
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.anfrage) }}",
+        "options": {
+          "timeout": 240000
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 5000,
+      "onError": "continueErrorOutput",
+      "credentials": {
+        "anthropicApi": {
+          "id": "LFuagu0KYE2rtoF8",
+          "name": "sk-ant-"
+        }
+      }
+    },
+    {
+      "id": "65852098-19eb-4e4e-89e7-0f56ffb9e4a6",
+      "name": "Entwurf pruefen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2464,
+        800
+      ],
+      "parameters": {
+        "jsCode": "const v = $('Auftrag vorbereiten').first().json;\nconst ka = $('KI-Anfrage bilden').first().json;\nconst f = v.fall || {};\nconst PROP = 'String {00020329-0000-0000-C000-000000000046} Name jarvis_action_id';\nconst res = $input.first().json || {};\nconst blocks = Array.isArray(res.content) ? res.content : [];\nconst tu = blocks.filter(function (b) { return b && b.type === 'tool_use' && b.name === 'entwurf'; })[0];\nif (!tu || !tu.input || typeof tu.input !== 'object') throw new Error(res.stop_reason === 'max_tokens' ? 'Der Entwurf war zu lang und wurde abgebrochen. Bitte erneut erstellen.' : 'Die KI lieferte keinen strukturierten Entwurf. Bitte erneut erstellen.');\nconst i = tu.input;\nconst s = function (x, m) { return (typeof x === 'string' && x.trim()) ? x.trim().slice(0, m) : null; };\nconst sArr = function (x, m, n) { return Array.isArray(x) ? x.map(function (y) { return s(y, m); }).filter(function (y) { return y; }).slice(0, n) : []; };\nconst datumOk = function (x) { if (typeof x !== 'string' || !/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(x)) return null; const t = new Date(x + 'T12:00:00Z'); return (!isNaN(t.getTime()) && t.toISOString().slice(0, 10) === x) ? x : null; };\nif (i.machbar === false) throw new Error('Nicht ausführbar: ' + (s(i.grund, 600) || 'Mit diesem Dokument ist der Auftrag nicht möglich.'));\nconst betreff = s(i.betreff, 150);\nconst text = s(i.text, 8000);\nlet muster = null;\ntry { muster = f.betreff_muster ? new RegExp(f.betreff_muster, 'i') : null; } catch (x) { muster = null; }\nif (!betreff || (muster && !muster.test(betreff))) throw new Error('Der Entwurf hat keinen gültigen Betreff. Bitte erneut erstellen.');\nif (!text || text.length < 80) throw new Error('Der Entwurfstext ist unvollständig. Bitte erneut erstellen.');\nlet mail = s(i.empfaenger_email, 200);\nif (mail && !/^[^ @<>,;]+@[^ @<>,;]+[.][A-Za-z]{2,}$/.test(mail)) mail = null;\nlet mailBeleg = mail ? s(i.empfaenger_email_beleg, 300) : null;\nconst alt = (v.alt_empf && v.alt_empf.email) ? v.alt_empf : null;\nif (alt) { mail = alt.email; mailBeleg = null; }\nconst fehlende = sArr(i.fehlende_angaben, 200, 10).filter(function (x) { return !(alt && /e-mail/i.test(x)); });\nif (!mail) fehlende.unshift('E-Mail-Adresse des Empfängers – bitte in Outlook eintragen');\nconst an = ka.anhang || null;\nif (an && an.zu_gross) fehlende.push('Anhang: Das Original ist grösser als 2,5 MB – bitte in Outlook selbst anhängen.');\nconst form = ['keine_angabe', 'schriftlich', 'eingeschrieben'].indexOf(i.formvorschrift) !== -1 ? i.formvorschrift : 'keine_angabe';\nconst entwurf = { betreff: betreff, text: text, empfaenger_email: mail, empfaenger_email_beleg: mailBeleg,\n  vertragspartner: s(i.empfaenger_name, 120), vertragsnummer: s(i.bezug, 80),\n  kuendigung_zum: datumOk(i.termin), kuendigung_zum_beleg: s(i.termin_beleg, 300), spaetester_versand: datumOk(i.spaetester_versand),\n  formvorschrift: form, formvorschrift_beleg: form === 'keine_angabe' ? null : s(i.formvorschrift_beleg, 300),\n  fehlende_angaben: fehlende, hinweise: sArr(i.hinweise, 300, 8),\n  anhang: an ? { name: an.name, groesse: an.groesse, beigefuegt: !an.zu_gross } : null };\nif (alt) { entwurf.empfaenger_quelle = alt.quelle || null; entwurf.empfaenger_quelle_url = alt.quelle_url || null; entwurf.empfaenger_bestaetigt_at = alt.bestaetigt_at || null; }\nconst msg = { subject: betreff, body: { contentType: 'Text', content: text }, singleValueExtendedProperties: [{ id: PROP, value: v.action_id }] };\nif (mail) msg.toRecipients = [{ emailAddress: { address: mail } }];\nif (an && !an.zu_gross) msg.attachments = [{ '@odata.type': '#microsoft.graph.fileAttachment', name: an.name, contentType: an.contentType, contentBytes: an.contentBytes }];\nconst ersatz = { subject: betreff, body: { contentType: 'Text', content: text } };\n// CR-11 E2: Bestätigter Empfänger wird beim Neufassen immer gesetzt, eine KI-Adresse nur, wenn der Outlook-Entwurf noch keinen Empfänger hat (Weiche im Knoten «Entwurf ersetzen»).\nconst ersatz_mit = mail ? Object.assign({}, ersatz, { toRecipients: [{ emailAddress: { address: mail } }] }) : ersatz;\nconst filter = 'singleValueExtendedProperties/Any(ep: ep/id eq ' + String.fromCharCode(39) + PROP + String.fromCharCode(39) + ' and ep/value eq ' + String.fromCharCode(39) + v.action_id + String.fromCharCode(39) + ')';\nreturn [{ json: { entwurf: entwurf, msg: msg, ersatz: ersatz, ersatz_mit: ersatz_mit, empf_bestaetigt: !!alt, filter: filter } }];"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "599a54b0-c871-4183-a945-ff0299bec955",
+      "name": "Entwurf suchen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2688,
+        720
+      ],
+      "parameters": {
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "microsoftOutlookOAuth2Api",
+        "method": "GET",
+        "url": "https://graph.microsoft.com/v1.0/me/mailFolders/drafts/messages",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "$filter",
+              "value": "={{ $json.filter }}"
+            },
+            {
+              "name": "$select",
+              "value": "id,subject,toRecipients"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "onError": "continueErrorOutput",
+      "credentials": {
+        "microsoftOutlookOAuth2Api": {
+          "id": "gB5n6DOIXZAdx3Hf",
+          "name": "jv_privat_outlook"
+        }
+      }
+    },
+    {
+      "id": "6b701cd8-d0fd-4f42-9904-f081ca5d79fe",
+      "name": "Entwurf neu?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2912,
+        656
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ ($json.value || []).length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "9277dc32-284b-4e77-a500-3b8ecfa36f62",
+      "name": "Entwurf anlegen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3136,
+        560
+      ],
+      "parameters": {
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "microsoftOutlookOAuth2Api",
+        "method": "POST",
+        "url": "https://graph.microsoft.com/v1.0/me/messages",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($('Entwurf pruefen').first().json.msg) }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "onError": "continueErrorOutput",
+      "credentials": {
+        "microsoftOutlookOAuth2Api": {
+          "id": "gB5n6DOIXZAdx3Hf",
+          "name": "jv_privat_outlook"
+        }
+      }
+    },
+    {
+      "id": "80b70b1a-6c35-4d53-873a-d27664f2e7e9",
+      "name": "Entwurf-ID bestimmen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3360,
+        480
+      ],
+      "parameters": {
+        "jsCode": "const j = $input.first().json || {};\nconst id = j.id || (Array.isArray(j.value) && j.value[0] && j.value[0].id) || null;\nif (!id || !/^[A-Za-z0-9=_+/-]{20,400}$/.test(id)) throw new Error('Outlook lieferte keine gültige Entwurfs-ID.');\nreturn [{ json: { message_id: id, neu: !!j.id } }];"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "4311b5b2-5944-44c4-a055-1a942f7904ca",
+      "name": "Auftrag belegt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5600,
+        1584
+      ],
+      "parameters": {
+        "jsCode": "const f = $input.first().json || {};\nreturn [{ json: { antwort: { ok: false, fehler: f.error ? 'Datenbank nicht erreichbar.' : 'Der Entwurf wird gerade erstellt oder ist bereits vorhanden. Bitte aktualisieren.' } } }];"
+      }
+    },
+    {
+      "id": "1017ead3-1d31-40f5-87d4-0a898a116ddd",
+      "name": "Versand lesen",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        3808,
+        2112
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT t.task_id, t.title, t.status, t.due_at, t.body\nFROM jarvis_privat.task t\nWHERE t.task_id = $1 AND t.body->>'quelle' = 'auftrag_rolf'",
+        "options": {
+          "queryReplacement": "={{ $json.task_id }}"
+        }
+      },
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "postgres": {
+          "id": "oCkj27EiMe96vXvU",
+          "name": "jv_privat_postgres"
+        }
+      }
+    },
+    {
+      "id": "971fc5e1-328b-4bae-959f-a94ef6ac2de1",
+      "name": "Versand pruefen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4032,
+        2112
+      ],
+      "parameters": {
+        "jsCode": "const sicht = function (t) {\n  const b = (t && t.body) || {}; const e = b.entwurf || {}; const td = b.todo || {};\n  const alt = e.state === 'running' && e.started_at && (Date.now() - new Date(e.started_at).getTime() > 15 * 60 * 1000);\n  const fehlerText = alt ? 'Die Erstellung wurde unterbrochen. Bitte erneut erstellen.' : (e.state === 'failed' ? ((e.fehler && e.fehler.text) || 'Der letzte Versuch ist fehlgeschlagen.') : null);\n  return { task_id: t.task_id, titel: t.title, status: t.status, art: b.art || null, hinweis: b.hinweis || null,\n    frist: t.due_at ? new Date(t.due_at).toISOString().slice(0, 10) : null,\n    entwurf: { state: alt ? 'failed' : (e.state || null), betreff: e.betreff || null, text: e.text || null, empfaenger_email: e.empfaenger_email || null,\n      web_link: e.web_link || null, formvorschrift: e.formvorschrift || null, formvorschrift_beleg: e.formvorschrift_beleg || null,\n      kuendigung_zum: e.kuendigung_zum || null, kuendigung_zum_beleg: e.kuendigung_zum_beleg || null, spaetester_versand: e.spaetester_versand || null,\n      fehlende_angaben: Array.isArray(e.fehlende_angaben) ? e.fehlende_angaben : [], hinweise: Array.isArray(e.hinweise) ? e.hinweise : [], fehler: fehlerText },\n    todo_state: td.state || null, versand: b.versand || null };\n};\nconst PROP = 'String {00020329-0000-0000-C000-000000000046} Name jarvis_action_id';\nconst rows = $input.all().map(function (x) { return x.json; });\nconst nein = function (t) { return [{ json: { weiter: false, antwort: { ok: false, fehler: t } } }]; };\nif (rows.some(function (r) { return r && r.error; })) return nein('Datenbank nicht erreichbar.');\nconst r = rows.filter(function (x) { return x && x.task_id; })[0];\nif (!r) return nein('Auftrag nicht gefunden.');\nif (r.status === 'done') return [{ json: { weiter: false, antwort: { ok: true, hinweis: 'Bereits als versendet bestätigt.', auftrag: sicht(r) } } }];\nconst e = (r.body && r.body.entwurf) || {};\nif (e.state !== 'done' || !e.action_id) return nein('Es gibt noch keinen fertigen Entwurf.');\nconst td = (r.body && r.body.todo) || {};\nconst q = String.fromCharCode(39);\nreturn [{ json: { weiter: true, task_id: r.task_id, action_id: e.action_id, art: (r.body && r.body.art) || null,\n  filter: 'singleValueExtendedProperties/Any(ep: ep/id eq ' + q + PROP + q + ' and ep/value eq ' + q + e.action_id + q + ')',\n  todo_list_id: td.state === 'ok' ? td.list_id : null, todo_task_id: td.state === 'ok' ? td.task_id : null } }];"
+      }
+    },
+    {
+      "id": "0c9ba2b2-6e5d-4064-8509-ae812524a0fe",
+      "name": "Versand erlaubt?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        4256,
+        2112
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.weiter }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "5b3f7162-7201-4cbe-b74d-01268b5e93c9",
+      "name": "Gesendet suchen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        4480,
+        1968
+      ],
+      "parameters": {
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "microsoftOutlookOAuth2Api",
+        "method": "GET",
+        "url": "https://graph.microsoft.com/v1.0/me/mailFolders/sentitems/messages",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "$filter",
+              "value": "={{ $json.filter }}"
+            },
+            {
+              "name": "$select",
+              "value": "id,sentDateTime"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "microsoftOutlookOAuth2Api": {
+          "id": "gB5n6DOIXZAdx3Hf",
+          "name": "jv_privat_outlook"
+        }
+      }
+    },
+    {
+      "id": "9cfa1c01-fc7c-48c6-aa9c-4ffcbace41ca",
+      "name": "Versand vorbereiten",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4704,
+        1968
+      ],
+      "parameters": {
+        "jsCode": "const v = $('Versand pruefen').first().json;\nconst j = $input.first().json || {};\nconst g = (!j.error && Array.isArray(j.value) && j.value[0]) ? j.value[0] : null;\n// CR-09a A11: Eine Zahlung hat keine Mail – Nachweis ist Rolfs Bestätigung, keine Postfachsuche.\nconst versand = v.art === 'zahlen' ? { methode: 'bestaetigung_rolf_zahlung' } : g ? { methode: 'sent_items_action_id', gesendet_at: g.sentDateTime || null } : { methode: 'bestaetigung_rolf', pruefung: j.error ? 'postfach_nicht_lesbar' : 'nicht_in_gesendet_gefunden' };\nreturn [{ json: { versand: versand, p64: Buffer.from(JSON.stringify({ task_id: v.task_id, action_id: v.action_id, versand: versand }), 'utf8').toString('base64') } }];"
+      }
+    },
+    {
+      "id": "1f11c553-2ab1-426b-9d80-919e9a1ec243",
+      "name": "Versand bestaetigen",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        4928,
+        1968
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH p AS (SELECT convert_from(decode($1, 'base64'), 'UTF8')::jsonb AS j),\nu AS (\n  UPDATE jarvis_privat.task t\n  SET status = 'done', body = t.body || jsonb_build_object('versand', (p.j->'versand') || jsonb_build_object('bestaetigt_at', now())), updated_at = now()\n  FROM p\n  WHERE t.task_id = p.j->>'task_id' AND t.status <> 'done' AND t.body->'entwurf'->>'action_id' = p.j->>'action_id'\n  RETURNING t.task_id, t.title, t.status, t.due_at, t.body\n),\nl AS (\n  INSERT INTO jarvis_privat.action_log (entry_kind, actor, task_id, action_id, summary_de, body)\n  SELECT 'task_completed', 'rolf', u.task_id, p.j->>'action_id', left(CASE WHEN u.body->>'art' = 'zahlen' THEN 'Zahlung als erledigt bestätigt: ' ELSE 'Auftrag als versendet bestätigt: ' END || u.title, 500), jsonb_build_object('nachweis', p.j->'versand'->>'methode')\n  FROM u, p\n  RETURNING log_id\n)\nSELECT (SELECT count(*) FROM u)::int AS bestaetigt,\n  COALESCE((SELECT jsonb_build_object('task_id', u.task_id, 'title', u.title, 'status', u.status, 'due_at', u.due_at, 'body', u.body) FROM u),\n    -- CR-11 B6c: Zweite Bestätigung (Doppelklick, zweiter Tab) liefert den bereits erledigten Auftrag statt eines Fehlers.\n    (SELECT jsonb_build_object('task_id', t.task_id, 'title', t.title, 'status', t.status, 'due_at', t.due_at, 'body', t.body) FROM jarvis_privat.task t, p WHERE t.task_id = p.j->>'task_id' AND t.status = 'done')) AS task,\n  (SELECT j->>'task_id' FROM p) AS task_id\n",
+        "options": {
+          "queryReplacement": "={{ $json.p64 }}"
+        }
+      },
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "postgres": {
+          "id": "oCkj27EiMe96vXvU",
+          "name": "jv_privat_postgres"
+        }
+      }
+    },
+    {
+      "id": "0e20fb49-b86c-46ec-9996-912059c8a8a3",
+      "name": "To Do abschliessen?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        5152,
+        1968
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.bestaetigt }}",
+              "rightValue": 1,
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              }
+            },
+            {
+              "leftValue": "={{ $('Versand pruefen').first().json.todo_task_id || '' }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "ae156059-bfa3-412e-a570-c63507e93c75",
+      "name": "To-Do-Aufgabe erledigen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        5376,
+        1872
+      ],
+      "parameters": {
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "microsoftOutlookOAuth2Api",
+        "method": "PATCH",
+        "url": "=https://graph.microsoft.com/v1.0/me/todo/lists/{{ encodeURIComponent($('Versand pruefen').first().json.todo_list_id) }}/tasks/{{ encodeURIComponent($('Versand pruefen').first().json.todo_task_id) }}",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "{\"status\":\"completed\"}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "microsoftToDoOAuth2Api": {
+          "id": "Cvkrx5Q9x5RPDv3V",
+          "name": "Microsoft To Do account"
+        },
+        "microsoftOutlookOAuth2Api": {
+          "id": "iFyJVs8R8yTH1nh5",
+          "name": "Microsoft Outlook account"
+        }
+      }
+    },
+    {
+      "id": "48c825e3-17c6-48aa-9682-0f76455cb56c",
+      "name": "Versand melden",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5600,
+        1968
+      ],
+      "parameters": {
+        "jsCode": "const sicht = function (t) {\n  const b = (t && t.body) || {}; const e = b.entwurf || {}; const td = b.todo || {};\n  const alt = e.state === 'running' && e.started_at && (Date.now() - new Date(e.started_at).getTime() > 15 * 60 * 1000);\n  const fehlerText = alt ? 'Die Erstellung wurde unterbrochen. Bitte erneut erstellen.' : (e.state === 'failed' ? ((e.fehler && e.fehler.text) || 'Der letzte Versuch ist fehlgeschlagen.') : null);\n  return { task_id: t.task_id, titel: t.title, status: t.status, art: b.art || null, hinweis: b.hinweis || null,\n    frist: t.due_at ? new Date(t.due_at).toISOString().slice(0, 10) : null,\n    entwurf: { state: alt ? 'failed' : (e.state || null), betreff: e.betreff || null, text: e.text || null, empfaenger_email: e.empfaenger_email || null,\n      web_link: e.web_link || null, formvorschrift: e.formvorschrift || null, formvorschrift_beleg: e.formvorschrift_beleg || null,\n      kuendigung_zum: e.kuendigung_zum || null, kuendigung_zum_beleg: e.kuendigung_zum_beleg || null, spaetester_versand: e.spaetester_versand || null,\n      fehlende_angaben: Array.isArray(e.fehlende_angaben) ? e.fehlende_angaben : [], hinweise: Array.isArray(e.hinweise) ? e.hinweise : [], fehler: fehlerText },\n    todo_state: td.state || null, versand: b.versand || null };\n};\nconst r = $('Versand bestaetigen').first().json || {};\nconst vv = $('Versand vorbereiten').first().json.versand;\n// CR-11 B6c: Bereits bestätigt (zweite Anfrage) ist kein Fehler.\nif (!r.error && Number(r.bestaetigt) === 0 && r.task && r.task.status === 'done') return [{ json: { antwort: { ok: true, hinweis: (r.task.body && r.task.body.art === 'zahlen') ? 'Bereits als bezahlt bestätigt.' : 'Bereits als versendet bestätigt.', auftrag: sicht(r.task) } } }];\nif (r.error || Number(r.bestaetigt) !== 1 || !r.task) return [{ json: { antwort: { ok: false, fehler: r.error ? 'Datenbank nicht erreichbar.' : 'Der Auftrag konnte nicht abgeschlossen werden. Bitte aktualisieren.' } } }];\nconst art = (r.task && r.task.body && r.task.body.art) || '';\nlet h = art === 'zahlen' ? 'Als bezahlt bestätigt.' : vv.methode === 'sent_items_action_id' ? 'Versand bestätigt: Die Mail liegt in „Gesendete Elemente“.' : 'Als versendet bestätigt. In „Gesendete Elemente“ wurde keine Mail aus diesem Entwurf gefunden.';\nlet pt = null;\ntry { if ($('To-Do-Aufgabe erledigen').isExecuted) pt = $('To-Do-Aufgabe erledigen').first().json; } catch (x) { pt = null; }\nif (pt && pt.status === 'completed') h += ' Die To-Do-Aufgabe ist erledigt.';\nelse if (pt) h += ' Die To-Do-Aufgabe bitte selbst abhaken.';\nreturn [{ json: { antwort: { ok: true, hinweis: h, auftrag: sicht(r.task) } } }];"
+      }
+    },
+    {
+      "id": "c5988420-90ec-41ae-8730-3e85af03c080",
+      "name": "Entwurf nachlesen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3584,
+        416
+      ],
+      "parameters": {
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "microsoftOutlookOAuth2Api",
+        "method": "GET",
+        "url": "=https://graph.microsoft.com/v1.0/me/messages/{{ encodeURIComponent($json.message_id) }}",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "$select",
+              "value": "id,subject,isDraft,webLink,toRecipients,hasAttachments,body"
+            },
+            {
+              "name": "$expand",
+              "value": "singleValueExtendedProperties($filter=id eq 'String {00020329-0000-0000-C000-000000000046} Name jarvis_action_id')"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Prefer",
+              "value": "outlook.body-content-type=\"text\""
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "onError": "continueErrorOutput",
+      "credentials": {
+        "microsoftOutlookOAuth2Api": {
+          "id": "gB5n6DOIXZAdx3Hf",
+          "name": "jv_privat_outlook"
+        }
+      }
+    },
+    {
+      "id": "3c3b5583-e4bf-49e9-af68-93133fe8fa8e",
+      "name": "Nachweis pruefen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3808,
+        336
+      ],
+      "parameters": {
+        "jsCode": "const v = $('Auftrag vorbereiten').first().json;\nconst e = $('Entwurf pruefen').first().json.entwurf;\nconst idb = $('Entwurf-ID bestimmen').first().json;\nconst m = $input.first().json || {};\nconst props = Array.isArray(m.singleValueExtendedProperties) ? m.singleValueExtendedProperties : [];\nif (m.isDraft !== true) throw new Error('Nachweis fehlgeschlagen: Die Nachricht in Outlook ist kein Entwurf.');\nif (!props.filter(function (p) { return p && p.value === v.action_id; })[0]) throw new Error('Nachweis fehlgeschlagen: Die Aktions-ID fehlt am Outlook-Entwurf.');\nif (e.anhang && e.anhang.beigefuegt && idb.neu && m.hasAttachments !== true) throw new Error('Nachweis fehlgeschlagen: Der Anhang fehlt am Outlook-Entwurf.');\nconst s = function (x, n) { return (typeof x === 'string' && x.trim()) ? x.trim().slice(0, n) : null; };\nconst e2 = Object.assign({}, e);\nconst UEB = 'Entwurf aus einem früheren Lauf übernommen';\nif (!idb.neu) {\n  // CR-11 E1 (Variante B): Übernommener Entwurf wird nicht überschrieben; Betreff und Text werden aus Outlook gespeichert.\n  const otext = s(m.body && m.body.content, 8000);\n  if (!otext) throw new Error('Nachweis fehlgeschlagen: Der Text des Outlook-Entwurfs ist nicht lesbar.');\n  e2.betreff = s(m.subject, 150) || e.betreff;\n  e2.text = otext;\n  e2.hinweise = [UEB + ' – Betreff und Text stammen aus Outlook.'].concat((e.hinweise || []).filter(function (h) { return String(h).indexOf(UEB) !== 0; })).slice(0, 8);\n} else if (String(m.subject || '') !== e.betreff) throw new Error('Nachweis fehlgeschlagen: Der Betreff in Outlook weicht ab.');\n// CR-11 E2: Der Empfänger im Outlook-Entwurf ist massgebend; JARVIS speichert genau diesen.\nconst to = Array.isArray(m.toRecipients) ? m.toRecipients : [];\nconst om = (to[0] && to[0].emailAddress && typeof to[0].emailAddress.address === 'string') ? to[0].emailAddress.address.trim().slice(0, 200) : '';\nconst gleich = function (a, b) { return !!a && !!b && String(a).toLowerCase() === String(b).toLowerCase(); };\nconst vor = v.vor_empf || null;\nconst setze = function (mail, beleg, quelle, url, best) { e2.empfaenger_email = mail; e2.empfaenger_email_beleg = beleg; e2.empfaenger_quelle = quelle; e2.empfaenger_quelle_url = url; e2.empfaenger_bestaetigt_at = best; };\nif (!om) setze(null, null, null, null, null);\nelse if (gleich(om, e.empfaenger_email)) setze(om, e.empfaenger_email_beleg || null, e.empfaenger_quelle || null, e.empfaenger_quelle_url || null, e.empfaenger_bestaetigt_at || null);\nelse if (vor && gleich(om, vor.email)) setze(om, vor.beleg || null, vor.quelle || null, vor.quelle_url || null, vor.bestaetigt_at || null);\nelse setze(om, null, 'rolf', null, new Date().toISOString());\nconst FEHLT = 'E-Mail-Adresse des Empfängers';\ne2.fehlende_angaben = (e.fehlende_angaben || []).filter(function (x) { return String(x).indexOf(FEHLT) !== 0; });\nif (!om) e2.fehlende_angaben.unshift(FEHLT + ' – bitte in Outlook eintragen');\nconst link = /^https:[/][/]/.test(String(m.webLink || '')) ? m.webLink : null;\nreturn [{ json: { entwurf: e2, message_id: m.id, web_link: link, todo_noetig: !v.todo_ok } }];\n"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "5872e586-1ce9-4287-80be-6ae22d770d9a",
+      "name": "To Do noetig?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        4032,
+        288
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.todo_noetig }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "67c6a818-cb56-4974-bd89-46f752ffa5ef",
+      "name": "To-Do-Listen lesen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        4256,
+        224
+      ],
+      "parameters": {
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "microsoftOutlookOAuth2Api",
+        "method": "GET",
+        "url": "https://graph.microsoft.com/v1.0/me/todo/lists",
+        "options": {
+          "timeout": 30000,
+          "pagination": {
+            "pagination": {
+              "paginationMode": "responseContainsNextURL",
+              "nextURL": "={{ $response.body['@odata.nextLink'] }}",
+              "paginationCompleteWhen": "other",
+              "completeExpression": "={{ !$response.body || !$response.body['@odata.nextLink'] }}",
+              "limitPagesFetched": true,
+              "maxRequests": 20
+            }
+          }
+        }
+      },
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "microsoftToDoOAuth2Api": {
+          "id": "Cvkrx5Q9x5RPDv3V",
+          "name": "Microsoft To Do account"
+        },
+        "microsoftOutlookOAuth2Api": {
+          "id": "iFyJVs8R8yTH1nh5",
+          "name": "Microsoft Outlook account"
+        }
+      }
+    },
+    {
+      "id": "1ba62c89-0797-4e86-a7a7-368bc44f8f27",
+      "name": "To-Do-Aufgabe bilden",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4480,
+        224
+      ],
+      "parameters": {
+        "jsCode": "const v = $('Auftrag vorbereiten').first().json;\nlet due = null;\ntry { if ($('Nachweis pruefen').isExecuted) due = $('Nachweis pruefen').first().json.entwurf.spaetester_versand || null; } catch (x) { due = null; }\ntry { if ($('Zahlung vorbereiten').isExecuted) due = $('Zahlung vorbereiten').first().json.due || null; } catch (x) { due = due || null; }\n// CR-11 B6b: Listen über alle Seiten (ein Element je Seite).\nconst seiten = $input.all().map(function (x) { return x.json || {}; });\nif (!seiten.length || seiten.some(function (p) { return p.error || !Array.isArray(p.value); })) return [{ json: { ok: false, fehler: 'To-Do-Listen nicht lesbar.' } }];\nconst j = { value: [].concat.apply([], seiten.map(function (p) { return p.value; })) };\nif (!v.todo_liste) return [{ json: { ok: false, fehler: 'Keine To-Do-Liste konfiguriert.' } }];\nconst l = j.value.filter(function (x) { return x && x.displayName === v.todo_liste; })[0];\nif (!l) return [{ json: { ok: false, fehler: 'To-Do-Liste nicht gefunden.' } }];\n// CR-09a B1: Merkzeichen je Auftrag, damit ein Wiederholungslauf die bestehende To-Do-Aufgabe findet statt eine zweite anzulegen.\nconst marker = 'JARVIS-Auftrag: ' + v.task_id;\nconst t = { title: v.titel, importance: 'high', body: { contentType: 'text', content: 'JARVIS-Dokument: ' + v.seite + '#' + v.document_id + String.fromCharCode(10) + marker } };\nif (due) t.dueDateTime = { dateTime: due + 'T12:00:00.0000000', timeZone: 'UTC' };\nreturn [{ json: { ok: true, list_id: l.id, aufgabe: t, due: due, marker: marker } }];"
+      }
+    },
+    {
+      "id": "842a3850-9394-4099-9517-de2d1e1617c4",
+      "name": "Liste gefunden?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        4704,
+        224
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "90b0fba1-9287-4272-a42b-c10f291f0691",
+      "name": "To-Do-Aufgabe anlegen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        5600,
+        -120
+      ],
+      "parameters": {
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "microsoftOutlookOAuth2Api",
+        "method": "POST",
+        "url": "=https://graph.microsoft.com/v1.0/me/todo/lists/{{ encodeURIComponent($json.list_id) }}/tasks",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.aufgabe) }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "microsoftToDoOAuth2Api": {
+          "id": "Cvkrx5Q9x5RPDv3V",
+          "name": "Microsoft To Do account"
+        },
+        "microsoftOutlookOAuth2Api": {
+          "id": "iFyJVs8R8yTH1nh5",
+          "name": "Microsoft Outlook account"
+        }
+      }
+    },
+    {
+      "id": "4a2ff36a-d225-41e7-bec3-1e2ec166355b",
+      "name": "Ergebnis bilden",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5152,
+        320
+      ],
+      "parameters": {
+        "jsCode": "const v = $('Auftrag vorbereiten').first().json;\nlet n = null;\nlet zv = null;\ntry { if ($('Nachweis pruefen').isExecuted) n = $('Nachweis pruefen').first().json; } catch (x) { n = null; }\ntry { if ($('Zahlung vorbereiten').isExecuted) zv = $('Zahlung vorbereiten').first().json; } catch (x) { zv = null; }\nconst quelle = n || zv || {};\nconst jetzt = new Date().toISOString();\nlet b = null; let r = null;\ntry { if ($('To-Do-Aufgabe bilden').isExecuted) b = $('To-Do-Aufgabe bilden').first().json; } catch (x) { b = null; }\ntry { if ($('To-Do-Aufgabe anlegen').isExecuted) r = $('To-Do-Aufgabe anlegen').first().json; } catch (x) { r = null; }\nlet dp = null;\ntry { if ($('To-Do-Dublette pruefen').isExecuted) dp = $('To-Do-Dublette pruefen').first().json; } catch (x) { dp = null; }\nif (dp && dp.vorhanden && dp.vorhanden.id) r = { id: dp.vorhanden.id, status: dp.vorhanden.status };\nlet todo = null;\nif (quelle.todo_noetig) {\n  if (b && b.ok && r && r.id && !r.error) todo = { state: 'ok', task_id: r.id, list_id: b.list_id, status: r.status || 'notStarted', due: b.due, titel: v.titel, action_id: v.action_id, synced_at: jetzt };\n  else todo = { state: 'failed', fehler: (b && !b.ok) ? b.fehler : ((dp && dp.fehler) ? dp.fehler : 'Anlage in To Do fehlgeschlagen.'), at: jetzt };\n}\nconst label = (v.fall && v.fall.label_de) || 'Auftrag';\nlet u;\nif (n) {\n  const entwurf = Object.assign({}, n.entwurf, { state: 'done', action_id: v.action_id, message_id: n.message_id, web_link: n.web_link, erstellt_at: jetzt, nachweis: 'readback_isDraft_action_id', neu_fassen_offen: false });\n  u = { task_id: v.task_id, action_id: v.action_id, entwurf: entwurf, todo: todo, due: n.entwurf.spaetester_versand || null,\n    nachweis: 'readback_isDraft_action_id', log_text: 'Entwurf «' + label + '» im privaten Outlook-Postfach angelegt und nachgelesen' };\n} else {\n  const entwurf = { state: 'done', action_id: v.action_id, erstellt_at: jetzt, nachweis: 'aufgabe_ohne_entwurf', neu_fassen_offen: false };\n  u = { task_id: v.task_id, action_id: v.action_id, entwurf: entwurf, todo: todo, due: (zv && zv.due) || null,\n    zahlung: Object.assign({}, (zv && zv.zahlung) || {}, { action_id: v.action_id }),\n    nachweis: 'aufgabe_ohne_entwurf', log_text: 'Aufgabe «' + label + '» angelegt: ' + v.titel };\n}\nreturn [{ json: { p64: Buffer.from(JSON.stringify(u), 'utf8').toString('base64') } }];\n"
+      }
+    },
+    {
+      "id": "7d553981-60f5-4812-944b-884d133e3d83",
+      "name": "Auftrag abschliessen",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        5376,
+        320
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH p AS (SELECT convert_from(decode($1, 'base64'), 'UTF8')::jsonb AS j),\nu AS (\n  UPDATE jarvis_privat.task t\n  SET body = t.body || jsonb_build_object('entwurf', p.j->'entwurf')\n             || CASE WHEN jsonb_typeof(p.j->'todo') = 'object' THEN jsonb_build_object('todo', p.j->'todo') ELSE '{}'::jsonb END\n             || CASE WHEN jsonb_typeof(p.j->'zahlung') = 'object' THEN jsonb_build_object('zahlung', p.j->'zahlung') ELSE '{}'::jsonb END\n             || CASE WHEN p.j->>'due' IS NOT NULL THEN jsonb_build_object('frist', p.j->>'due', 'frist_quelle', 'ki') ELSE '{}'::jsonb END,\n      due_at = CASE WHEN p.j->>'due' IS NOT NULL THEN ((p.j->>'due') || 'T12:00:00Z')::timestamptz ELSE t.due_at END,\n      updated_at = now()\n  FROM p\n  WHERE t.task_id = p.j->>'task_id' AND t.body->'entwurf'->>'action_id' = p.j->>'action_id'\n  RETURNING t.task_id, t.title, t.status, t.due_at, t.body\n),\nl AS (\n  INSERT INTO jarvis_privat.action_log (entry_kind, actor, task_id, action_id, summary_de, body)\n  SELECT CASE WHEN jsonb_typeof(p.j->'zahlung') = 'object' THEN 'task_prepared' ELSE 'draft_created' END, 'jarvis', u.task_id, p.j->>'action_id', left(COALESCE(p.j->>'log_text', 'Entwurf angelegt'), 500),\n    jsonb_build_object('nachweis', COALESCE(p.j->>'nachweis', 'readback_isDraft_action_id'), 'todo_state', p.j->'todo'->>'state', 'art', u.body->>'art')\n  FROM u, p\n  RETURNING log_id\n)\nSELECT (SELECT count(*) FROM u)::int AS aktualisiert, (SELECT count(*) FROM l)::int AS protokolliert,\n  (SELECT jsonb_build_object('task_id', u.task_id, 'title', u.title, 'status', u.status, 'due_at', u.due_at, 'body', u.body) FROM u) AS task",
+        "options": {
+          "queryReplacement": "={{ $json.p64 }}"
+        }
+      },
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "postgres": {
+          "id": "oCkj27EiMe96vXvU",
+          "name": "jv_privat_postgres"
+        }
+      }
+    },
+    {
+      "id": "0dc44344-07d1-4e75-b188-3e2c12f76760",
+      "name": "Abschluss melden",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5600,
+        320
+      ],
+      "parameters": {
+        "jsCode": "const sicht = function (t) {\n  const b = (t && t.body) || {}; const e = b.entwurf || {}; const td = b.todo || {};\n  const alt = e.state === 'running' && e.started_at && (Date.now() - new Date(e.started_at).getTime() > 15 * 60 * 1000);\n  const fehlerText = alt ? 'Die Erstellung wurde unterbrochen. Bitte erneut erstellen.' : (e.state === 'failed' ? ((e.fehler && e.fehler.text) || 'Der letzte Versuch ist fehlgeschlagen.') : null);\n  return { task_id: t.task_id, titel: t.title, status: t.status, art: b.art || null, hinweis: b.hinweis || null,\n    frist: t.due_at ? new Date(t.due_at).toISOString().slice(0, 10) : null,\n    entwurf: { state: alt ? 'failed' : (e.state || null), betreff: e.betreff || null, text: e.text || null, empfaenger_email: e.empfaenger_email || null,\n      web_link: e.web_link || null, formvorschrift: e.formvorschrift || null, formvorschrift_beleg: e.formvorschrift_beleg || null,\n      kuendigung_zum: e.kuendigung_zum || null, kuendigung_zum_beleg: e.kuendigung_zum_beleg || null, spaetester_versand: e.spaetester_versand || null,\n      fehlende_angaben: Array.isArray(e.fehlende_angaben) ? e.fehlende_angaben : [], hinweise: Array.isArray(e.hinweise) ? e.hinweise : [], fehler: fehlerText },\n    todo_state: td.state || null, versand: b.versand || null };\n};\nconst r = $input.first().json || {};\n// CR-09a B1: Der Auftrag bleibt bis 15 Minuten gesperrt; ein späterer Versuch findet Entwurf (Aktions-ID) und To-Do-Aufgabe (Merkzeichen) wieder.\nlet grp = '';\ntry { grp = $('Auftrag vorbereiten').first().json.gruppe || ''; } catch (x) { grp = ''; }\nif (r.error || Number(r.aktualisiert) !== 1 || !r.task) return [{ json: { antwort: { ok: false, fehler: grp === 'aufgabe'\n  ? 'Die Zahlungsaufgabe konnte nicht in JARVIS gespeichert werden. Bitte in 15 Minuten „Erneut anlegen“ klicken – es entsteht keine zweite To-Do-Aufgabe.'\n  : 'Der Entwurf liegt in Outlook, konnte aber nicht in JARVIS gespeichert werden. Bitte in 15 Minuten „Entwurf erneut erstellen“ klicken – es entsteht weder ein zweiter Entwurf noch eine zweite To-Do-Aufgabe.' } } }];\nconst a = sicht(r.task);\nlet ersetzt = false;\ntry { ersetzt = $('Entwurf ersetzen').isExecuted === true; } catch (x) { ersetzt = false; }\nlet h = ersetzt ? 'Der Entwurf in Outlook ist neu gefasst (Betreff und Text ersetzt, in Outlook nachgelesen).' : (a.art === 'zahlen' ? 'Die Zahlungsaufgabe ist angelegt.' : 'Der Entwurf liegt in Outlook unter „Entwürfe“.');\ntry {\n  const ep = $('Entwurf pruefen').isExecuted ? $('Entwurf pruefen').first().json.entwurf : null;\n  if (ep && ep.anhang && !ersetzt) h += ep.anhang.beigefuegt ? ' Das Original ist angehängt.' : ' Das Original bitte in Outlook selbst anhängen (grösser als 2,5 MB).';\n} catch (x) { h = h; }\nif (a.todo_state === 'ok') h += ' Die Aufgabe steht in To Do.';\nif (a.todo_state === 'failed') h += ' Die Aufgabe konnte nicht nach To Do übertragen werden.';\nreturn [{ json: { antwort: { ok: true, hinweis: h, auftrag: a } } }];"
+      }
+    },
+    {
+      "id": "30183690-5dae-4996-8790-a192c7575066",
+      "name": "Entwurfsfehler einordnen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4032,
+        1088
+      ],
+      "parameters": {
+        "jsCode": "const v = $('Auftrag vorbereiten').first().json;\nconst f = $input.first().json || {};\nlet m = f.error;\nif (m && typeof m === 'object') m = m.message || m.description || JSON.stringify(m);\nm = String(m || f.message || 'Unbekannter Fehler').replace(/sk-ant-[A-Za-z0-9_-]+/g, '***').replace(/\\s*\\[line [0-9]+\\]\\s*$/, '');\n// CR-09b: Auftrag mit diesem Dokument nicht ausführbar (fachlich, nicht technisch) – kein «erneut erstellen».\nconst nichtMachbar = /^(Nicht ausführbar:|Im Dokument ist kein offener Zahlbetrag)/.test(m);\nlet text = m;\nif (/InvalidAuthenticationToken|ErrorAccessDenied|401|403/i.test(m) && /graph|outlook|mailbox|Forbidden|Unauthorized/i.test(m)) text = 'Der Zugang zum Outlook-Postfach wurde abgelehnt. Bitte das Credential jv_privat_outlook prüfen.';\nelse if (/overloaded|529|429|rate_limit/i.test(m)) text = 'Die KI ist gerade überlastet. Bitte in einigen Minuten erneut erstellen.';\nelse if (/timeout|ETIMEDOUT|ESOCKETTIMEDOUT/i.test(m)) text = 'Zeitüberschreitung. Bitte erneut erstellen.';\nelse if (/^[0-9]{3} - /.test(m)) text = 'Technischer Fehler (' + m.slice(0, 3) + '). Bitte erneut erstellen.';\ntext = String(text).slice(0, 700);\nconst j = { task_id: v.task_id, action_id: v.action_id, fehler: { code: nichtMachbar ? 'nicht_machbar' : 'draft_failed', text: text, message: m.slice(0, 700) } };\nreturn [{ json: { text: text, p64: Buffer.from(JSON.stringify(j), 'utf8').toString('base64') } }];"
+      }
+    },
+    {
+      "id": "037dac2e-e1e4-4964-9021-3a04b10e36c8",
+      "name": "Entwurf zuruecksetzen",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        4256,
+        1088
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH p AS (SELECT convert_from(decode($1, 'base64'), 'UTF8')::jsonb AS j),\na AS (\n  -- CR-11 E3: Scheitert «Neu fassen», bleibt der bisherige (fertige) Entwurf gültig.\n  SELECT t.task_id,\n    (COALESCE((t.body->'entwurf'->>'neu_fassen_offen')::boolean, false) AND COALESCE(t.body->'entwurf'->>'message_id', '') <> '') AS behalten,\n    CASE WHEN jsonb_typeof(t.body->'entwurf'->'hinweise') = 'array' THEN t.body->'entwurf'->'hinweise' ELSE '[]'::jsonb END AS hinweise\n  FROM jarvis_privat.task t, p\n  WHERE t.task_id = p.j->>'task_id'\n),\nu AS (\n  UPDATE jarvis_privat.task t\n  SET body = jsonb_set(t.body, '{entwurf}', CASE WHEN a.behalten THEN\n        COALESCE(t.body->'entwurf', '{}'::jsonb) || jsonb_build_object('state', 'done', 'neu_fassen_offen', false,\n          'letzter_fehler', (p.j->'fehler') || jsonb_build_object('at', now()),\n          'hinweise', jsonb_build_array('Neu fassen fehlgeschlagen: ' || COALESCE(p.j->'fehler'->>'text', 'unbekannter Fehler') || ' Der bisherige Entwurf gilt – massgebend ist der Text in Outlook.')\n            || COALESCE((SELECT jsonb_agg(x) FROM jsonb_array_elements(a.hinweise) x WHERE (x #>> '{}') NOT LIKE 'Neu fassen fehlgeschlagen:%'), '[]'::jsonb))\n      ELSE\n        COALESCE(t.body->'entwurf', '{}'::jsonb) || jsonb_build_object('state', 'failed', 'fehler', p.j->'fehler', 'failed_at', now())\n      END),\n      updated_at = now()\n  FROM p, a\n  WHERE t.task_id = a.task_id AND t.body->'entwurf'->>'action_id' = p.j->>'action_id' AND t.body->'entwurf'->>'state' = 'running'\n  RETURNING t.task_id, a.behalten\n),\nl AS (\n  INSERT INTO jarvis_privat.action_log (entry_kind, actor, task_id, action_id, summary_de, body)\n  SELECT 'draft_failed', 'jarvis', u.task_id, p.j->>'action_id',\n    CASE WHEN u.behalten THEN 'Neu fassen fehlgeschlagen – bisheriger Entwurf bleibt gültig' ELSE 'Auftrag konnte nicht ausgeführt werden' END,\n    jsonb_build_object('code', COALESCE(p.j->'fehler'->>'code', 'draft_failed'), 'bisheriger_entwurf_gilt', u.behalten)\n  FROM u, p\n  RETURNING log_id\n)\nSELECT (SELECT count(*) FROM u)::int AS zurueckgesetzt, COALESCE((SELECT u.behalten FROM u), false) AS behalten\n",
+        "options": {
+          "queryReplacement": "={{ $json.p64 }}"
+        }
+      },
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "postgres": {
+          "id": "oCkj27EiMe96vXvU",
+          "name": "jv_privat_postgres"
+        }
+      }
+    },
+    {
+      "id": "83814f0e-6143-430f-9709-8341003bf7af",
+      "name": "Entwurfsfehler melden",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4480,
+        1088
+      ],
+      "parameters": {
+        "jsCode": "const t = $('Entwurfsfehler einordnen').first().json.text;\nconst g = $('Auftrag vorbereiten').first().json.gruppe;\n// CR-11 E3: Beim gescheiterten Neufassen gilt der bisherige Entwurf weiter.\nlet behalten = false;\ntry { behalten = $('Entwurf zuruecksetzen').first().json.behalten === true; } catch (x) { behalten = false; }\nif (behalten) return [{ json: { antwort: { ok: false, fehler: 'Neu fassen fehlgeschlagen: ' + t + ' Der bisherige Entwurf gilt weiter.' } } }];\nreturn [{ json: { antwort: { ok: false, fehler: (g === 'aufgabe' ? 'Aufgabe nicht angelegt: ' : 'Entwurf nicht erstellt: ') + t } } }];\n"
+      }
+    },
+    {
+      "id": "14deba52-b13a-4829-8a1f-5c4a771ad414",
+      "name": "Adressaktion?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        672,
+        2560
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.route }}",
+              "rightValue": "adr_",
+              "operator": {
+                "type": "string",
+                "operation": "startsWith"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "a28595da-280b-4a03-95cb-f4fc567b11e8",
+      "name": "Adresse lesen",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        896,
+        2496
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT t.task_id, t.status, t.body, a.body->'ki' AS ki,\n  fc.adresse_zweck, COALESCE(fc.empfaenger_ist_absender, true) AS empfaenger_ist_absender,\n  ft.target_id, ft.provider_label, ft.contact_email, ft.contact_email_source_url,\n  (SELECT jsonb_build_object('email', o.body->'entwurf'->>'empfaenger_email', 'quelle_url', o.body->'entwurf'->>'empfaenger_quelle_url')\n   FROM jarvis_privat.task o\n   WHERE o.task_id <> t.task_id AND o.body->>'quelle' = 'auftrag_rolf'\n     AND lower(o.body->'entwurf'->>'vertragspartner') = lower(t.body->'entwurf'->>'vertragspartner')\n     AND o.body->'entwurf'->>'empfaenger_bestaetigt_at' IS NOT NULL\n   ORDER BY o.updated_at DESC LIMIT 1) AS frueher\nFROM jarvis_privat.task t\nLEFT JOIN jarvis_privat.document_fall fc ON fc.fall_key = COALESCE(t.body->>'art', 'kuendigen')\nLEFT JOIN LATERAL (\n  SELECT x.body FROM jarvis_privat.document_analysis x\n  WHERE x.document_id = t.body->>'document_id'\n  ORDER BY x.analyzed_at DESC, x.analysis_id DESC LIMIT 1\n) a ON true\nLEFT JOIN LATERAL (\n  SELECT f.target_id, f.provider_label, f.contact_email, f.contact_email_source_url\n  FROM jarvis_privat.filing_target f\n  WHERE f.active AND COALESCE(fc.empfaenger_ist_absender, true) AND f.category_key = a.body->'ki'->>'kategorie_key'\n    AND f.sub_key IS NOT DISTINCT FROM (a.body->'ki'->>'sparte_key')\n    AND (lower(a.body->'ki'->>'absender_kurz') = ANY (f.aliases) OR lower(a.body->'ki'->>'absender') = ANY (f.aliases) OR lower(t.body->'entwurf'->>'vertragspartner') = ANY (f.aliases))\n  ORDER BY f.target_id LIMIT 1\n) ft ON true\nWHERE t.task_id = $1 AND t.body->>'quelle' = 'auftrag_rolf'",
+        "options": {
+          "queryReplacement": "={{ $json.task_id }}"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true,
+      "executeOnce": true,
+      "credentials": {
+        "postgres": {
+          "id": "oCkj27EiMe96vXvU",
+          "name": "jv_privat_postgres"
+        }
+      }
+    },
+    {
+      "id": "d503ceff-49cd-4b75-ae16-44395f69b233",
+      "name": "Adresse pruefen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        2496
+      ],
+      "parameters": {
+        "jsCode": "const q = $('Anfrage pruefen').first().json;\nconst rows = $input.all().map(function (x) { return x.json; });\nconst aw = function (o) { return [{ json: { weg: 'antwort', antwort: o } }]; };\nif (rows.some(function (r) { return r && r.error; })) return aw({ ok: false, fehler: 'Datenbank nicht erreichbar.' });\nconst r = rows.filter(function (x) { return x && x.task_id; })[0];\nif (!r) return aw({ ok: false, fehler: 'Auftrag nicht gefunden.' });\nconst e = (r.body && r.body.entwurf) || {};\nif (r.status === 'done') return aw({ ok: false, fehler: 'Der Auftrag ist bereits erledigt.' });\nif (e.state !== 'done' || !e.message_id || !e.action_id) return aw({ ok: false, fehler: 'Es gibt noch keinen fertigen Entwurf.' });\nif (q.route === 'adr_setzen') {\n  const fehlende = (Array.isArray(e.fehlende_angaben) ? e.fehlende_angaben : []).filter(function (x) { return String(x).indexOf('E-Mail-Adresse des Empfängers') !== 0; });\n  return [{ json: { weg: 'setzen', task_id: r.task_id, action_id: e.action_id, message_id: e.message_id, email: q.email, quelle: q.quelle, quelle_url: q.quelle_url || null,\n    target_id: r.target_id || null, fehlende: fehlende, patch: { toRecipients: [{ emailAddress: { address: q.email } }] } } }];\n}\nif (r.contact_email) return aw({ ok: true, vorschlag: { email: r.contact_email, quelle: 'register', quelle_url: r.contact_email_source_url || null, beleg: 'Für ' + (r.provider_label || 'diesen Anbieter') + ' gespeichert und von dir bestätigt.', warnung: null } });\nconst fr = r.frueher || null;\nif (fr && fr.email) return aw({ ok: true, vorschlag: { email: fr.email, quelle: 'register', quelle_url: fr.quelle_url || null, beleg: 'Bei einem früheren Auftrag an diesen Empfänger von dir bestätigt.', warnung: null } });\nconst ki = r.ki || {};\nconst txt = function (x, m) { if (x === null || x === undefined) return ''; return (typeof x === 'string' ? x : JSON.stringify(x)).slice(0, m); };\nconst eigen = r.empfaenger_ist_absender !== false;\nconst zweck = String(r.adresse_zweck || 'die Kündigung eines Vertrags');\nconst partner = txt(eigen ? (e.vertragspartner || ki.absender_kurz || ki.absender) : e.vertragspartner, 120);\nif (!partner) return aw({ ok: true, vorschlag: null, hinweis: 'Der Empfänger ist nicht bekannt. Bitte die Adresse selbst eintragen.' });\nlet modell = '';\ntry { modell = $vars.JV_MODEL_REASONING; } catch (x) { modell = ''; }\nmodell = (typeof modell === 'string') ? modell.trim() : '';\nif (!/^[a-z0-9][a-z0-9.-]{2,80}$/.test(modell)) modell = 'claude-sonnet-5';\nconst NL = String.fromCharCode(10);\nconst system = [\n  'Du suchst für JARVIS die offizielle E-Mail-Adresse, an die ein Kunde ' + zweck + ' bei einem Anbieter senden kann. Nutze dafür die Websuche.',\n  'Regeln:',\n  '1. Nur Adressen, die wörtlich auf einer offiziellen Website des Anbieters selbst stehen (Kontakt-, Service-, Kündigungs- oder Impressumsseite). Vergleichsportale, Foren und Kündigungsdienste sind keine zulässige Quelle.',\n  '2. Nichts raten und keine Adresse aus einer Domain ableiten.',\n  '3. Achte auf das richtige Land und die richtige Gesellschaft.',\n  '4. Bevorzuge eine Adresse, die ausdrücklich für dieses Anliegen genannt ist, oder den Kundenservice der genannten Sparte, sonst die allgemeine Kundenservice-Adresse.',\n  '5. quelle_url ist die genaue Seite, auf der die Adresse steht; beleg ist der wörtliche Textausschnitt mit der Adresse.',\n  '6. Findest du keine belegte Adresse, melde gefunden = false und nenne in hinweis kurz den offiziellen Kündigungsweg, falls du ihn gefunden hast.',\n  'Melde das Ergebnis am Ende immer über das Werkzeug adresse_melden.'\n].join(NL);\nconst SN = { type: ['string', 'null'] };\nconst schema = { type: 'object', additionalProperties: false, required: ['gefunden', 'email', 'quelle_url', 'beleg', 'hinweis'],\n  properties: { gefunden: { type: 'boolean' }, email: SN, quelle_url: SN, beleg: SN, hinweis: SN } };\nconst frage = eigen\n  ? 'Anbieter: ' + partner + NL + 'Anliegen: ' + zweck + NL + 'Absender laut Dokument: ' + txt(ki.absender, 300) + NL + 'Sparte: ' + txt(ki.sparte_key, 80) + NL + 'Dokumentart: ' + txt(ki.dokumentart, 120) + NL + 'Sprache des Dokuments: ' + txt(ki.sprache, 20)\n  : 'Empfänger: ' + partner + NL + 'Anliegen: ' + zweck + NL + 'Hinweis von Rolf: ' + txt(r.body && r.body.hinweis, 300);\nconst anfrage = { model: modell, max_tokens: 2000, system: system,\n  tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 5 }, { name: 'adresse_melden', description: 'Ergebnis der Adresssuche für Rolf', input_schema: schema }],\n  messages: [{ role: 'user', content: frage }] };\nreturn [{ json: { weg: 'suche', anfrage: anfrage } }];"
+      }
+    },
+    {
+      "id": "b25167e1-7074-48a5-b0ba-c3ba65f70a80",
+      "name": "Adressweg",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        1344,
+        2496
+      ],
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "outputKey": "antwort",
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.weg }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "antwort"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "outputKey": "suche",
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.weg }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "suche"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "outputKey": "setzen",
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.weg }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "setzen"
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "970852e5-69cf-4ead-90ae-c866d9dcbb1d",
+      "name": "KI sucht Adresse",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1568,
+        2496
+      ],
+      "parameters": {
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "anthropicApi",
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.anfrage) }}",
+        "options": {
+          "timeout": 180000
+        }
+      },
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true,
+      "credentials": {
+        "anthropicApi": {
+          "id": "LFuagu0KYE2rtoF8",
+          "name": "sk-ant-"
+        }
+      }
+    },
+    {
+      "id": "f8c323ce-772c-4b8f-9202-07c94ab28cc5",
+      "name": "Vorschlag bilden",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1792,
+        2496
+      ],
+      "parameters": {
+        "jsCode": "const res = $input.first().json || {};\nif (res.error) return [{ json: { antwort: { ok: false, fehler: 'Die Websuche ist gerade nicht verfügbar. Bitte die Adresse selbst eintragen.' } } }];\nconst blocks = Array.isArray(res.content) ? res.content : [];\nconst tu = blocks.filter(function (b) { return b && b.type === 'tool_use' && b.name === 'adresse_melden'; })[0];\nconst i = (tu && tu.input && typeof tu.input === 'object') ? tu.input : {};\nconst s = function (x, m) { return (typeof x === 'string' && x.trim()) ? x.trim().slice(0, m) : null; };\nconst email = s(i.email, 200);\nconst url = s(i.quelle_url, 500);\nconst mailOk = !!email && /^[^ @<>,;]+@[^ @<>,;]+[.][A-Za-z]{2,}$/.test(email);\nconst urlOk = !!url && /^https:[/][/][^ <>]+$/.test(url);\nif (!tu || i.gefunden !== true || !mailOk || !urlOk) {\n  const h = s(i.hinweis, 300);\n  return [{ json: { antwort: { ok: true, vorschlag: null, hinweis: 'JARVIS hat keine belegte E-Mail-Adresse gefunden. Bitte die Adresse selbst eintragen.' + (h ? ' Hinweis: ' + h : '') } } }];\n}\nconst hostVon = function (u) { const m = /^https?:[/][/]([^/?#:]+)/i.exec(String(u || '')); return m ? m[1].toLowerCase() : ''; };\nconst basis = function (h) { return h.split('.').slice(-2).join('.'); };\nconst treffer = {};\nblocks.forEach(function (b) {\n  if (b && b.type === 'web_search_tool_result' && Array.isArray(b.content)) b.content.forEach(function (c) { const h = hostVon(c && c.url); if (h) treffer[h] = true; });\n});\nconst host = hostVon(url);\nconst warn = [];\nif (basis(host) !== basis(email.split('@')[1].toLowerCase())) warn.push('Die Adresse gehört nicht zur Domain der Quelle.');\nif (!treffer[host]) warn.push('Die Quelle war nicht unter den Suchtreffern.');\nreturn [{ json: { antwort: { ok: true, vorschlag: { email: email, quelle: 'web', quelle_url: url, beleg: s(i.beleg, 300), warnung: warn.length ? 'Achtung: ' + warn.join(' ') + ' Bitte besonders genau prüfen.' : null } } } }];"
+      }
+    },
+    {
+      "id": "4c1943e7-5c4a-4a26-be9c-11b0f6a23a41",
+      "name": "Empfaenger eintragen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1568,
+        2720
+      ],
+      "parameters": {
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "microsoftOutlookOAuth2Api",
+        "method": "PATCH",
+        "url": "=https://graph.microsoft.com/v1.0/me/messages/{{ encodeURIComponent($json.message_id) }}",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.patch) }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true,
+      "credentials": {
+        "microsoftOutlookOAuth2Api": {
+          "id": "gB5n6DOIXZAdx3Hf",
+          "name": "jv_privat_outlook"
+        }
+      }
+    },
+    {
+      "id": "cd104774-37ee-4149-b938-ae351b73756f",
+      "name": "Empfaenger nachlesen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1792,
+        2720
+      ],
+      "parameters": {
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "microsoftOutlookOAuth2Api",
+        "method": "GET",
+        "url": "=https://graph.microsoft.com/v1.0/me/messages/{{ encodeURIComponent($('Adresse pruefen').first().json.message_id) }}",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "$select",
+              "value": "id,isDraft,toRecipients"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true,
+      "credentials": {
+        "microsoftOutlookOAuth2Api": {
+          "id": "gB5n6DOIXZAdx3Hf",
+          "name": "jv_privat_outlook"
+        }
+      }
+    },
+    {
+      "id": "b6688a3c-0de7-4ac0-9110-121c875a0f13",
+      "name": "Empfaenger pruefen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2016,
+        2720
+      ],
+      "parameters": {
+        "jsCode": "const v = $('Adresse pruefen').first().json;\nconst m = $input.first().json || {};\nconst rc = Array.isArray(m.toRecipients) ? m.toRecipients : [];\nconst adr = rc.map(function (x) { return String((x && x.emailAddress && x.emailAddress.address) || '').toLowerCase(); });\nconst ok = !m.error && m.isDraft === true && rc.length === 1 && adr[0] === String(v.email).toLowerCase();\nif (!ok) {\n  let t = 'Die Adresse konnte nicht in den Outlook-Entwurf eingetragen werden. Bitte erneut versuchen.';\n  if (m.error) t = 'Der Entwurf ist in Outlook nicht mehr auffindbar oder das Postfach ist nicht erreichbar. Die Adresse wurde nicht eingetragen.';\n  else if (m.isDraft !== true) t = 'Die Nachricht ist in Outlook kein Entwurf mehr – vermutlich wurde sie bereits versendet.';\n  return [{ json: { weiter: false, antwort: { ok: false, fehler: t } } }];\n}\nconst j = { task_id: v.task_id, action_id: v.action_id, email: v.email, quelle: v.quelle, quelle_url: v.quelle_url || null, target_id: v.target_id || null, fehlende: v.fehlende || [] };\nreturn [{ json: { weiter: true, p64: Buffer.from(JSON.stringify(j), 'utf8').toString('base64') } }];"
+      }
+    },
+    {
+      "id": "6babf021-2cc0-454a-a8e7-015132b79974",
+      "name": "Empfaenger belegt?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2240,
+        2720
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.weiter }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "8c17a1f2-92a7-4c20-ab31-493f5a7837a1",
+      "name": "Adresse sichern",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        2464,
+        2656
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH p AS (SELECT convert_from(decode($1, 'base64'), 'UTF8')::jsonb AS j),\nu AS (\n  UPDATE jarvis_privat.task t\n  SET body = jsonb_set(t.body, '{entwurf}', (t.body->'entwurf') || jsonb_build_object('empfaenger_email', p.j->>'email', 'empfaenger_quelle', p.j->>'quelle', 'empfaenger_quelle_url', p.j->'quelle_url', 'empfaenger_bestaetigt_at', now(), 'fehlende_angaben', p.j->'fehlende')),\n      updated_at = now()\n  FROM p\n  WHERE t.task_id = p.j->>'task_id' AND t.status <> 'done' AND t.body->'entwurf'->>'action_id' = p.j->>'action_id'\n  RETURNING t.task_id\n),\nf AS (\n  UPDATE jarvis_privat.filing_target ft\n  SET contact_email = p.j->>'email', contact_email_source = p.j->>'quelle', contact_email_source_url = p.j->>'quelle_url', contact_email_confirmed_at = now(), updated_at = now()\n  FROM p, u\n  WHERE ft.target_id = p.j->>'target_id' AND p.j->>'quelle' IN ('rolf', 'web')\n  RETURNING ft.target_id\n),\nl AS (\n  INSERT INTO jarvis_privat.action_log (entry_kind, actor, task_id, action_id, summary_de, body)\n  SELECT 'draft_recipient_set', 'rolf', u.task_id, p.j->>'action_id', 'Empfängeradresse im Entwurf eingetragen und nachgelesen',\n    jsonb_build_object('quelle', p.j->>'quelle', 'nachweis', 'readback_toRecipients', 'register_aktualisiert', EXISTS (SELECT 1 FROM f))\n  FROM u, p\n  RETURNING log_id\n)\nSELECT (SELECT count(*) FROM u)::int AS aktualisiert, (SELECT count(*) FROM f)::int AS register, (SELECT count(*) FROM l)::int AS protokolliert",
+        "options": {
+          "queryReplacement": "={{ $json.p64 }}"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "oCkj27EiMe96vXvU",
+          "name": "jv_privat_postgres"
+        }
+      }
+    },
+    {
+      "id": "a13ce160-5321-4a70-8120-b13915eb6978",
+      "name": "Adresse melden",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2688,
+        2656
+      ],
+      "parameters": {
+        "jsCode": "const r = $input.first().json || {};\nconst v = $('Adresse pruefen').first().json;\nif (r.error || Number(r.aktualisiert) !== 1) return [{ json: { antwort: { ok: false, fehler: 'Die Adresse steht im Outlook-Entwurf, konnte aber nicht in JARVIS gespeichert werden. Bitte erneut eintragen.' } } }];\nlet h = 'Die Adresse ' + v.email + ' steht jetzt im Outlook-Entwurf (in Outlook nachgelesen).';\nif (Number(r.register) === 1) h += ' Sie ist für diesen Anbieter gespeichert.';\nreturn [{ json: { antwort: { ok: true, hinweis: h } } }];"
+      }
+    },
+    {
+      "id": "4392bd95-17f2-4a2f-8581-c12fbca1d050",
+      "name": "Entwurf ersetzen?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        3136,
+        760
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $('Auftrag vorbereiten').first().json.neu_fassen }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "2ceccf9d-7b40-4d26-858a-91b6abc8b529",
+      "name": "Entwurf ersetzen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3248,
+        900
+      ],
+      "parameters": {
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "microsoftOutlookOAuth2Api",
+        "method": "PATCH",
+        "url": "=https://graph.microsoft.com/v1.0/me/messages/{{ encodeURIComponent($json.value[0].id) }}",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify(($('Entwurf pruefen').first().json.empf_bestaetigt || !((((($json.value || [])[0]) || {}).toRecipients) || []).length) ? $('Entwurf pruefen').first().json.ersatz_mit : $('Entwurf pruefen').first().json.ersatz) }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "onError": "continueErrorOutput",
+      "credentials": {
+        "microsoftOutlookOAuth2Api": {
+          "id": "gB5n6DOIXZAdx3Hf",
+          "name": "jv_privat_outlook"
+        }
+      }
+    },
+    {
+      "id": "87b325c3-7a07-4853-a1a9-e625b87fb736",
+      "name": "Entwurf noetig?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1680,
+        1200
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $('Auftrag vorbereiten').first().json.gruppe }}",
+              "rightValue": "entwurf",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "85ae6ded-ef2a-4774-b847-27a8c66d4314",
+      "name": "Zahlung vorbereiten",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1904,
+        1320
+      ],
+      "parameters": {
+        "jsCode": "// CR-09 Fall «Zahlen»: Aufgabe mit Betrag, Empfänger und Frist; JARVIS zahlt nicht selbst. Daten aus der Analyse (ki.zahlung).\nconst v = $('Auftrag vorbereiten').first().json;\nconst z = (v.ki && v.ki.zahlung && typeof v.ki.zahlung === 'object') ? v.ki.zahlung : null;\nif (!z || (!z.betrag && !z.empfaenger)) throw new Error('Im Dokument ist kein offener Zahlbetrag erkannt.');\nconst zahlung = { empfaenger: z.empfaenger || null, betrag: z.betrag || null, betrag_roh: z.betrag_roh || null, waehrung: z.waehrung || null,\n  iban: z.iban || null, iban_roh: z.iban_roh || null, bic: z.bic || null, referenz: z.referenz || null, faellig: z.faellig || null, beleg: z.beleg || null };\nreturn [{ json: { todo_noetig: !v.todo_ok, zahlung: zahlung, due: zahlung.faellig } }];\n"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "ec9e107c-1732-44c8-8d1f-09e34f549afc",
+      "name": "To-Do-Bestand lesen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        4928,
+        -120
+      ],
+      "parameters": {
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "microsoftOutlookOAuth2Api",
+        "method": "GET",
+        "url": "={{ 'https://graph.microsoft.com/v1.0/me/todo/lists/' + encodeURIComponent($json.list_id) + '/tasks?$top=100' }}",
+        "options": {
+          "timeout": 30000,
+          "pagination": {
+            "pagination": {
+              "paginationMode": "responseContainsNextURL",
+              "nextURL": "={{ $response.body['@odata.nextLink'] }}",
+              "paginationCompleteWhen": "other",
+              "completeExpression": "={{ !$response.body || !$response.body['@odata.nextLink'] }}",
+              "limitPagesFetched": true,
+              "maxRequests": 20
+            }
+          }
+        }
+      },
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true,
+      "credentials": {
+        "microsoftOutlookOAuth2Api": {
+          "id": "iFyJVs8R8yTH1nh5",
+          "name": "Microsoft Outlook account"
+        }
+      }
+    },
+    {
+      "id": "cd8c2021-1eb7-4739-b335-b6764fe9d013",
+      "name": "To-Do-Dublette pruefen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5152,
+        -120
+      ],
+      "parameters": {
+        "jsCode": "// CR-09a B1: Gibt es die To-Do-Aufgabe zu diesem Auftrag schon (Merkzeichen im Text), wird sie übernommen statt neu angelegt.\nconst b = $('To-Do-Aufgabe bilden').first().json;\n// CR-11 B6b: Bestand über alle Seiten (ein Element je Seite), nicht nur die ersten 100 Aufgaben.\nconst seiten = $input.all().map(function (x) { return x.json || {}; });\nconst r = (seiten.length && !seiten.some(function (p) { return p.error || !Array.isArray(p.value); })) ? { value: [].concat.apply([], seiten.map(function (p) { return p.value; })) } : { error: true };\nif (r.error || !Array.isArray(r.value)) return [{ json: { neu: false, vorhanden: null, fehler: 'To Do nicht lesbar (Bestand). Bitte später erneut versuchen.' } }];\nconst t = r.value.filter(function (x) { return x && x.body && String(x.body.content || '').indexOf(b.marker) !== -1; })[0];\nreturn [{ json: { neu: !t, vorhanden: t ? { id: t.id, status: t.status || 'notStarted' } : null, fehler: null, list_id: b.list_id, aufgabe: b.aufgabe } }];"
+      }
+    },
+    {
+      "id": "665b1270-a1dc-46b3-9368-85f6053dc4f0",
+      "name": "To-Do neu?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        5376,
+        -120
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.neu }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "91a6db83-9278-4c6c-9fd0-3d60b260abb3",
+      "name": "Auftrag schliessen",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        3808,
+        2400
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH u AS (\n  UPDATE jarvis_privat.task t\n  SET status = 'cancelled', body = t.body || jsonb_build_object('geschlossen', jsonb_build_object('at', now(), 'von', 'rolf', 'grund', t.body->'entwurf'->'fehler'->>'code')), updated_at = now()\n  WHERE t.task_id = $1 AND t.body->>'quelle' = 'auftrag_rolf' AND t.status NOT IN ('done', 'cancelled')\n    AND (t.body->'entwurf'->>'state' = 'failed'\n         OR (t.body->'entwurf'->>'state' = 'running' AND (t.body->'entwurf'->>'started_at')::timestamptz < now() - interval '15 minutes'))\n  RETURNING t.task_id, t.title, t.body\n),\nl AS (\n  INSERT INTO jarvis_privat.action_log (entry_kind, actor, task_id, action_id, summary_de, body)\n  SELECT 'task_cancelled', 'rolf', u.task_id, u.body->'entwurf'->>'action_id', left('Auftrag geschlossen: ' || u.title, 500),\n    jsonb_build_object('grund', u.body->'entwurf'->'fehler'->>'code', 'art', u.body->>'art')\n  FROM u\n  RETURNING log_id\n)\nSELECT (SELECT count(*) FROM u)::int AS geschlossen, (SELECT count(*) FROM l)::int AS protokolliert,\n  (SELECT u.body->'todo'->>'state' FROM u) AS todo_state",
+        "options": {
+          "queryReplacement": "={{ $json.task_id }}"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "oCkj27EiMe96vXvU",
+          "name": "jv_privat_postgres"
+        }
+      }
+    },
+    {
+      "id": "45442009-bbfd-4e2f-9aa0-4aa079dca8fc",
+      "name": "Schliessen melden",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4032,
+        2400
+      ],
+      "parameters": {
+        "jsCode": "// CR-09b: Nur offene, fehlgeschlagene (oder seit über 15 Minuten hängende) Aufträge lassen sich schliessen. Nachweis: Datensatz aktualisiert.\nconst r = $input.first().json || {};\nif (r.error) return [{ json: { antwort: { ok: false, fehler: 'Datenbank nicht erreichbar.' } } }];\nif (Number(r.geschlossen) !== 1) return [{ json: { antwort: { ok: false, fehler: 'Der Auftrag kann nicht geschlossen werden. Nur offene Aufträge, die fehlgeschlagen sind, lassen sich schliessen.' } } }];\nreturn [{ json: { antwort: { ok: true, hinweis: 'Auftrag geschlossen.' + (r.todo_state === 'ok' ? ' Die To-Do-Aufgabe dazu bitte selbst löschen.' : '') } } }];\n"
+      }
+    },
+    {
+      "id": "a2225aa3-127a-4151-92c8-69f994841b44",
+      "name": "Versandform setzen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1008,
+        976
+      ],
+      "parameters": {
+        "jsCode": "// CR-16b: Versandform je Auftrag – Wahl von Rolf, sonst Vorschlag der Analyse, sonst Standard des Falls (document_fall.versandform_standard).\nconst v = $input.first().json;\nif (!v || v.weiter !== true) return [{ json: v }];\nconst ERL = ['email', 'brief', 'brief_email', 'brief_email_post'];\nlet p = {};\ntry { p = JSON.parse(String((($('API Auftrag').first().json || {}).body || {}).p || '{}')); } catch (x) { p = {}; }\nconst wunsch = ERL.indexOf(String(p.versandform || '')) !== -1 ? String(p.versandform) : '';\nconst opt = (Array.isArray(v.ki && v.ki.optionen) ? v.ki.optionen : []).filter(function (o) { return o && o.fall === v.art; })[0];\nconst vorschlag = (opt && ERL.indexOf(opt.versandform) !== -1) ? opt.versandform : '';\nconst std = ERL.indexOf((v.fall || {}).versandform_standard) !== -1 ? v.fall.versandform_standard : 'email';\nconst vf = v.gruppe === 'aufgabe' ? null : (wunsch || vorschlag || std);\nconst quelle = v.gruppe === 'aufgabe' ? null : (wunsch ? 'rolf' : (vorschlag ? 'analyse' : 'standard'));\nconst j = JSON.parse(Buffer.from(String(v.p64), 'base64').toString('utf8'));\nj.body = Object.assign({}, j.body, { versandform: vf, versandform_quelle: quelle });\nreturn [{ json: Object.assign({}, v, { versandform: vf, p64: Buffer.from(JSON.stringify(j), 'utf8').toString('base64') }) }];"
+      }
+    },
+    {
+      "id": "ead7f4e3-ff78-4a95-bc7b-6c00a7f484a7",
+      "name": "Versandform anfragen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2128,
+        768
+      ],
+      "parameters": {
+        "jsCode": "// CR-16b/16c: Bei Briefversand liefert die KI den Brief getrennt (brief) und als E-Mail nur einen kurzen Begleittext (text).\nconst e = $input.first().json;\nconst vf = String($('Versandform setzen').first().json.versandform || 'email');\nif (vf.indexOf('brief') !== 0) return [{ json: e }];\nconst NL = String.fromCharCode(10);\nconst weg = vf === 'brief' ? 'per Post' : (vf === 'brief_email' ? 'eingescannt per E-Mail' : 'eingescannt per E-Mail und zusätzlich per Post');\nconst zusatz = [\n  'Versandform: Rolf versendet dieses Schreiben als eigenhändig unterschriebenen Brief, ' + weg + '. Diese Regeln gehen den allgemeinen Regeln vor:',\n  'B1. brief.empfaenger_anschrift: Name und Postanschrift des Empfängers aus dem Dokument, mehrzeilig, ohne Vorsilben wie «Postanschrift:»; fehlt sie im Dokument, null.',\n  'B2. brief.betreff: Betreff des Briefs mit der Bezugsnummer, höchstens 120 Zeichen.',\n  'B3. brief.inhalt: Anrede, vollständiger Brieftext und Grussformel (z. B. «Freundliche Grüsse»). Ohne Absender, Empfänger, Ort, Datum, Betreff, Unterschriftszeile und Anschrift – diese setzt JARVIS. Die Erklärung (z. B. Kündigung) muss vollständig und auch per Post gültig sein; keine Formulierungen wie «per E-Mail».',\n  'B4. text ist nur die Begleit-E-Mail mit 3 bis 6 Sätzen: Bezug auf das Schreiben bzw. die Bezugsnummer, Hinweis, dass das unterschriebene Schreiben als Anhang beiliegt' + (vf === 'brief_email_post' ? ' und zusätzlich per Post folgt' : '') + ', Grussformel mit Name und Anschrift wie in Regel 4.',\n  'B5. hinweise: «Brief ausdrucken und eigenhändig unterschreiben»' + (vf === 'brief' ? ', «per Post senden».' : (vf === 'brief_email' ? ', «einscannen und an die E-Mail anhängen».' : ', «einscannen und an die E-Mail anhängen», «zusätzlich per Post senden».'))\n].join(NL);\nconst a = e.anfrage || {};\nconst tool = (Array.isArray(a.tools) && a.tools[0]) ? a.tools[0] : null;\nif (!tool || !tool.input_schema) throw new Error('Entwurfsanfrage ohne Werkzeugschema');\nconst props = Object.assign({}, tool.input_schema.properties, { brief: { type: 'object', additionalProperties: false, required: ['empfaenger_anschrift', 'betreff', 'inhalt'],\n  properties: { empfaenger_anschrift: { type: ['string', 'null'] }, betreff: { type: 'string' }, inhalt: { type: 'string' } } } });\nconst req = (Array.isArray(tool.input_schema.required) ? tool.input_schema.required : []).filter(function (x) { return x !== 'brief'; }).concat(['brief']);\nconst schema = Object.assign({}, tool.input_schema, { properties: props, required: req });\nreturn [{ json: Object.assign({}, e, { anfrage: Object.assign({}, a, { system: String(a.system || '') + NL + zusatz, max_tokens: Math.max(Number(a.max_tokens) || 0, 5000), tools: [Object.assign({}, tool, { input_schema: schema })] }) }) }];"
+      }
+    },
+    {
+      "id": "e1cda3fd-9a51-42a1-bed1-5dd860ef5c89",
+      "name": "Entwurfsordner lesen",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        5824,
+        0
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "options": {},
+        "query": "SELECT s.drafts_ref FROM jarvis_ops.context_document_settings s WHERE s.context_id = 'privat'"
+      },
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true,
+      "executeOnce": true,
+      "credentials": {
+        "postgres": {
+          "id": "oCkj27EiMe96vXvU",
+          "name": "jv_privat_postgres"
+        }
+      }
+    },
+    {
+      "id": "68620739-44e6-4b7c-83b4-dccf12122862",
+      "name": "Brief vorbereiten",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        6048,
+        0
+      ],
+      "parameters": {
+        "jsCode": "// CR-16c: Briefdokument vorbereiten – Briefkopf aus der zentralen Konfiguration (Anschrift), Inhalt von der KI, Ablage im Entwurfsordner (drafts_ref).\nconst crypto = require('crypto');\nconst ab = $('Abschluss melden').first().json || {};\nconst antwort = ab.antwort || {};\nconst raus = function (w) { return [{ json: { brief: false, warnung: w || null } }]; };\nlet vf = '';\ntry { vf = String($('Versandform setzen').first().json.versandform || ''); } catch (x) { vf = ''; }\nlet ep = false;\ntry { ep = $('Entwurf pruefen').isExecuted === true; } catch (x) { ep = false; }\nif (antwort.ok !== true || vf.indexOf('brief') !== 0 || !ep) return raus(null);\nconst v = $('Auftrag vorbereiten').first().json;\nconst res = $('KI entwirft').first().json || {};\nconst tu = (Array.isArray(res.content) ? res.content : []).filter(function (b) { return b && b.type === 'tool_use' && b.name === 'entwurf'; })[0];\nconst br = (tu && tu.input && tu.input.brief && typeof tu.input.brief === 'object') ? tu.input.brief : null;\nconst s = function (x, m) { return (typeof x === 'string' && x.trim()) ? x.trim().slice(0, m) : null; };\nif (!br || !s(br.inhalt, 12000) || !s(br.betreff, 200)) return raus('Die KI lieferte keinen Brieftext – bitte «Anpassen» und «Entwurf neu fassen».');\nconst z = $input.all().map(function (x) { return x.json; }).filter(function (r) { return r && r.drafts_ref; })[0];\nconst m = /^env:([A-Z][A-Z0-9_]{3,63})$/.exec(String((z && z.drafts_ref) || ''));\nlet ordner = '';\nif (m) { try { ordner = $vars[m[1]]; } catch (x) { ordner = ''; } }\nordner = (typeof ordner === 'string') ? ordner.trim() : '';\nif (!/^[A-Za-z0-9_-]{10,200}$/.test(ordner)) return raus('Der Entwurfsordner ist nicht konfiguriert (drafts_ref) – das Briefdokument wurde nicht erstellt.');\nconst fuer = v.fuer || null;\nconst pa = (v.privatadresse && typeof v.privatadresse === 'object') ? v.privatadresse : {};\nconst fa = fuer ? (fuer.anschrift || {}) : {};\nconst absender = fuer\n  ? [fuer.name, 'vertreten durch Rolf Hutz', fa.strasse, (String(fa.plz || '') + ' ' + String(fa.ort || '')).trim(), fa.land]\n  : [pa.name || 'Rolf Hutz', pa.strasse, (String(pa.plz || '') + ' ' + String(pa.ort || '')).trim(), pa.land];\nif (!fuer && !(pa.strasse && pa.ort)) return raus('Deine Anschrift ist nicht hinterlegt – das Briefdokument wurde nicht erstellt.');\nconst ort = fuer ? fa.ort : pa.ort;\nconst heute = new Date().toLocaleDateString('de-CH', { timeZone: 'Europe/Zurich', day: '2-digit', month: '2-digit', year: 'numeric' });\nconst esc = function (t) { return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); };\nconst zeilen = function (t) { return esc(t).split(/\\r?\\n/).join('<br>'); };\nconst absatz = function (t) { return String(t).split(/\\r?\\n\\s*\\r?\\n/).map(function (p) { return '<p>' + zeilen(p.trim()) + '</p>'; }).join(''); };\nconst unterz = fuer ? 'Rolf Hutz, in Vollmacht für ' + fuer.name : (pa.name || 'Rolf Hutz');\nconst betreff = s(br.betreff, 200);\nconst html = '<html><head><meta charset=\"utf-8\"></head><body style=\"font-family:Arial,sans-serif;font-size:11pt;line-height:1.4\">'\n  + '<p style=\"font-size:9pt\">' + absender.filter(function (x) { return x && String(x).trim(); }).map(esc).join('<br>') + '</p><p><br></p>'\n  + '<p>' + zeilen(s(br.empfaenger_anschrift, 800) || '[bitte ergänzen: Postanschrift des Empfängers]') + '</p><p><br></p>'\n  + '<p style=\"text-align:right\">' + esc((ort ? ort + ', ' : '') + heute) + '</p><p><br></p>'\n  + '<p><b>' + esc(betreff) + '</b></p><p><br></p>'\n  + absatz(s(br.inhalt, 12000))\n  + '<p><br><br><br>______________________________<br>' + esc(unterz) + '</p></body></html>';\nconst tl = function (t, max) {\n  let x = String(t || '').replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/Ä/g, 'Ae').replace(/Ö/g, 'Oe').replace(/Ü/g, 'Ue').replace(/ß/g, 'ss');\n  x = x.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^A-Za-z0-9]+/g, '-').replace(/^-+|-+$/g, '');\n  return x.slice(0, max).replace(/-+$/, '');\n};\nconst jetzt = new Date();\nconst iso = jetzt.toLocaleDateString('sv-SE', { timeZone: 'Europe/Zurich' });\nconst zeit = jetzt.toLocaleTimeString('de-CH', { timeZone: 'Europe/Zurich', hour: '2-digit', minute: '2-digit' }).replace(':', '');\nconst ki = v.ki || {};\nconst teile = [iso + '-' + zeit, (fuer ? tl(fuer.name, 20) + '__' : '') + 'Brief', tl(ki.absender_kurz || ki.absender || 'Empfaenger', 30), tl((v.fall && v.fall.label_de) || 'Schreiben', 30)];\nconst name = teile.filter(function (x) { return x; }).join('__').slice(0, 96);\nconst key = 'brf_' + crypto.createHash('sha256').update(v.action_id + '|' + html).digest('hex').slice(0, 24);\nconst q = \"appProperties has { key='jarvis_brief' and value='\" + key + \"' } and trashed = false\";\nreturn [{ json: { brief: true, key: key, ordner: ordner, name: name, html: html, task_id: v.task_id, action_id: v.action_id, q: q } }];"
+      }
+    },
+    {
+      "id": "0622aeb0-f800-4c71-81a2-65f0b1e1ffda",
+      "name": "Brief noetig?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        6272,
+        0
+      ],
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "leftValue": "={{ $json.brief }}",
+              "operator": {
+                "operation": "true",
+                "singleValue": true,
+                "type": "boolean"
+              },
+              "rightValue": true
+            }
+          ],
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          }
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "cea05f1d-22d9-4088-a4a0-40b1cf0812ac",
+      "name": "Brief suchen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        6496,
+        -96
+      ],
+      "parameters": {
+        "authentication": "predefinedCredentialType",
+        "method": "GET",
+        "nodeCredentialType": "googleDriveOAuth2Api",
+        "options": {
+          "timeout": 30000
+        },
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "q",
+              "value": "={{ $json.q }}"
+            },
+            {
+              "name": "fields",
+              "value": "files(id,name,mimeType)"
+            },
+            {
+              "name": "spaces",
+              "value": "drive"
+            },
+            {
+              "name": "pageSize",
+              "value": "10"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "url": "https://www.googleapis.com/drive/v3/files"
+      },
+      "onError": "continueErrorOutput",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "T9eXpovYsz2Ipp6B",
+          "name": "jv_privat_gdrive"
+        }
+      }
+    },
+    {
+      "id": "b6987749-1584-49b8-861d-e1929f886e5a",
+      "name": "Brief neu?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        6720,
+        -96
+      ],
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "leftValue": "={{ ($json.files || []).filter(function (f) { return f.mimeType === 'application/vnd.google-apps.document'; }).length }}",
+              "operator": {
+                "operation": "equals",
+                "type": "number"
+              },
+              "rightValue": 0
+            }
+          ],
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          }
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "29f6077c-7dde-4b6a-b8f6-cea260989f8d",
+      "name": "Dokument bauen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        6944,
+        -192
+      ],
+      "parameters": {
+        "jsCode": "// CR-16c: Google Doc aus HTML (Drive-Import), mehrteilige Anfrage mit Metadaten und Merkzeichen jarvis_brief.\nconst j = $('Brief vorbereiten').first().json;\nconst B = 'jarvis_brief_' + j.key;\nconst meta = { name: j.name, mimeType: 'application/vnd.google-apps.document', parents: [j.ordner], appProperties: { jarvis_brief: j.key, jarvis_task: j.task_id } };\nconst body = Buffer.concat([\n  Buffer.from('--' + B + '\\r\\nContent-Type: application/json; charset=UTF-8\\r\\n\\r\\n' + JSON.stringify(meta) + '\\r\\n--' + B + '\\r\\nContent-Type: text/html; charset=UTF-8\\r\\n\\r\\n', 'utf8'),\n  Buffer.from(j.html, 'utf8'),\n  Buffer.from('\\r\\n--' + B + '--\\r\\n', 'utf8')]);\nreturn [{ json: { boundary: B }, binary: { mp: { data: body.toString('base64'), mimeType: 'multipart/related; boundary=' + B, fileName: 'brief_anfrage.txt' } } }];"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "af37e4fa-c994-4869-b0d4-0469c47276ea",
+      "name": "Brief anlegen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        7168,
+        -192
+      ],
+      "parameters": {
+        "authentication": "predefinedCredentialType",
+        "contentType": "binaryData",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "={{ 'multipart/related; boundary=' + $json.boundary }}"
+            }
+          ]
+        },
+        "inputDataFieldName": "mp",
+        "method": "POST",
+        "nodeCredentialType": "googleDriveOAuth2Api",
+        "options": {
+          "timeout": 60000
+        },
+        "sendBody": true,
+        "sendHeaders": true,
+        "url": "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,mimeType,webViewLink"
+      },
+      "onError": "continueErrorOutput",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "T9eXpovYsz2Ipp6B",
+          "name": "jv_privat_gdrive"
+        }
+      }
+    },
+    {
+      "id": "955c4444-ad34-496b-bf1d-1e20fa1f610f",
+      "name": "Brief exportieren",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        7392,
+        -192
+      ],
+      "parameters": {
+        "authentication": "predefinedCredentialType",
+        "method": "GET",
+        "nodeCredentialType": "googleDriveOAuth2Api",
+        "options": {
+          "response": {
+            "response": {
+              "outputPropertyName": "pdf",
+              "responseFormat": "file"
+            }
+          },
+          "timeout": 60000
+        },
+        "url": "=https://www.googleapis.com/drive/v3/files/{{ $json.id }}/export?mimeType=application/pdf"
+      },
+      "onError": "continueErrorOutput",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "T9eXpovYsz2Ipp6B",
+          "name": "jv_privat_gdrive"
+        }
+      }
+    },
+    {
+      "id": "98eb81f4-3d55-4c9a-8326-ca99441bf9f4",
+      "name": "PDF bauen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        7616,
+        -192
+      ],
+      "parameters": {
+        "jsCode": "// CR-16c: PDF-Fassung des Briefs neben dem Google Doc ablegen (gleiches Merkzeichen).\nconst j = $('Brief vorbereiten').first().json;\nconst it = $input.first();\nif (!it || !it.binary || !it.binary.pdf) throw new Error('PDF-Export lieferte keine Datei');\nconst pdf = await this.helpers.getBinaryDataBuffer(0, 'pdf');\nif (pdf.length < 500 || pdf.slice(0, 5).toString('latin1') !== '%PDF-') throw new Error('PDF-Export ungültig');\nconst B = 'jarvis_pdf_' + j.key;\nconst meta = { name: j.name + '.pdf', mimeType: 'application/pdf', parents: [j.ordner], appProperties: { jarvis_brief: j.key, jarvis_task: j.task_id } };\nconst body = Buffer.concat([\n  Buffer.from('--' + B + '\\r\\nContent-Type: application/json; charset=UTF-8\\r\\n\\r\\n' + JSON.stringify(meta) + '\\r\\n--' + B + '\\r\\nContent-Type: application/pdf\\r\\n\\r\\n', 'utf8'),\n  pdf,\n  Buffer.from('\\r\\n--' + B + '--\\r\\n', 'utf8')]);\nreturn [{ json: { boundary: B }, binary: { mp: { data: body.toString('base64'), mimeType: 'multipart/related; boundary=' + B, fileName: 'pdf_anfrage.txt' } } }];"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "96e151e8-2071-4381-999a-1be9e37970c5",
+      "name": "PDF anlegen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        7840,
+        -192
+      ],
+      "parameters": {
+        "authentication": "predefinedCredentialType",
+        "contentType": "binaryData",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "={{ 'multipart/related; boundary=' + $json.boundary }}"
+            }
+          ]
+        },
+        "inputDataFieldName": "mp",
+        "method": "POST",
+        "nodeCredentialType": "googleDriveOAuth2Api",
+        "options": {
+          "timeout": 60000
+        },
+        "sendBody": true,
+        "sendHeaders": true,
+        "url": "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,mimeType,webViewLink"
+      },
+      "onError": "continueErrorOutput",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "T9eXpovYsz2Ipp6B",
+          "name": "jv_privat_gdrive"
+        }
+      }
+    },
+    {
+      "id": "dad1089f-085d-42ff-b7d7-06d4ed5021e2",
+      "name": "Brief merken",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        8064,
+        -96
+      ],
+      "parameters": {
+        "jsCode": "// CR-16c: Ergebnisnachweis = von Google Drive gelieferte Datei-IDs (neu angelegt oder per Merkzeichen wiedergefunden).\nconst j = $('Brief vorbereiten').first().json;\nlet doc = null; let pdf = null; let neu = false;\ntry { neu = $('Brief anlegen').isExecuted === true; } catch (x) { neu = false; }\nif (neu) { doc = $('Brief anlegen').first().json; pdf = $('PDF anlegen').first().json; }\nelse {\n  const f = (($('Brief suchen').first().json || {}).files) || [];\n  doc = f.filter(function (x) { return x.mimeType === 'application/vnd.google-apps.document'; })[0] || null;\n  pdf = f.filter(function (x) { return x.mimeType === 'application/pdf'; })[0] || null;\n}\nif (!doc || !/^[A-Za-z0-9_-]{10,200}$/.test(String(doc.id || ''))) throw new Error('Google Drive lieferte keine Dokument-ID');\nconst pdfOk = !!(pdf && /^[A-Za-z0-9_-]{10,200}$/.test(String(pdf.id || '')));\nconst brief = { state: 'done', key: j.key, name: j.name, doc_id: doc.id, doc_link: 'https://docs.google.com/document/d/' + doc.id + '/edit',\n  pdf_id: pdfOk ? pdf.id : null, pdf_link: pdfOk ? 'https://drive.google.com/file/d/' + pdf.id + '/view' : null,\n  erstellt_at: new Date().toISOString(), nachweis: neu ? 'drive_create_response' : 'drive_appproperty_search', action_id: j.action_id };\nreturn [{ json: { brief: brief, p64: Buffer.from(JSON.stringify({ task_id: j.task_id, brief: brief }), 'utf8').toString('base64') } }];"
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "id": "724903fb-7a87-47a9-8ec8-fdd306289732",
+      "name": "Brieffehler",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        8064,
+        128
+      ],
+      "parameters": {
+        "jsCode": "// CR-16c: Briefdokument fehlgeschlagen – Outlook-Entwurf bleibt gültig, Fehler wird am Auftrag vermerkt.\nconst j = $('Brief vorbereiten').first().json;\nconst f = $input.first().json || {};\nlet m = f.error;\nif (m && typeof m === 'object') m = m.message || m.description || JSON.stringify(m);\nm = String(m || f.message || 'unbekannter Fehler').replace(/\\s*\\[line [0-9]+\\]\\s*$/, '').slice(0, 200);\nconst brief = { state: 'failed', fehler: 'Das Briefdokument konnte nicht erstellt werden (' + m + '). Bitte «Anpassen» und «Entwurf neu fassen».', at: new Date().toISOString(), action_id: j.action_id };\nreturn [{ json: { brief: brief, p64: Buffer.from(JSON.stringify({ task_id: j.task_id, brief: brief }), 'utf8').toString('base64') } }];"
+      }
+    },
+    {
+      "id": "550d9bfd-2a61-4697-af3e-6af10a2850a3",
+      "name": "Brief speichern",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        8288,
+        0
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "options": {
+          "queryReplacement": "={{ $json.p64 }}"
+        },
+        "query": "WITH p AS (SELECT convert_from(decode($1, 'base64'), 'UTF8')::jsonb AS j),\nu AS (\n  UPDATE jarvis_privat.task t\n  SET body = t.body || jsonb_build_object('brief', p.j->'brief'), updated_at = now()\n  FROM p\n  WHERE t.task_id = p.j->>'task_id'\n  RETURNING t.task_id\n),\nl AS (\n  INSERT INTO jarvis_privat.action_log (entry_kind, actor, task_id, action_id, summary_de, body)\n  SELECT CASE WHEN p.j->'brief'->>'state' = 'done' THEN 'draft_created' ELSE 'error_recorded' END, 'jarvis', u.task_id, p.j->'brief'->>'action_id',\n    CASE WHEN p.j->'brief'->>'state' = 'done' THEN left('Briefdokument angelegt: ' || COALESCE(p.j->'brief'->>'name', ''), 500) ELSE left(COALESCE(p.j->'brief'->>'fehler', 'Briefdokument fehlgeschlagen'), 500) END,\n    jsonb_build_object('brief', p.j->'brief')\n  FROM u, p\n  RETURNING log_id\n)\nSELECT (SELECT count(*) FROM u)::int AS aktualisiert, (SELECT count(*) FROM l)::int AS protokolliert"
+      },
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "oCkj27EiMe96vXvU",
+          "name": "jv_privat_postgres"
+        }
+      }
+    },
+    {
+      "id": "5bbd75fb-f1ca-4db4-983b-aabe17c05b79",
+      "name": "Brief melden",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        8512,
+        0
+      ],
+      "parameters": {
+        "jsCode": "// CR-16c: Antwort des Auftrags um das Briefdokument ergänzen.\nconst ab = $('Abschluss melden').first().json || {};\nconst antwort = Object.assign({}, ab.antwort || {});\nlet brief = null; let warn = null; let gespeichert = true;\ntry { if ($('Brief merken').isExecuted) brief = $('Brief merken').first().json.brief; } catch (x) { brief = null; }\ntry { if (!brief && $('Brieffehler').isExecuted) brief = $('Brieffehler').first().json.brief; } catch (x) { brief = brief; }\ntry { const bv = $('Brief vorbereiten').first().json; if (bv && bv.warnung) warn = bv.warnung; } catch (x) { warn = null; }\ntry { if ($('Brief speichern').isExecuted) { const r = $('Brief speichern').first().json || {}; gespeichert = !r.error && Number(r.aktualisiert) === 1; } } catch (x) { gespeichert = gespeichert; }\nif (antwort.auftrag && brief) antwort.auftrag = Object.assign({}, antwort.auftrag, { brief: brief });\nlet h = antwort.hinweis || '';\nif (brief && brief.state === 'done') h += ' Der Brief liegt als Google Doc' + (brief.pdf_id ? ' und PDF' : '') + ' im Entwurfsordner.' + (gespeichert ? '' : ' (Verknüpfung am Auftrag nicht gespeichert.)');\nelse if (brief && brief.state === 'failed') h += ' ' + brief.fehler;\nelse if (warn) h += ' ' + warn;\nantwort.hinweis = h.trim();\nreturn [{ json: { antwort: antwort } }];"
+      }
+    }
+  ],
+  "connections": {
+    "API Auftrag": {
+      "main": [
+        [
+          {
+            "node": "Anfrage pruefen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anfrage pruefen": {
+      "main": [
+        [
+          {
+            "node": "Aktion waehlen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aktion waehlen": {
+      "main": [
+        [
+          {
+            "node": "Auftraege lesen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Dokument lesen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Versand lesen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Auftrag schliessen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Adressaktion?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Auftraege lesen": {
+      "main": [
+        [
+          {
+            "node": "Auftraege bilden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Auftraege bilden": {
+      "main": [
+        [
+          {
+            "node": "Antwort senden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Dokument lesen": {
+      "main": [
+        [
+          {
+            "node": "Auftrag vorbereiten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Auftrag erlaubt?": {
+      "main": [
+        [
+          {
+            "node": "Auftrag sichern",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Antwort senden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Auftrag sichern": {
+      "main": [
+        [
+          {
+            "node": "Gesichert?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gesichert?": {
+      "main": [
+        [
+          {
+            "node": "Entwurf noetig?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Auftrag belegt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Original laden": {
+      "main": [
+        [
+          {
+            "node": "KI-Anfrage bilden",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Entwurfsfehler einordnen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "KI-Anfrage bilden": {
+      "main": [
+        [
+          {
+            "node": "Versandform anfragen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Entwurfsfehler einordnen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "KI entwirft": {
+      "main": [
+        [
+          {
+            "node": "Entwurf pruefen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Entwurfsfehler einordnen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Entwurf pruefen": {
+      "main": [
+        [
+          {
+            "node": "Entwurf suchen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Entwurfsfehler einordnen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Entwurf suchen": {
+      "main": [
+        [
+          {
+            "node": "Entwurf neu?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Entwurfsfehler einordnen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Entwurf neu?": {
+      "main": [
+        [
+          {
+            "node": "Entwurf anlegen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Entwurf ersetzen?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Entwurf anlegen": {
+      "main": [
+        [
+          {
+            "node": "Entwurf-ID bestimmen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Entwurfsfehler einordnen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Entwurf-ID bestimmen": {
+      "main": [
+        [
+          {
+            "node": "Entwurf nachlesen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Entwurfsfehler einordnen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Auftrag belegt": {
+      "main": [
+        [
+          {
+            "node": "Antwort senden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Versand lesen": {
+      "main": [
+        [
+          {
+            "node": "Versand pruefen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Versand pruefen": {
+      "main": [
+        [
+          {
+            "node": "Versand erlaubt?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Versand erlaubt?": {
+      "main": [
+        [
+          {
+            "node": "Gesendet suchen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Antwort senden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gesendet suchen": {
+      "main": [
+        [
+          {
+            "node": "Versand vorbereiten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Versand vorbereiten": {
+      "main": [
+        [
+          {
+            "node": "Versand bestaetigen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Versand bestaetigen": {
+      "main": [
+        [
+          {
+            "node": "To Do abschliessen?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "To Do abschliessen?": {
+      "main": [
+        [
+          {
+            "node": "To-Do-Aufgabe erledigen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Versand melden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "To-Do-Aufgabe erledigen": {
+      "main": [
+        [
+          {
+            "node": "Versand melden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Versand melden": {
+      "main": [
+        [
+          {
+            "node": "Antwort senden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Entwurf nachlesen": {
+      "main": [
+        [
+          {
+            "node": "Nachweis pruefen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Entwurfsfehler einordnen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Nachweis pruefen": {
+      "main": [
+        [
+          {
+            "node": "To Do noetig?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Entwurfsfehler einordnen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "To Do noetig?": {
+      "main": [
+        [
+          {
+            "node": "To-Do-Listen lesen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ergebnis bilden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "To-Do-Listen lesen": {
+      "main": [
+        [
+          {
+            "node": "To-Do-Aufgabe bilden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "To-Do-Aufgabe bilden": {
+      "main": [
+        [
+          {
+            "node": "Liste gefunden?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Liste gefunden?": {
+      "main": [
+        [
+          {
+            "node": "To-Do-Bestand lesen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ergebnis bilden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "To-Do-Aufgabe anlegen": {
+      "main": [
+        [
+          {
+            "node": "Ergebnis bilden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ergebnis bilden": {
+      "main": [
+        [
+          {
+            "node": "Auftrag abschliessen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Auftrag abschliessen": {
+      "main": [
+        [
+          {
+            "node": "Abschluss melden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Entwurfsfehler einordnen": {
+      "main": [
+        [
+          {
+            "node": "Entwurf zuruecksetzen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Entwurf zuruecksetzen": {
+      "main": [
+        [
+          {
+            "node": "Entwurfsfehler melden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Entwurfsfehler melden": {
+      "main": [
+        [
+          {
+            "node": "Antwort senden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Adressaktion?": {
+      "main": [
+        [
+          {
+            "node": "Adresse lesen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Antwort senden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Adresse lesen": {
+      "main": [
+        [
+          {
+            "node": "Adresse pruefen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Adresse pruefen": {
+      "main": [
+        [
+          {
+            "node": "Adressweg",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Adressweg": {
+      "main": [
+        [
+          {
+            "node": "Antwort senden",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "KI sucht Adresse",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Empfaenger eintragen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "KI sucht Adresse": {
+      "main": [
+        [
+          {
+            "node": "Vorschlag bilden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vorschlag bilden": {
+      "main": [
+        [
+          {
+            "node": "Antwort senden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Empfaenger eintragen": {
+      "main": [
+        [
+          {
+            "node": "Empfaenger nachlesen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Empfaenger nachlesen": {
+      "main": [
+        [
+          {
+            "node": "Empfaenger pruefen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Empfaenger pruefen": {
+      "main": [
+        [
+          {
+            "node": "Empfaenger belegt?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Empfaenger belegt?": {
+      "main": [
+        [
+          {
+            "node": "Adresse sichern",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Antwort senden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Adresse sichern": {
+      "main": [
+        [
+          {
+            "node": "Adresse melden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Adresse melden": {
+      "main": [
+        [
+          {
+            "node": "Antwort senden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Entwurf ersetzen?": {
+      "main": [
+        [
+          {
+            "node": "Entwurf ersetzen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Entwurf-ID bestimmen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Entwurf ersetzen": {
+      "main": [
+        [
+          {
+            "node": "Entwurf-ID bestimmen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Entwurfsfehler einordnen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Entwurf noetig?": {
+      "main": [
+        [
+          {
+            "node": "Original laden",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Zahlung vorbereiten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Zahlung vorbereiten": {
+      "main": [
+        [
+          {
+            "node": "To Do noetig?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Entwurfsfehler einordnen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "To-Do-Bestand lesen": {
+      "main": [
+        [
+          {
+            "node": "To-Do-Dublette pruefen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "To-Do-Dublette pruefen": {
+      "main": [
+        [
+          {
+            "node": "To-Do neu?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "To-Do neu?": {
+      "main": [
+        [
+          {
+            "node": "To-Do-Aufgabe anlegen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ergebnis bilden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Auftrag schliessen": {
+      "main": [
+        [
+          {
+            "node": "Schliessen melden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schliessen melden": {
+      "main": [
+        [
+          {
+            "node": "Antwort senden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Auftrag vorbereiten": {
+      "main": [
+        [
+          {
+            "node": "Versandform setzen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Versandform setzen": {
+      "main": [
+        [
+          {
+            "node": "Auftrag erlaubt?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Versandform anfragen": {
+      "main": [
+        [
+          {
+            "node": "KI entwirft",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Abschluss melden": {
+      "main": [
+        [
+          {
+            "node": "Entwurfsordner lesen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Entwurfsordner lesen": {
+      "main": [
+        [
+          {
+            "node": "Brief vorbereiten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Brief vorbereiten": {
+      "main": [
+        [
+          {
+            "node": "Brief noetig?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Brief noetig?": {
+      "main": [
+        [
+          {
+            "node": "Brief suchen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Brief melden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Brief suchen": {
+      "main": [
+        [
+          {
+            "node": "Brief neu?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Brieffehler",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Brief neu?": {
+      "main": [
+        [
+          {
+            "node": "Dokument bauen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Brief merken",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Dokument bauen": {
+      "main": [
+        [
+          {
+            "node": "Brief anlegen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Brieffehler",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Brief anlegen": {
+      "main": [
+        [
+          {
+            "node": "Brief exportieren",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Brieffehler",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Brief exportieren": {
+      "main": [
+        [
+          {
+            "node": "PDF bauen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Brieffehler",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PDF bauen": {
+      "main": [
+        [
+          {
+            "node": "PDF anlegen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Brieffehler",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PDF anlegen": {
+      "main": [
+        [
+          {
+            "node": "Brief merken",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Brieffehler",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Brief merken": {
+      "main": [
+        [
+          {
+            "node": "Brief speichern",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Brieffehler",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Brieffehler": {
+      "main": [
+        [
+          {
+            "node": "Brief speichern",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Brief speichern": {
+      "main": [
+        [
+          {
+            "node": "Brief melden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Brief melden": {
+      "main": [
+        [
+          {
+            "node": "Antwort senden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": false,
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "none"
+  },
+  "meta": {
+    "jarvis_source_workflow_id": "2RX9Uj9qtP8xL0Al",
+    "jarvis_phase": "cr-16",
+    "jarvis_spec_phase_0": "1.1.0",
+    "jarvis_spec_phase_1": "4.0.2",
+    "jarvis_exported_at": "2026-10-23",
+    "jarvis_required_credentials": [
+      {
+        "id": "Cvkrx5Q9x5RPDv3V",
+        "name": "Microsoft To Do account"
+      },
+      {
+        "id": "LFuagu0KYE2rtoF8",
+        "name": "sk-ant-"
+      },
+      {
+        "id": "T9eXpovYsz2Ipp6B",
+        "name": "jv_privat_gdrive"
+      },
+      {
+        "id": "gB5n6DOIXZAdx3Hf",
+        "name": "jv_privat_outlook"
+      },
+      {
+        "id": "iFyJVs8R8yTH1nh5",
+        "name": "Microsoft Outlook account"
+      },
+      {
+        "id": "oCkj27EiMe96vXvU",
+        "name": "jv_privat_postgres"
+      }
+    ]
+  }
+}

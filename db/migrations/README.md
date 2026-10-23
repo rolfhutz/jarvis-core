@@ -37,6 +37,24 @@ sondern aus Abhaengigkeiten:
 | `0024_tool_registry_seed_1_1b.sql` | **erzeugt** aus `spec/phase-1/nachtrag-1.1b/registry/tool_registry_phase1_1b.json`; registriert `storage_gdrive.get_file@1.2.0` (draft, beide Kontexte), prueft sich selbst | 0013 |
 | `0025_intake_config_seed_1_2.sql` | **erzeugt** aus `config/intake_config.json` 1.2.0 (1.1b-E3: Visolva auf `storage_gdrive`), prueft sich selbst; loest `0021` ab | 0020, 0022 |
 | `0026_release_storage_gdrive_get_file_1_2_0.sql` | Freigabe `storage_gdrive.get_file@1.2.0` nach 12.1.1, 1.1.0 auf `deprecated`; prueft den gespeicherten Nachweis, prueft sich selbst | 0013, 0023, 0024 |
+| `0027_filing_rules_privat.sql` | CR-02/S1b: Ablageregeln je Kategorie, erweiterbare Sparten | 0003 |
+| `0028_filing_scheme_sparte_jahr.sql` | Ablageschema «Sparte/Jahr» | 0027 |
+| `0029_filing_rule_gliederung_entschieden.sql` | Merker «Gliederung entschieden» je Kategorie | 0027 |
+| `0030_filing_rule_gliederung_systemkategorien.sql` | Gliederung für Systemkategorien gesetzt | 0029 |
+| `0031_task_todo_spiegelung.sql` | CR-03: Spiegelung der Aufgaben nach Microsoft To Do | 0005 |
+| `0032_finance_privat.sql` | CR-04: Finanzmodul, Tabellen (keine IBAN im Klartext) | 0003 |
+| `0033_finance_privat_seed.sql` | CR-04: Finanz-Startdaten – **nur Verweis, Inhalt privat (DT-1)** | 0032 |
+| `0034_finance_privat_cockpit.sql` | CR-04: Cockpit (Perioden, Sonderzuflüsse, Sichten); **Startwerte privat (DT-1)** | 0032, 0033 |
+| `0035_filing_target_register.sql` | CR-06: Ablageregister `filing_target`; **Registerziele privat (DT-1)** | 0027 |
+| `0036_filing_target_fix_asga_folder.sql` | Datenkorrektur Ablageregister – **nur Verweis, Inhalt privat (DT-1)** | 0035 |
+| `0037_filing_target_contact_email.sql` | Kontakt-E-Mail je Registerziel (CR-07) | 0035 |
+| `0038_document_fall.sql` | CR-09: Fall-Katalog der Weboberfläche | 0005 |
+| `0039_einreichen_ohne_diagnose.sql` | Fall «Einreichen»: keine Gesundheitsangaben im Text | 0038 |
+| `0040_handlungsoptionen_regeln.sql` | CR-13b+: Vorgangsarten, Optionen, Regeln von Rolf (TS-34: ohne Eintrag in der Migrationshistorie eingespielt, mit der Datenbank abgeglichen) | 0027, 0038 |
+| `0041_document_status_discarded.sql` | Dokumentstatus `discarded`/`misrouted` (Spec 4.0.2 §5.1) | 0005, 0006 |
+| `0042a_betreute_person.sql` | CR-15: betreute Personen; **weitere Personen privat (DT-1)** | 0005, 0035 |
+| `0042b_filing_target_uq_person.sql` | Eindeutigkeit Registerziel je Person | 0042a |
+| `0043_cr16_versandform_nachforderung.sql` | CR-16: Versandform je Fall, Vorgangsart «Nachforderung», Fall «Nachreichen» (Beispielnummer neutralisiert, DT-1) | 0038, 0040 |
 
 Die Rechtevergabe steht bewusst am Ende: `REVOKE ALL ON ALL TABLES IN SCHEMA`
 wirkt nur auf Tabellen, die zu diesem Zeitpunkt bereits vorhanden sind. Wuerde
@@ -103,3 +121,15 @@ python3 tests/db/readback_phase_1_0.py    --psql-args="-h <host> -p <port> -U <u
 Der Abnahmelauf setzt eine frisch migrierte, leere Datenbank voraus. Er
 schreibt synthetische Zeilen und raeumt sie nicht ab: `action_log` ist
 append-only, ein Testlauf darf diese Eigenschaft nicht unterlaufen.
+
+## Datentrennung DT-1 (Rolf, 23.10.2026)
+
+Das Repository ist öffentlich. Personenbezogene Daten (Finanzen, Anschriften betreuter Personen,
+Vertrags- und Kundennummern, Drive-Ordner-IDs) und geheime Webhook-Pfade stehen deshalb **nicht** im Repository.
+
+- Betroffene Migrationen enthalten hier nur den Schemateil und einen Verweis im Kopf.
+- Die privaten Ergänzungen liegen im Claude-Projekt «JARVIS – Persönlicher KI-Assistent» unter `claude/privat_daten/<name>.privat.sql`.
+- Wiederherstellung: Repository-Fassung ausführen, danach die private Ergänzung.
+- In der Datenbank ist jeweils die Gesamtfassung eingespielt (Migrationshistorie).
+- Webhook-Pfade: `tools/normalize_n8n_export.py` ersetzt sie durch `JV_GEHEIM_WEBHOOK_PFAD`; die echten Pfade liegen in `claude/privat_daten/webhook_pfade.json`.
+
