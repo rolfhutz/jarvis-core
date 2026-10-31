@@ -45,3 +45,5 @@ python3 tools/render_intake_config.py --check db/migrations/0021_intake_config_s
 Abhaengigkeiten: `jsonschema==4.26.0`, `referencing==0.37.0`. Der Pruefwert je
 Werkzeug wird so gebildet, wie PostgreSQL `jsonb::text` ausgibt. Die Datenbank
 rechnet ihn beim Einspielen aus der gespeicherten Definition nach.
+
+| `sicherung_zurueckspielen.py` | CR-19/TS-13: Sicherungsdatei (`jarvis-sicherung-1`) in eine frisch migrierte Datenbank zurückspielen und zeilengenau prüfen |

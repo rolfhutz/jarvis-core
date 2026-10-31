@@ -22,6 +22,7 @@
 | `JV-CORE-ADP-storage_gdrive_visolva-v1` | `IHdbJYSAs2HtMzK6` | **veroeffentlicht**, Aufrufer beschraenkt, Ausfuehrungsdaten nicht gespeichert | ja (lesend, `jv_visolva_postgres`) + Drive (`jv_visolva_gdrive`) | **neu in 1.1b Teil 2 (1.1b-E3/E4 A):** Kontext `arbeitgeber_visolva`. Geprueft gleiche Kopie des privaten Adapters; Unterschiede nur in Kontextweiche, drei Google-Knoten und der Einstellungsabfrage. Logik doppelt gepflegt (TS-32) |
 | `JV-CORE-OPS-db_keepalive-v1` | `DTRoxZvPQ5BPhM4o` | **veroeffentlicht** | ja | unveraendert |
 | `JV-CORE-OPS-smoke_test-v1` | `P5IlT5RlGBK1aqiO` | Entwurf, manuell | ja (beide Kontexte) + Drive (`jv_privat_gdrive`, `jv_visolva_gdrive`) | 1.1b Teil 2: Einrichtungspruefung beider Kontexte (9 private und 8 Visolva-Ordner, TS-27 A), Faelle `storage_gdrive.get_file` je Kontext, Freigabenachweis; 69 Knoten, 168 Pruefungen |
+| `JV-CORE-OPS-db_sicherung-v1` | `aZWpCEcG9vG3nCiY` | **veroeffentlicht** (sonntags 03:17 Europe/Zurich) | ja (beide Kontexte) + Drive (`jv_privat_gdrive`, `jv_visolva_gdrive`) | CR-19/TS-13: woechentliche Sicherung je Kontext nach `95_Sicherung`, Nachweis durch Zuruecklesen/Entpacken/Zeilenzaehlung, 84 Tage Aufbewahrung; Zweig A = privat (inkl. `jarvis_ops`), Zweig B = Visolva (TS-10: keine Kontextnamen in Code-Knoten) |
 
 "Entwurf" heisst in n8n: nicht veroeffentlicht. Seit TS-23 (10.09.2026) sind alle Kern-Subworkflows
 und Adapter veroeffentlicht; nur der Smoke-Test bleibt Entwurf (manueller Ausloeser).

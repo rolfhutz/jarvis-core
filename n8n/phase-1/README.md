@@ -4,7 +4,7 @@ Exportierte n8n-Workflows des KI-Dokumentenassistenten (Kontext privat).
 
 | Datei | Inhalt | Stand |
 |---|---|---|
-| `JV-P1-MAIN-document_desk-v1.json` | Weboberfläche Dokumente: Upload, KI-Analyse, Ablage, Aufgaben, Regeln, Suchen, Ablageort zuerst, Ablagepfad als Baum (CR-02 bis CR-18) | 31.10.2026 |
+| `JV-P1-MAIN-document_desk-v1.json` | Weboberfläche Dokumente: Upload, KI-Analyse, Ablage, Aufgaben, Regeln, Suchen, Ablageort zuerst, Ablagepfad als Baum auch in der Ordnerkarte (CR-02 bis CR-18a) | 31.10.2026 |
 | `JV-P1-MAIN-auftrag_desk-v1.json` | Aufträge zu Dokumenten: Entwürfe (E-Mail/Brief), Zahlungsaufgaben, Empfänger, Versand bestätigen (CR-05 bis CR-16) | 23.10.2026 |
 | `JV-P1-MAIN-dokument_suche-v1.json` | Such-Schnittstelle der Weboberfläche, nur lesend (CR-12) | 31.10.2026 |
 | `JV-P1-SUB-text_erfassen-v1.json` | Unterworkflow Texterkennung (Google Document AI, EU) und Speichern in `document_text` (CR-12) | 31.10.2026 |
