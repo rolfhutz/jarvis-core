@@ -1,6 +1,6 @@
 # Gate-Matrix Phase 1 – Ist-Umfang (CR-19 E1 A)
 
-Stand: 31.10.2026 (Fassung 4) · Status: **G-2 bis G-5 und B-1 von Rolf entschieden (31.10.2026, je Variante A); keine Gate-Freigabe**
+Stand: 31.10.2026 (Fassung 5) · Status: **G-2 bis G-5 und B-1 von Rolf entschieden (31.10.2026, je Variante A); keine Gate-Freigabe**
 Grundlage: SPEC_PHASE_1 v4.0.2 (§7.3, §8.6, §9.8, §10.6, §11.7, §16, §17, §18.4), UMSETZUNGS_UND_TESTPLAN, DECISION_LOG (Repo `main` = `ab66189`), Projekt-CR-Dokumente CR-02 bis CR-19, Datenbankabfragen vom 31.10.2026 (Supabase, nur lesend).
 
 ## Legende
@@ -266,6 +266,7 @@ Abkürzungen der Nachweise: **GATE-1.0** = `docs/evidence/PHASE_1_0_GATE_2026-09
 | A7 | Terminaler Status | P1-A23 | **erledigt** (B-1 A umgesetzt, 13/13) |
 | A8 | Sicherheitsprüfung Datenbank-API | Hinweis HANDOVER CR-16 | **erledigt** 31.10.: Die API-Rollen `anon`, `authenticated`, `authenticator`, `service_role` haben weder Schemarecht (USAGE) noch Tabellenrechte auf `jarvis_privat`, `jarvis_visolva`, `jarvis_ops`; trotz ausgeschaltetem RLS über die Supabase-API nicht erreichbar |
 | A9 | Pilotbericht, Übergabe Phase 2 | G8, G9 | nach 14.11. |
+| A10 | Befund B-2: Kontextwerte im Phase-1-Code | Grundprinzip «keine fest eingebauten Werte», 1.1-A18 | Entscheidung offen (Abschnitt 10) |
 
 ### B. Nach Phase 2 verschoben (G-2 A, 31.10.2026)
 
@@ -284,6 +285,13 @@ T-03, T-04/T-51, T-07, T-12, T-17, T-34, T-36, T-39, 1.3-A2 (Verbotsliste).
 | G-4 A | Messbasis Pilotbericht: alle echten Dokumente seit 27.09.2026, Pilotzeitraum gesondert | im Pilotbericht |
 | G-5 A | DT-1 gilt, OFFEN-1 geschlossen (Repo bleibt öffentlich, Daten getrennt) | DECISION_LOG-Nachtrag |
 | B-1 A | Verworfene und fehlgeleitete Dokumente sind terminal (P1-A23) | umgesetzt, aktiv `0a96392a`, Gegenprobe 13/13 |
+
+**Offen zur Freigabe – B-2 (TS-10 für Phase-1-Workflows):** `tests/n8n/check_ts10.py --src n8n/phase-1` meldet 16 fest eingebaute Kontextwerte (`privat`, `jarvis_privat`) in den fünf Phase-1-Workflows, unverändert seit dem alten Repo-Stand. Der Eintrag TS-33b («`check_ts10.py` BESTANDEN») gilt damit nur für `n8n/core`. Ursache ist CR-02 E1 A: Die Weboberfläche ist bewusst nur für den Kontext `privat` gebaut.
+
+| | Variante | Wirkung |
+|---|---|---|
+| **A (empfohlen)** | Als Schuld TS-41 führen; Bereinigung, sobald ein zweiter Kontext die Weboberfläche nutzt (frühestens Phase 2). TS-33b im DECISION_LOG präzisieren («nur core») | kein Umbau vor dem Gate; Abweichung dokumentiert |
+| B | Vor dem Gate bereinigen (Kontext aus `source_binding`/Konfiguration statt Codewerten) | Umbau von 5 Workflows mit 16 Stellen, neuer Test- und Abnahmezyklus |
 
 ## 11. Beobachtung für den Pilotbericht
 
