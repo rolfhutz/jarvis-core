@@ -1,0 +1,209 @@
+{
+  "id": "Bowqp0SWxckxb31w",
+  "name": "JV-P1-MAIN-dokument_suche-v1",
+  "nodes": [
+    {
+      "id": "975d7f4e-1dd0-44d5-86a0-f71699b7fb80",
+      "name": "Suche",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        80
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "JV_GEHEIM_WEBHOOK_PFAD",
+        "responseMode": "responseNode",
+        "options": {}
+      }
+    },
+    {
+      "id": "1ac67ae5-58ad-4e9c-bfff-731c9af33e38",
+      "name": "Suche pruefen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        80
+      ],
+      "parameters": {
+        "jsCode": "// CR-12 E4: Suchanfrage pruefen (nur lesen). Erwartet JSON { q, person, kategorie, von, bis }.\nconst b = ($input.first().json || {}).body || {};\nconst s = function (v, max) { return typeof v === 'string' ? v.trim().slice(0, max) : ''; };\nconst q = s(b.q, 200);\nconst person = s(b.person, 30);\nconst kat = s(b.kategorie, 60);\nconst von = s(b.von, 10);\nconst bis = s(b.bis, 10);\nconst datum = function (v) { if (!v) return ''; if (!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(v)) return null; const t = new Date(v + 'T12:00:00Z'); return (!isNaN(t.getTime()) && t.toISOString().slice(0, 10) === v) ? v : null; };\nlet fehler = null;\nif (q.replace(/\\s+/g, '').length < 2) fehler = 'Bitte mindestens 2 Zeichen eingeben.';\nelse if (person && !/^[a-z][a-z_]{1,29}$/.test(person)) fehler = 'Ungültige Person.';\nelse if (kat && !/^[a-z][a-z0-9_]{1,59}$/.test(kat)) fehler = 'Ungültige Kategorie.';\nelse if (datum(von) === null || datum(bis) === null) fehler = 'Ungültiges Datum.';\nif (fehler) return [{ json: { ok: false, fehler: fehler } }];\nreturn [{ json: { ok: true, p64: Buffer.from(JSON.stringify({ q: q, person: person, kategorie: kat, von: von, bis: bis }), 'utf8').toString('base64') } }];\n"
+      }
+    },
+    {
+      "id": "15c8f2e5-413e-4f39-b32d-0ab8a8bfe4ba",
+      "name": "Anfrage gueltig?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        448,
+        80
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.ok }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "ea57da2c-379c-4e25-b9b1-ee34e468e7bf",
+      "name": "Suchen",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        672,
+        0
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH p AS (SELECT convert_from(decode($1, 'base64'), 'UTF8')::jsonb AS j)\nSELECT s.* FROM p, LATERAL jarvis_privat.document_search(p.j->>'q', nullif(p.j->>'person', ''), nullif(p.j->>'kategorie', ''), nullif(p.j->>'von', '')::date, nullif(p.j->>'bis', '')::date, 30) s",
+        "options": {
+          "queryReplacement": "={{ $json.p64 }}"
+        }
+      },
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "postgres": {
+          "id": "oCkj27EiMe96vXvU",
+          "name": "jv_privat_postgres"
+        }
+      }
+    },
+    {
+      "id": "d43d95fe-249a-43a8-ab37-9fddd799142d",
+      "name": "Antwort bilden",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        896,
+        80
+      ],
+      "parameters": {
+        "jsCode": "// CR-12 E4: Trefferliste fuer die Weboberflaeche (Ausschnitt hoechstens 220 Zeichen, kein Volltext).\nconst p = $('Suche pruefen').first().json;\nif (!p.ok) return [{ json: { antwort: { ok: false, fehler: p.fehler } } }];\nconst rows = $input.all().map(function (x) { return x.json || {}; });\nif (rows.some(function (r) { return r.error; })) return [{ json: { antwort: { ok: false, fehler: 'Die Suche ist gerade nicht möglich. Bitte später erneut versuchen.' } } }];\nconst treffer = rows.filter(function (r) { return r && r.document_id; }).map(function (r) {\n  return { id: r.document_id, person: r.person_key || null, status: r.status, kategorie: r.kategorie_key || null, datum: r.dokumentdatum || null, titel: r.titel || null,\n    absender: r.absender || null, ablage: r.ablage || null, link: (typeof r.link === 'string' && /^https:\\/\\/drive\\.google\\.com\\//.test(r.link)) ? r.link : null,\n    ausschnitt: r.ausschnitt || null, volltext: r.quelle_volltext === true };\n});\nreturn [{ json: { antwort: { ok: true, anzahl: treffer.length, treffer: treffer } } }];\n"
+      }
+    },
+    {
+      "id": "8995284b-9e0e-4c42-87c5-3b461b272e3b",
+      "name": "Antwort senden",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1120,
+        80
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json.antwort) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Cache-Control",
+                "value": "no-store"
+              }
+            ]
+          }
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Suche": {
+      "main": [
+        [
+          {
+            "node": "Suche pruefen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Suche pruefen": {
+      "main": [
+        [
+          {
+            "node": "Anfrage gueltig?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anfrage gueltig?": {
+      "main": [
+        [
+          {
+            "node": "Suchen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Antwort bilden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Suchen": {
+      "main": [
+        [
+          {
+            "node": "Antwort bilden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Antwort bilden": {
+      "main": [
+        [
+          {
+            "node": "Antwort senden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "none"
+  },
+  "meta": {
+    "jarvis_source_workflow_id": "Bowqp0SWxckxb31w",
+    "jarvis_phase": "cr-18",
+    "jarvis_spec_phase_0": "1.1.0",
+    "jarvis_spec_phase_1": "4.0.2",
+    "jarvis_exported_at": "2026-10-31",
+    "jarvis_required_credentials": [
+      {
+        "id": "oCkj27EiMe96vXvU",
+        "name": "jv_privat_postgres"
+      }
+    ]
+  }
+}
