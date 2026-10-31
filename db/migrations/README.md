@@ -57,6 +57,8 @@ sondern aus Abhaengigkeiten:
 | `0043_cr16_versandform_nachforderung.sql` | CR-16: Versandform je Fall, Vorgangsart «Nachforderung», Fall «Nachreichen» (Beispielnummer neutralisiert, DT-1) | 0038, 0040 |
 | `0044_document_search.sql` | CR-12: Suchspalten und Trigramm-Indizes auf `document_text`, Suchfunktion `document_search` (nur lesend), Erweiterungen `pg_trgm`/`unaccent` (Beispielnummern neutralisiert, DT-1) | 0005, 0041 |
 | `0045_document_search_wortstamm.sql` | CR-12: Wortstamm ohne Vorsilbe «ge» (gekündigt findet Kündigung) | 0044 |
+| `0046_sicherung_export.sql` | CR-19/TS-13: lesende Exportfunktion `jarvis_ops.f_sicherung(schema)` für die wöchentliche Sicherung (Rechte des Aufrufers, wiederholbar) | 0011 |
+| `0047_schemaabgleich_live.sql` | CR-19: live vorgenommene Änderungen nachgezogen (`finance_import.source_format` «web», alter Index `filing_target_uq` entfernt); live ohne Wirkung, wiederholbar | 0032, 0042b |
 
 Die Rechtevergabe steht bewusst am Ende: `REVOKE ALL ON ALL TABLES IN SCHEMA`
 wirkt nur auf Tabellen, die zu diesem Zeitpunkt bereits vorhanden sind. Wuerde
@@ -135,3 +137,17 @@ Vertrags- und Kundennummern, Drive-Ordner-IDs) und geheime Webhook-Pfade stehen 
 - In der Datenbank ist jeweils die Gesamtfassung eingespielt (Migrationshistorie).
 - Webhook-Pfade: `tools/normalize_n8n_export.py` ersetzt sie durch `JV_GEHEIM_WEBHOOK_PFAD`; die echten Pfade liegen in `claude/privat_daten/webhook_pfade.json`.
 
+
+## Sicherung zurückspielen (CR-19 / TS-13)
+
+Die wöchentliche Sicherung (`JV-CORE-OPS-db_sicherung-v1`) legt je Kontext eine Datei
+`JARVIS_Sicherung_<kontext>_<JJJJ-Www>.json.gz` in `95_Sicherung` des Kontext-Drives ab.
+Wiederherstellung: leere Datenbank, `create schema extensions`, alle Migrationen in Reihenfolge
+(0023 und 0026 scheitern beabsichtigt, ihr Ergebnis steht in den Daten), danach
+
+```bash
+python3 tools/sicherung_zurueckspielen.py --datei <sicherung.json.gz> --psql-args="-h <host> -p <port> -U <superuser> -d <db>" --ersetzen
+```
+
+Nachweis 31.10.2026: Sicherung privat 2026-W44 (45 Tabellen, 1561 Zeilen) in eine lokale PostgreSQL 16
+zurückgespielt, Zeilenzahlen identisch, Suche liefert dieselben Treffer; Gegenprobe ohne `--ersetzen` bricht ab.

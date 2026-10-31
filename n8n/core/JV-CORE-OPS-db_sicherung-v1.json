@@ -1,0 +1,1652 @@
+{
+  "id": "aZWpCEcG9vG3nCiY",
+  "name": "JV-CORE-OPS-db_sicherung-v1",
+  "nodes": [
+    {
+      "id": "38030105-4858-462d-b77f-f1cdf5d326ab",
+      "name": "Sonntags 03:17",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        192
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "weeksInterval": 1,
+              "triggerAtDay": [
+                0
+              ],
+              "triggerAtHour": 3,
+              "triggerAtMinute": 17
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "c835d0f4-6f67-4d55-b39a-796b69d38e5f",
+      "name": "Lauf vorbereiten",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        288
+      ],
+      "parameters": {
+        "jsCode": "// CR-19/TS-13: Laufkennung (ISO-Woche) für die wöchentliche Sicherung.\nconst d = new Date();\nconst t = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));\nconst tag = t.getUTCDay() || 7;\nt.setUTCDate(t.getUTCDate() + 4 - tag);\nconst j = t.getUTCFullYear();\nconst w = Math.ceil(((t - Date.UTC(j, 0, 1)) / 86400000 + 1) / 7);\nreturn [{ json: { woche: j + '-W' + String(w).padStart(2, '0'), start: d.toISOString(), aufbewahrung_tage: 84 } }];\n"
+      }
+    },
+    {
+      "id": "9ff0a26a-1b0d-41f8-bbc9-bae8f8b1e532",
+      "name": "Start",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        384
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "d59f111e-98b9-44dc-b3d4-de3d94f61ad1",
+      "name": "Export lesen A",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        448,
+        96
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT s.context_id, s.context_root_ref, jarvis_ops.f_sicherung('jarvis_privat') AS fach, jarvis_ops.f_sicherung('jarvis_ops') AS betrieb\nFROM jarvis_ops.context_document_settings s WHERE s.context_id = 'privat'",
+        "options": {}
+      },
+      "credentials": {
+        "postgres": {
+          "id": "oCkj27EiMe96vXvU",
+          "name": "jv_privat_postgres"
+        }
+      }
+    },
+    {
+      "id": "048dddb3-79ff-4123-b6c7-f50e50dd961c",
+      "name": "Ziel bestimmen A",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        96
+      ],
+      "parameters": {
+        "jsCode": "// CR-19/TS-13: Ziel bestimmen. Kontext kommt aus der Datenbank, Wurzelordner aus der n8n-Variable (env-Verweis).\nconst e = $('Export lesen A').first().json || {};\nconst lauf = $('Lauf vorbereiten').first().json;\nconst m = /^env:([A-Z][A-Z0-9_]{3,63})$/.exec(String(e.context_root_ref || ''));\nlet root = '';\nif (m) { try { root = String($vars[m[1]] || '').trim(); } catch (x) { root = ''; } }\nif (!/^[A-Za-z0-9_-]{10,200}$/.test(root)) throw new Error('Sicherung: Wurzelordner des Kontexts ist nicht konfiguriert');\nconst k = String(e.context_id || '');\nif (!/^[a-z][a-z_]{2,40}$/.test(k)) throw new Error('Sicherung: Kontext unbekannt');\nreturn [{ json: { kontext: k, root_id: root, woche: lauf.woche, dateiname: 'JARVIS_Sicherung_' + k + '_' + lauf.woche + '.json' } }];\n"
+      }
+    },
+    {
+      "id": "04b4c149-9c9c-4a1d-8205-427c0e8fd862",
+      "name": "Ordner suchen A",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        896,
+        96
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "https://www.googleapis.com/drive/v3/files",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleDriveOAuth2Api",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "q",
+              "value": "='{{ $json.root_id }}' in parents and name = '95_Sicherung' and mimeType = 'application/vnd.google-apps.folder' and trashed = false"
+            },
+            {
+              "name": "fields",
+              "value": "files(id,name)"
+            },
+            {
+              "name": "orderBy",
+              "value": "createdTime"
+            },
+            {
+              "name": "spaces",
+              "value": "drive"
+            },
+            {
+              "name": "pageSize",
+              "value": "5"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "T9eXpovYsz2Ipp6B",
+          "name": "jv_privat_gdrive"
+        }
+      }
+    },
+    {
+      "id": "140e963e-a00e-4a37-a1d9-1415ddb1b9ef",
+      "name": "Ordner da? A",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1120,
+        96
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ ($json.files || []).length > 0 }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "092b449d-8aab-4b43-80f4-e55ab1b36ac1",
+      "name": "Ordner merken A",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1568,
+        96
+      ],
+      "parameters": {
+        "jsCode": "// CR-19/TS-13: Sicherungsordner 95_Sicherung (gefunden oder neu angelegt).\nconst f = $input.first().json || {};\nconst id = (Array.isArray(f.files) && f.files[0]) ? f.files[0].id : f.id;\nif (!id) throw new Error('Sicherung: Ordner 95_Sicherung nicht verfügbar');\nreturn [{ json: Object.assign({}, $('Ziel bestimmen A').first().json, { ordner_id: id }) }];\n"
+      }
+    },
+    {
+      "id": "78ebe8ad-e8c7-4722-b589-b34e5d4b4263",
+      "name": "Vorhanden suchen A",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1792,
+        96
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "https://www.googleapis.com/drive/v3/files",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleDriveOAuth2Api",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "q",
+              "value": "='{{ $json.ordner_id }}' in parents and name = '{{ $json.dateiname }}.gz' and trashed = false"
+            },
+            {
+              "name": "fields",
+              "value": "files(id,name)"
+            },
+            {
+              "name": "spaces",
+              "value": "drive"
+            },
+            {
+              "name": "pageSize",
+              "value": "5"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "T9eXpovYsz2Ipp6B",
+          "name": "jv_privat_gdrive"
+        }
+      }
+    },
+    {
+      "id": "27fccc13-8b82-4c0d-933e-16dde8f61787",
+      "name": "Schon gesichert? A",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2016,
+        96
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ ($json.files || []).length > 0 }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "2f1eb1cb-99a4-434e-bb2c-9645bd522063",
+      "name": "Uebersprungen protokollieren A",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        2240,
+        0
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "options": {
+          "queryReplacement": "={{ $(\"Ordner merken A\").first().json.woche }},{{ $(\"Ordner merken A\").first().json.dateiname }}.gz"
+        },
+        "query": "INSERT INTO jarvis_privat.action_log (entry_kind, actor, summary_de, body)\nVALUES ('backup_skipped', 'jarvis', 'Sicherung ' || $1 || ' bereits vorhanden, nicht erneut abgelegt',\n  jsonb_build_object('woche', $1, 'datei', $2, 'change_request', 'CR-19', 'schuld', 'TS-13'))\nRETURNING log_id"
+      },
+      "credentials": {
+        "postgres": {
+          "id": "oCkj27EiMe96vXvU",
+          "name": "jv_privat_postgres"
+        }
+      }
+    },
+    {
+      "id": "fc7721dc-c4ea-41a5-bc87-798313e95d39",
+      "name": "Datei bilden A",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2240,
+        192
+      ],
+      "parameters": {
+        "jsCode": "// CR-19/TS-13: Sicherungsdatei bilden (alle Tabellen als JSON, Zeilenzahlen für den Nachweis).\nconst z = $('Ordner merken A').first().json;\nconst ex = $('Export lesen A').first().json;\nconst schemas = [ex.fach, ex.betrieb].filter(function (x) { return x && typeof x === 'object'; });\nif (!schemas.length) throw new Error('Sicherung: Export leer');\nconst zeilen = {};\nlet gesamt = 0;\nschemas.forEach(function (x) { const zz = x.zeilen || {}; Object.keys(zz).forEach(function (t) { zeilen[x.schema + '.' + t] = Number(zz[t]) || 0; gesamt += Number(zz[t]) || 0; }); });\nconst inhalt = JSON.stringify({ format: 'jarvis-sicherung-1', kontext: z.kontext, woche: z.woche, erstellt: new Date().toISOString(), schemas: schemas });\nconst bin = await this.helpers.prepareBinaryData(Buffer.from(inhalt, 'utf8'), z.dateiname, 'application/json');\nreturn [{ json: Object.assign({}, z, { zeilen: zeilen, zeilen_gesamt: gesamt, bytes_roh: Buffer.byteLength(inhalt, 'utf8') }), binary: { data: bin } }];\n"
+      }
+    },
+    {
+      "id": "0a96e233-45fa-4236-bd18-e0d35ffef1c1",
+      "name": "Packen A",
+      "type": "n8n-nodes-base.compression",
+      "typeVersion": 1.1,
+      "position": [
+        2464,
+        192
+      ],
+      "parameters": {
+        "operation": "compress",
+        "binaryPropertyName": "data",
+        "outputFormat": "gzip"
+      }
+    },
+    {
+      "id": "aa3228e5-0770-4743-bfa4-21f62219d7ce",
+      "name": "Hochladen A",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        2688,
+        192
+      ],
+      "parameters": {
+        "authentication": "oAuth2",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $(\"Ordner merken A\").first().json.ordner_id }}"
+        },
+        "inputDataFieldName": "={{ Object.keys($binary || {})[0] || \"data\" }}",
+        "name": "={{ $(\"Ordner merken A\").first().json.dateiname }}.gz",
+        "operation": "upload",
+        "options": {},
+        "resource": "file"
+      },
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "T9eXpovYsz2Ipp6B",
+          "name": "jv_privat_gdrive"
+        }
+      }
+    },
+    {
+      "id": "56738a65-564d-4c79-8bd2-b0863c8d94ad",
+      "name": "Nachlesen A",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        2912,
+        192
+      ],
+      "parameters": {
+        "resource": "file",
+        "operation": "download",
+        "authentication": "oAuth2",
+        "fileId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $json.id }}"
+        },
+        "options": {}
+      },
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "T9eXpovYsz2Ipp6B",
+          "name": "jv_privat_gdrive"
+        }
+      }
+    },
+    {
+      "id": "3872462a-9c1f-46af-91e4-591796eba37e",
+      "name": "Entpacken A",
+      "type": "n8n-nodes-base.compression",
+      "typeVersion": 1.1,
+      "position": [
+        3136,
+        192
+      ],
+      "parameters": {
+        "operation": "decompress",
+        "binaryPropertyName": "={{ Object.keys($binary || {})[0] || \"data\" }}",
+        "outputPrefix": "file_"
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "4282ae07-8176-467d-bc86-c5ab93f1f906",
+      "name": "Nachweis pruefen A",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3360,
+        192
+      ],
+      "parameters": {
+        "jsCode": "// CR-19/TS-13: Nachweis. Hochgeladene Datei wurde aus Drive zurückgelesen und entpackt; Grösse und Zeilenzahl je Tabelle müssen übereinstimmen.\nconst z = $('Datei bilden A').first().json;\nconst up = $('Hochladen A').first().json || {};\nconst it = $input.first();\nlet ok = false;\nlet fehler = null;\ntry {\n  if (!up.id) throw new Error('Upload ohne Datei-ID' + (up.error ? ': ' + String(up.error.message || up.error).slice(0, 200) : ''));\n  const keys = Object.keys((it && it.binary) || {});\n  if (!keys.length) throw new Error('Nachlesen lieferte keine Datei');\n  const buf = await this.helpers.getBinaryDataBuffer(0, keys[0]);\n  if (buf.length !== z.bytes_roh) throw new Error('Grösse weicht ab (' + buf.length + ' statt ' + z.bytes_roh + ')');\n  const d = JSON.parse(buf.toString('utf8'));\n  const gelesen = {};\n  (d.schemas || []).forEach(function (x) { Object.keys(x.tabellen || {}).forEach(function (t) { gelesen[x.schema + '.' + t] = Array.isArray(x.tabellen[t]) ? x.tabellen[t].length : -1; }); });\n  const abw = Object.keys(z.zeilen).filter(function (k) { return gelesen[k] !== z.zeilen[k]; });\n  if (abw.length) throw new Error('Zeilenzahl weicht ab: ' + abw.slice(0, 5).join(', '));\n  ok = true;\n} catch (e) { fehler = String(e.message || e).slice(0, 300); }\nconst body = { woche: z.woche, datei: z.dateiname + '.gz', file_id: up.id || null, tabellen: Object.keys(z.zeilen).length, zeilen: z.zeilen_gesamt,\n  bytes_roh: z.bytes_roh, nachweis: ok ? 'nachgelesen_entpackt_gezaehlt' : null, fehler: fehler, change_request: 'CR-19', schuld: 'TS-13' };\nreturn [{ json: { ok: ok, ordner_id: z.ordner_id, p64: Buffer.from(JSON.stringify(body), 'utf8').toString('base64') } }];\n"
+      }
+    },
+    {
+      "id": "db907b73-c83f-4bd7-91b5-9cac1f1e3a24",
+      "name": "Protokoll A",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        3584,
+        192
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH p AS (SELECT convert_from(decode($1, 'base64'), 'UTF8')::jsonb AS j)\nINSERT INTO jarvis_privat.action_log (entry_kind, actor, summary_de, body)\nSELECT CASE WHEN p.j->>'fehler' IS NULL THEN 'backup_completed' ELSE 'backup_failed' END, 'jarvis',\n  CASE WHEN p.j->>'fehler' IS NULL THEN 'Sicherung ' || (p.j->>'woche') || ' abgelegt und nachgelesen' ELSE 'Sicherung ' || (p.j->>'woche') || ' fehlgeschlagen' END,\n  p.j FROM p\nRETURNING log_id",
+        "options": {
+          "queryReplacement": "={{ $json.p64 }}"
+        }
+      },
+      "credentials": {
+        "postgres": {
+          "id": "oCkj27EiMe96vXvU",
+          "name": "jv_privat_postgres"
+        }
+      }
+    },
+    {
+      "id": "3be0a535-30a6-4e58-9f61-b397ec03c327",
+      "name": "Gelungen? A",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        3808,
+        192
+      ],
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "leftValue": "={{ $(\"Nachweis pruefen A\").first().json.ok }}",
+              "operator": {
+                "operation": "true",
+                "singleValue": true,
+                "type": "boolean"
+              }
+            }
+          ],
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          }
+        }
+      }
+    },
+    {
+      "id": "d5da10fc-2a33-473f-8af9-93038594690d",
+      "name": "Alte suchen A",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        4032,
+        192
+      ],
+      "parameters": {
+        "authentication": "predefinedCredentialType",
+        "method": "GET",
+        "nodeCredentialType": "googleDriveOAuth2Api",
+        "options": {
+          "timeout": 30000
+        },
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "q",
+              "value": "='{{ $(\"Nachweis pruefen A\").first().json.ordner_id }}' in parents and createdTime < '{{ $now.minus({ days: $(\"Lauf vorbereiten\").first().json.aufbewahrung_tage }).toUTC().toISO() }}' and trashed = false"
+            },
+            {
+              "name": "fields",
+              "value": "files(id,name)"
+            },
+            {
+              "name": "spaces",
+              "value": "drive"
+            },
+            {
+              "name": "pageSize",
+              "value": "50"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "url": "https://www.googleapis.com/drive/v3/files"
+      },
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "T9eXpovYsz2Ipp6B",
+          "name": "jv_privat_gdrive"
+        }
+      }
+    },
+    {
+      "id": "1a737cc3-db41-41e3-b827-257e0ca30d88",
+      "name": "Alte aufteilen A",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4256,
+        192
+      ],
+      "parameters": {
+        "jsCode": "// CR-19/TS-13: Sicherungen älter als die Aufbewahrungsfrist (Papierkorb, 30 Tage wiederherstellbar).\nconst r = $input.first().json || {};\nconst files = Array.isArray(r.files) ? r.files : [];\nreturn files.filter(function (f) { return f && f.id && /^JARVIS_Sicherung_/.test(String(f.name || '')); }).map(function (f) { return { json: { id: f.id, name: f.name } }; });\n"
+      }
+    },
+    {
+      "id": "088c31e6-9bfa-48d2-93b8-8601f717a2a4",
+      "name": "In Papierkorb A",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        4480,
+        192
+      ],
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://www.googleapis.com/drive/v3/files/{{ $json.id }}?fields=id,name,trashed",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleDriveOAuth2Api",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "{\"trashed\": true}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "T9eXpovYsz2Ipp6B",
+          "name": "jv_privat_gdrive"
+        }
+      }
+    },
+    {
+      "id": "2e32fc32-c49c-439b-9211-11fceac7b3c8",
+      "name": "Aufraeumen protokollieren A",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        4704,
+        192
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO jarvis_privat.action_log (entry_kind, actor, summary_de, body)\nVALUES ('backup_retention', 'jarvis', 'Alte Sicherung in den Papierkorb gelegt: ' || $1,\n  jsonb_build_object('datei', $1, 'file_id', $2, 'change_request', 'CR-19', 'schuld', 'TS-13'))\nRETURNING log_id",
+        "options": {
+          "queryReplacement": "={{ $json.name }},{{ $json.id }}"
+        }
+      },
+      "credentials": {
+        "postgres": {
+          "id": "oCkj27EiMe96vXvU",
+          "name": "jv_privat_postgres"
+        }
+      }
+    },
+    {
+      "id": "775271c1-4f25-4212-b5a4-a11c8f266a4d",
+      "name": "Ordner anlegen A",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1344,
+        224
+      ],
+      "parameters": {
+        "authentication": "predefinedCredentialType",
+        "contentType": "json",
+        "jsonBody": "={{ JSON.stringify({ name: \"95_Sicherung\", mimeType: \"application/vnd.google-apps.folder\", parents: [ $(\"Ziel bestimmen A\").first().json.root_id ] }) }}",
+        "method": "POST",
+        "nodeCredentialType": "googleDriveOAuth2Api",
+        "options": {
+          "timeout": 30000
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "url": "https://www.googleapis.com/drive/v3/files?fields=id,name"
+      },
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "T9eXpovYsz2Ipp6B",
+          "name": "jv_privat_gdrive"
+        }
+      }
+    },
+    {
+      "id": "ad623edf-407c-4045-87d7-901146c6622c",
+      "name": "Export lesen B",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        448,
+        480
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT s.context_id, s.context_root_ref, jarvis_ops.f_sicherung('jarvis_visolva') AS fach, NULL::jsonb AS betrieb\nFROM jarvis_ops.context_document_settings s WHERE s.context_id = 'arbeitgeber_visolva'",
+        "options": {}
+      },
+      "credentials": {
+        "postgres": {
+          "id": "7BblU6FbDds3EZBb",
+          "name": "jv_visolva_postgres"
+        }
+      }
+    },
+    {
+      "id": "dd58526b-2c30-44d2-9f66-b94c2c593c90",
+      "name": "Ziel bestimmen B",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        480
+      ],
+      "parameters": {
+        "jsCode": "// CR-19/TS-13: Ziel bestimmen. Kontext kommt aus der Datenbank, Wurzelordner aus der n8n-Variable (env-Verweis).\nconst e = $('Export lesen B').first().json || {};\nconst lauf = $('Lauf vorbereiten').first().json;\nconst m = /^env:([A-Z][A-Z0-9_]{3,63})$/.exec(String(e.context_root_ref || ''));\nlet root = '';\nif (m) { try { root = String($vars[m[1]] || '').trim(); } catch (x) { root = ''; } }\nif (!/^[A-Za-z0-9_-]{10,200}$/.test(root)) throw new Error('Sicherung: Wurzelordner des Kontexts ist nicht konfiguriert');\nconst k = String(e.context_id || '');\nif (!/^[a-z][a-z_]{2,40}$/.test(k)) throw new Error('Sicherung: Kontext unbekannt');\nreturn [{ json: { kontext: k, root_id: root, woche: lauf.woche, dateiname: 'JARVIS_Sicherung_' + k + '_' + lauf.woche + '.json' } }];\n"
+      }
+    },
+    {
+      "id": "38fb8d60-683f-4faf-8e47-437cd95de748",
+      "name": "Ordner suchen B",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        896,
+        480
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "https://www.googleapis.com/drive/v3/files",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleDriveOAuth2Api",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "q",
+              "value": "='{{ $json.root_id }}' in parents and name = '95_Sicherung' and mimeType = 'application/vnd.google-apps.folder' and trashed = false"
+            },
+            {
+              "name": "fields",
+              "value": "files(id,name)"
+            },
+            {
+              "name": "orderBy",
+              "value": "createdTime"
+            },
+            {
+              "name": "spaces",
+              "value": "drive"
+            },
+            {
+              "name": "pageSize",
+              "value": "5"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "r79T8YvgoloadnXV",
+          "name": "jv_visolva_gdrive"
+        }
+      }
+    },
+    {
+      "id": "7302961b-c71c-4b8b-83d3-bea79a44df85",
+      "name": "Ordner da? B",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1120,
+        480
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ ($json.files || []).length > 0 }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "7875e5bf-4e53-41ee-b907-68a989acc5db",
+      "name": "Ordner merken B",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1568,
+        480
+      ],
+      "parameters": {
+        "jsCode": "// CR-19/TS-13: Sicherungsordner 95_Sicherung (gefunden oder neu angelegt).\nconst f = $input.first().json || {};\nconst id = (Array.isArray(f.files) && f.files[0]) ? f.files[0].id : f.id;\nif (!id) throw new Error('Sicherung: Ordner 95_Sicherung nicht verfügbar');\nreturn [{ json: Object.assign({}, $('Ziel bestimmen B').first().json, { ordner_id: id }) }];\n"
+      }
+    },
+    {
+      "id": "2f8c3259-b45d-4bd0-a1ea-18379b23e0e4",
+      "name": "Vorhanden suchen B",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1792,
+        480
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "https://www.googleapis.com/drive/v3/files",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleDriveOAuth2Api",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "q",
+              "value": "='{{ $json.ordner_id }}' in parents and name = '{{ $json.dateiname }}.gz' and trashed = false"
+            },
+            {
+              "name": "fields",
+              "value": "files(id,name)"
+            },
+            {
+              "name": "spaces",
+              "value": "drive"
+            },
+            {
+              "name": "pageSize",
+              "value": "5"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "r79T8YvgoloadnXV",
+          "name": "jv_visolva_gdrive"
+        }
+      }
+    },
+    {
+      "id": "94914614-8faf-480e-9ffe-b047bbed33a0",
+      "name": "Schon gesichert? B",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2016,
+        480
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ ($json.files || []).length > 0 }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "8bbb5717-e14c-4a73-b8cb-78cd6f26ce87",
+      "name": "Uebersprungen protokollieren B",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        2240,
+        384
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "options": {
+          "queryReplacement": "={{ $(\"Ordner merken B\").first().json.woche }},{{ $(\"Ordner merken B\").first().json.dateiname }}.gz"
+        },
+        "query": "INSERT INTO jarvis_visolva.action_log (entry_kind, actor, summary_de, body)\nVALUES ('backup_skipped', 'jarvis', 'Sicherung ' || $1 || ' bereits vorhanden, nicht erneut abgelegt',\n  jsonb_build_object('woche', $1, 'datei', $2, 'change_request', 'CR-19', 'schuld', 'TS-13'))\nRETURNING log_id"
+      },
+      "credentials": {
+        "postgres": {
+          "id": "7BblU6FbDds3EZBb",
+          "name": "jv_visolva_postgres"
+        }
+      }
+    },
+    {
+      "id": "07848f2e-10ed-4c4f-9204-d7656ce700fa",
+      "name": "Datei bilden B",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2240,
+        576
+      ],
+      "parameters": {
+        "jsCode": "// CR-19/TS-13: Sicherungsdatei bilden (alle Tabellen als JSON, Zeilenzahlen für den Nachweis).\nconst z = $('Ordner merken B').first().json;\nconst ex = $('Export lesen B').first().json;\nconst schemas = [ex.fach, ex.betrieb].filter(function (x) { return x && typeof x === 'object'; });\nif (!schemas.length) throw new Error('Sicherung: Export leer');\nconst zeilen = {};\nlet gesamt = 0;\nschemas.forEach(function (x) { const zz = x.zeilen || {}; Object.keys(zz).forEach(function (t) { zeilen[x.schema + '.' + t] = Number(zz[t]) || 0; gesamt += Number(zz[t]) || 0; }); });\nconst inhalt = JSON.stringify({ format: 'jarvis-sicherung-1', kontext: z.kontext, woche: z.woche, erstellt: new Date().toISOString(), schemas: schemas });\nconst bin = await this.helpers.prepareBinaryData(Buffer.from(inhalt, 'utf8'), z.dateiname, 'application/json');\nreturn [{ json: Object.assign({}, z, { zeilen: zeilen, zeilen_gesamt: gesamt, bytes_roh: Buffer.byteLength(inhalt, 'utf8') }), binary: { data: bin } }];\n"
+      }
+    },
+    {
+      "id": "0036d34f-360c-4892-9379-385e25d77012",
+      "name": "Packen B",
+      "type": "n8n-nodes-base.compression",
+      "typeVersion": 1.1,
+      "position": [
+        2464,
+        576
+      ],
+      "parameters": {
+        "operation": "compress",
+        "binaryPropertyName": "data",
+        "outputFormat": "gzip"
+      }
+    },
+    {
+      "id": "39b54726-ca7e-4616-a95c-3d3d87c0e444",
+      "name": "Hochladen B",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        2688,
+        576
+      ],
+      "parameters": {
+        "authentication": "oAuth2",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $(\"Ordner merken B\").first().json.ordner_id }}"
+        },
+        "inputDataFieldName": "={{ Object.keys($binary || {})[0] || \"data\" }}",
+        "name": "={{ $(\"Ordner merken B\").first().json.dateiname }}.gz",
+        "operation": "upload",
+        "options": {},
+        "resource": "file"
+      },
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "r79T8YvgoloadnXV",
+          "name": "jv_visolva_gdrive"
+        }
+      }
+    },
+    {
+      "id": "b3b0c906-48cc-43f2-8ae0-d4de0b152551",
+      "name": "Nachlesen B",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        2912,
+        576
+      ],
+      "parameters": {
+        "resource": "file",
+        "operation": "download",
+        "authentication": "oAuth2",
+        "fileId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $json.id }}"
+        },
+        "options": {}
+      },
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "r79T8YvgoloadnXV",
+          "name": "jv_visolva_gdrive"
+        }
+      }
+    },
+    {
+      "id": "5ab5f0da-3446-4164-80b2-d6703ceb23df",
+      "name": "Entpacken B",
+      "type": "n8n-nodes-base.compression",
+      "typeVersion": 1.1,
+      "position": [
+        3136,
+        576
+      ],
+      "parameters": {
+        "operation": "decompress",
+        "binaryPropertyName": "={{ Object.keys($binary || {})[0] || \"data\" }}",
+        "outputPrefix": "file_"
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "c7a90422-4c6e-4fdb-926a-27cdf36c6fe5",
+      "name": "Nachweis pruefen B",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3360,
+        576
+      ],
+      "parameters": {
+        "jsCode": "// CR-19/TS-13: Nachweis. Hochgeladene Datei wurde aus Drive zurückgelesen und entpackt; Grösse und Zeilenzahl je Tabelle müssen übereinstimmen.\nconst z = $('Datei bilden B').first().json;\nconst up = $('Hochladen B').first().json || {};\nconst it = $input.first();\nlet ok = false;\nlet fehler = null;\ntry {\n  if (!up.id) throw new Error('Upload ohne Datei-ID' + (up.error ? ': ' + String(up.error.message || up.error).slice(0, 200) : ''));\n  const keys = Object.keys((it && it.binary) || {});\n  if (!keys.length) throw new Error('Nachlesen lieferte keine Datei');\n  const buf = await this.helpers.getBinaryDataBuffer(0, keys[0]);\n  if (buf.length !== z.bytes_roh) throw new Error('Grösse weicht ab (' + buf.length + ' statt ' + z.bytes_roh + ')');\n  const d = JSON.parse(buf.toString('utf8'));\n  const gelesen = {};\n  (d.schemas || []).forEach(function (x) { Object.keys(x.tabellen || {}).forEach(function (t) { gelesen[x.schema + '.' + t] = Array.isArray(x.tabellen[t]) ? x.tabellen[t].length : -1; }); });\n  const abw = Object.keys(z.zeilen).filter(function (k) { return gelesen[k] !== z.zeilen[k]; });\n  if (abw.length) throw new Error('Zeilenzahl weicht ab: ' + abw.slice(0, 5).join(', '));\n  ok = true;\n} catch (e) { fehler = String(e.message || e).slice(0, 300); }\nconst body = { woche: z.woche, datei: z.dateiname + '.gz', file_id: up.id || null, tabellen: Object.keys(z.zeilen).length, zeilen: z.zeilen_gesamt,\n  bytes_roh: z.bytes_roh, nachweis: ok ? 'nachgelesen_entpackt_gezaehlt' : null, fehler: fehler, change_request: 'CR-19', schuld: 'TS-13' };\nreturn [{ json: { ok: ok, ordner_id: z.ordner_id, p64: Buffer.from(JSON.stringify(body), 'utf8').toString('base64') } }];\n"
+      }
+    },
+    {
+      "id": "81b001f6-cc76-41e8-8e51-f19ddc4ecad0",
+      "name": "Protokoll B",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        3584,
+        576
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH p AS (SELECT convert_from(decode($1, 'base64'), 'UTF8')::jsonb AS j)\nINSERT INTO jarvis_visolva.action_log (entry_kind, actor, summary_de, body)\nSELECT CASE WHEN p.j->>'fehler' IS NULL THEN 'backup_completed' ELSE 'backup_failed' END, 'jarvis',\n  CASE WHEN p.j->>'fehler' IS NULL THEN 'Sicherung ' || (p.j->>'woche') || ' abgelegt und nachgelesen' ELSE 'Sicherung ' || (p.j->>'woche') || ' fehlgeschlagen' END,\n  p.j FROM p\nRETURNING log_id",
+        "options": {
+          "queryReplacement": "={{ $json.p64 }}"
+        }
+      },
+      "credentials": {
+        "postgres": {
+          "id": "7BblU6FbDds3EZBb",
+          "name": "jv_visolva_postgres"
+        }
+      }
+    },
+    {
+      "id": "662bf304-7898-478c-8948-6bc880e8a523",
+      "name": "Gelungen? B",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        3808,
+        576
+      ],
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "leftValue": "={{ $(\"Nachweis pruefen B\").first().json.ok }}",
+              "operator": {
+                "operation": "true",
+                "singleValue": true,
+                "type": "boolean"
+              }
+            }
+          ],
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          }
+        }
+      }
+    },
+    {
+      "id": "220438ba-5410-47c1-9c80-bf8917f96d56",
+      "name": "Alte suchen B",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        4032,
+        576
+      ],
+      "parameters": {
+        "authentication": "predefinedCredentialType",
+        "method": "GET",
+        "nodeCredentialType": "googleDriveOAuth2Api",
+        "options": {
+          "timeout": 30000
+        },
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "q",
+              "value": "='{{ $(\"Nachweis pruefen B\").first().json.ordner_id }}' in parents and createdTime < '{{ $now.minus({ days: $(\"Lauf vorbereiten\").first().json.aufbewahrung_tage }).toUTC().toISO() }}' and trashed = false"
+            },
+            {
+              "name": "fields",
+              "value": "files(id,name)"
+            },
+            {
+              "name": "spaces",
+              "value": "drive"
+            },
+            {
+              "name": "pageSize",
+              "value": "50"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "url": "https://www.googleapis.com/drive/v3/files"
+      },
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "r79T8YvgoloadnXV",
+          "name": "jv_visolva_gdrive"
+        }
+      }
+    },
+    {
+      "id": "92c6dd5b-6cbc-4049-bcf7-eef6fd2f750e",
+      "name": "Alte aufteilen B",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4256,
+        576
+      ],
+      "parameters": {
+        "jsCode": "// CR-19/TS-13: Sicherungen älter als die Aufbewahrungsfrist (Papierkorb, 30 Tage wiederherstellbar).\nconst r = $input.first().json || {};\nconst files = Array.isArray(r.files) ? r.files : [];\nreturn files.filter(function (f) { return f && f.id && /^JARVIS_Sicherung_/.test(String(f.name || '')); }).map(function (f) { return { json: { id: f.id, name: f.name } }; });\n"
+      }
+    },
+    {
+      "id": "e253ecdf-230f-49ad-9dfb-2684f9073f63",
+      "name": "In Papierkorb B",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        4480,
+        576
+      ],
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://www.googleapis.com/drive/v3/files/{{ $json.id }}?fields=id,name,trashed",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleDriveOAuth2Api",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "{\"trashed\": true}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "r79T8YvgoloadnXV",
+          "name": "jv_visolva_gdrive"
+        }
+      }
+    },
+    {
+      "id": "06bce78f-c82e-41cc-9489-d94f079bebeb",
+      "name": "Aufraeumen protokollieren B",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        4704,
+        576
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO jarvis_visolva.action_log (entry_kind, actor, summary_de, body)\nVALUES ('backup_retention', 'jarvis', 'Alte Sicherung in den Papierkorb gelegt: ' || $1,\n  jsonb_build_object('datei', $1, 'file_id', $2, 'change_request', 'CR-19', 'schuld', 'TS-13'))\nRETURNING log_id",
+        "options": {
+          "queryReplacement": "={{ $json.name }},{{ $json.id }}"
+        }
+      },
+      "credentials": {
+        "postgres": {
+          "id": "7BblU6FbDds3EZBb",
+          "name": "jv_visolva_postgres"
+        }
+      }
+    },
+    {
+      "id": "b9bf17d3-02c6-4b96-a358-2c1eea2cfb1e",
+      "name": "Ordner anlegen B",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1344,
+        560
+      ],
+      "parameters": {
+        "authentication": "predefinedCredentialType",
+        "contentType": "json",
+        "jsonBody": "={{ JSON.stringify({ name: \"95_Sicherung\", mimeType: \"application/vnd.google-apps.folder\", parents: [ $(\"Ziel bestimmen B\").first().json.root_id ] }) }}",
+        "method": "POST",
+        "nodeCredentialType": "googleDriveOAuth2Api",
+        "options": {
+          "timeout": 30000
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "url": "https://www.googleapis.com/drive/v3/files?fields=id,name"
+      },
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "r79T8YvgoloadnXV",
+          "name": "jv_visolva_gdrive"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Sonntags 03:17": {
+      "main": [
+        [
+          {
+            "node": "Lauf vorbereiten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lauf vorbereiten": {
+      "main": [
+        [
+          {
+            "node": "Export lesen A",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Export lesen B",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Start": {
+      "main": [
+        [
+          {
+            "node": "Lauf vorbereiten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Export lesen A": {
+      "main": [
+        [
+          {
+            "node": "Ziel bestimmen A",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ziel bestimmen A": {
+      "main": [
+        [
+          {
+            "node": "Ordner suchen A",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ordner suchen A": {
+      "main": [
+        [
+          {
+            "node": "Ordner da? A",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ordner da? A": {
+      "main": [
+        [
+          {
+            "node": "Ordner merken A",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ordner anlegen A",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ordner anlegen A": {
+      "main": [
+        [
+          {
+            "node": "Ordner merken A",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ordner merken A": {
+      "main": [
+        [
+          {
+            "node": "Vorhanden suchen A",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vorhanden suchen A": {
+      "main": [
+        [
+          {
+            "node": "Schon gesichert? A",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schon gesichert? A": {
+      "main": [
+        [
+          {
+            "node": "Uebersprungen protokollieren A",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Datei bilden A",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Datei bilden A": {
+      "main": [
+        [
+          {
+            "node": "Packen A",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Packen A": {
+      "main": [
+        [
+          {
+            "node": "Hochladen A",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Hochladen A": {
+      "main": [
+        [
+          {
+            "node": "Nachlesen A",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Nachlesen A": {
+      "main": [
+        [
+          {
+            "node": "Entpacken A",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Entpacken A": {
+      "main": [
+        [
+          {
+            "node": "Nachweis pruefen A",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Nachweis pruefen A": {
+      "main": [
+        [
+          {
+            "node": "Protokoll A",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Protokoll A": {
+      "main": [
+        [
+          {
+            "node": "Gelungen? A",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gelungen? A": {
+      "main": [
+        [
+          {
+            "node": "Alte suchen A",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Alte suchen A": {
+      "main": [
+        [
+          {
+            "node": "Alte aufteilen A",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Alte aufteilen A": {
+      "main": [
+        [
+          {
+            "node": "In Papierkorb A",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "In Papierkorb A": {
+      "main": [
+        [
+          {
+            "node": "Aufraeumen protokollieren A",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Export lesen B": {
+      "main": [
+        [
+          {
+            "node": "Ziel bestimmen B",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ziel bestimmen B": {
+      "main": [
+        [
+          {
+            "node": "Ordner suchen B",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ordner suchen B": {
+      "main": [
+        [
+          {
+            "node": "Ordner da? B",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ordner da? B": {
+      "main": [
+        [
+          {
+            "node": "Ordner merken B",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ordner anlegen B",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ordner anlegen B": {
+      "main": [
+        [
+          {
+            "node": "Ordner merken B",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ordner merken B": {
+      "main": [
+        [
+          {
+            "node": "Vorhanden suchen B",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vorhanden suchen B": {
+      "main": [
+        [
+          {
+            "node": "Schon gesichert? B",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schon gesichert? B": {
+      "main": [
+        [
+          {
+            "node": "Uebersprungen protokollieren B",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Datei bilden B",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Datei bilden B": {
+      "main": [
+        [
+          {
+            "node": "Packen B",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Packen B": {
+      "main": [
+        [
+          {
+            "node": "Hochladen B",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Hochladen B": {
+      "main": [
+        [
+          {
+            "node": "Nachlesen B",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Nachlesen B": {
+      "main": [
+        [
+          {
+            "node": "Entpacken B",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Entpacken B": {
+      "main": [
+        [
+          {
+            "node": "Nachweis pruefen B",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Nachweis pruefen B": {
+      "main": [
+        [
+          {
+            "node": "Protokoll B",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Protokoll B": {
+      "main": [
+        [
+          {
+            "node": "Gelungen? B",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gelungen? B": {
+      "main": [
+        [
+          {
+            "node": "Alte suchen B",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Alte suchen B": {
+      "main": [
+        [
+          {
+            "node": "Alte aufteilen B",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Alte aufteilen B": {
+      "main": [
+        [
+          {
+            "node": "In Papierkorb B",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "In Papierkorb B": {
+      "main": [
+        [
+          {
+            "node": "Aufraeumen protokollieren B",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Zurich",
+    "saveManualExecutions": false,
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "none",
+    "callerPolicy": "none"
+  },
+  "meta": {
+    "jarvis_source_workflow_id": "aZWpCEcG9vG3nCiY",
+    "jarvis_phase": "cr-19",
+    "jarvis_spec_phase_0": "1.1.0",
+    "jarvis_spec_phase_1": "4.0.2",
+    "jarvis_exported_at": "2026-10-31",
+    "jarvis_required_credentials": [
+      {
+        "id": "7BblU6FbDds3EZBb",
+        "name": "jv_visolva_postgres"
+      },
+      {
+        "id": "T9eXpovYsz2Ipp6B",
+        "name": "jv_privat_gdrive"
+      },
+      {
+        "id": "oCkj27EiMe96vXvU",
+        "name": "jv_privat_postgres"
+      },
+      {
+        "id": "r79T8YvgoloadnXV",
+        "name": "jv_visolva_gdrive"
+      }
+    ]
+  }
+}
