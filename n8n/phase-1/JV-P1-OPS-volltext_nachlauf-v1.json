@@ -1,0 +1,270 @@
+{
+  "id": "7TvYh8Uq5ml2Cs4f",
+  "name": "JV-P1-OPS-volltext_nachlauf-v1",
+  "nodes": [
+    {
+      "id": "27171d4d-022f-470e-8ab3-5d581cec35d0",
+      "name": "Start",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        80
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "5bb47585-2a26-40ef-ab96-40b4c429cd74",
+      "name": "Offene lesen",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        224,
+        192
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- CR-12 E2/E3: Dokumente ohne Volltext (hoechstens 3 Fehlversuche je Dokument), aelteste zuerst, 25 je Lauf.\nSELECT d.document_id, d.mime_type, d.source_external_id AS file_id\nFROM jarvis_privat.document d\nWHERE d.context_id = 'privat' AND d.status NOT IN ('discarded', 'misrouted')\n  AND d.source_external_id IS NOT NULL\n  AND d.mime_type IN ('application/pdf', 'image/jpeg', 'image/png', 'image/tiff')\n  AND coalesce(d.size_bytes, 0) <= 20971520\n  AND NOT EXISTS (SELECT 1 FROM jarvis_privat.document_text t WHERE t.document_id = d.document_id)\n  AND (SELECT count(*) FROM jarvis_privat.action_log l WHERE l.entry_kind = 'document_text_failed' AND l.body->>'document_id' = d.document_id) < 3\nORDER BY d.received_at\nLIMIT 25",
+        "options": {}
+      },
+      "credentials": {
+        "postgres": {
+          "id": "oCkj27EiMe96vXvU",
+          "name": "jv_privat_postgres"
+        }
+      }
+    },
+    {
+      "id": "32073c76-746e-4399-b2cb-00d90e01bdca",
+      "name": "Bericht",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        672,
+        0
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT count(*)::int AS dokumente, count(t.document_id)::int AS mit_volltext, (count(*) - count(t.document_id))::int AS ohne_volltext,\n  (SELECT count(*) FROM jarvis_privat.action_log l WHERE l.entry_kind = 'document_text_failed' AND l.logged_at > now() - interval '1 day')::int AS fehlversuche_24h\nFROM jarvis_privat.document d LEFT JOIN jarvis_privat.document_text t ON t.document_id = d.document_id\nWHERE d.context_id = 'privat' AND d.status NOT IN ('discarded', 'misrouted')",
+        "options": {}
+      },
+      "executeOnce": true,
+      "credentials": {
+        "postgres": {
+          "id": "oCkj27EiMe96vXvU",
+          "name": "jv_privat_postgres"
+        }
+      }
+    },
+    {
+      "id": "fc2aad58-daee-4c3c-b6d1-32dc11fe3d04",
+      "name": "Original laden",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        672,
+        192
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "=https://www.googleapis.com/drive/v3/files/{{ $json.file_id }}?alt=media",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleDriveOAuth2Api",
+        "options": {
+          "timeout": 120000,
+          "response": {
+            "response": {
+              "responseFormat": "file",
+              "outputPropertyName": "data"
+            }
+          }
+        }
+      },
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "T9eXpovYsz2Ipp6B",
+          "name": "jv_privat_gdrive"
+        }
+      }
+    },
+    {
+      "id": "fca06915-4868-4ea0-95a7-5ae17eee8116",
+      "name": "Eingabe bilden",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        896,
+        192
+      ],
+      "parameters": {
+        "jsCode": "// CR-12 Nachlauf: Original als base64 an den Unterworkflow; fehlt die Datei, wird der Ladefehler mitgegeben und dort als Fehlversuch protokolliert.\nconst z = $('Stapel').first().json;\nconst it = $input.first();\nlet b64 = '';\nlet ladefehler = null;\nif (it && it.binary && it.binary.data) {\n  const buf = await this.helpers.getBinaryDataBuffer(0, 'data');\n  b64 = buf.toString('base64');\n} else {\n  const e = (it && it.json && it.json.error) || null;\n  ladefehler = e ? String(e.description || e.message || 'unbekannt').slice(0, 200) : 'keine Datei geliefert';\n}\nreturn [{ json: { document_id: z.document_id, mime_type: z.mime_type, content_b64: b64, ladefehler: ladefehler, quelle: 'nachlauf' } }];\n"
+      }
+    },
+    {
+      "id": "e6ddadab-8f65-4c96-96d2-2d23350919a4",
+      "name": "Volltext erfassen",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1120,
+        272
+      ],
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "muK16kbK2DEoXZTU"
+        },
+        "mode": "once",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "aec64c5c-7e16-4a4a-9cbe-08baaadc5735",
+      "name": "Stapel",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        448,
+        192
+      ],
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      }
+    },
+    {
+      "id": "81fcc894-debe-4ac9-b03b-7b75da91dc86",
+      "name": "Alle 2 Stunden",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        272
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 2
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Start": {
+      "main": [
+        [
+          {
+            "node": "Offene lesen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Offene lesen": {
+      "main": [
+        [
+          {
+            "node": "Stapel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Original laden": {
+      "main": [
+        [
+          {
+            "node": "Eingabe bilden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Eingabe bilden": {
+      "main": [
+        [
+          {
+            "node": "Volltext erfassen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Volltext erfassen": {
+      "main": [
+        [
+          {
+            "node": "Stapel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Stapel": {
+      "main": [
+        [
+          {
+            "node": "Bericht",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Original laden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Alle 2 Stunden": {
+      "main": [
+        [
+          {
+            "node": "Offene lesen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "none"
+  },
+  "meta": {
+    "jarvis_source_workflow_id": "7TvYh8Uq5ml2Cs4f",
+    "jarvis_phase": "cr-18",
+    "jarvis_spec_phase_0": "1.1.0",
+    "jarvis_spec_phase_1": "4.0.2",
+    "jarvis_exported_at": "2026-10-31",
+    "jarvis_required_credentials": [
+      {
+        "id": "T9eXpovYsz2Ipp6B",
+        "name": "jv_privat_gdrive"
+      },
+      {
+        "id": "oCkj27EiMe96vXvU",
+        "name": "jv_privat_postgres"
+      }
+    ]
+  }
+}

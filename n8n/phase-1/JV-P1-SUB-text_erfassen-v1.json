@@ -1,0 +1,245 @@
+{
+  "id": "muK16kbK2DEoXZTU",
+  "name": "JV-P1-SUB-text_erfassen-v1",
+  "nodes": [
+    {
+      "id": "a724ca2d-0328-4648-a076-1f31001eaebd",
+      "name": "Aufruf",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        80
+      ],
+      "parameters": {
+        "inputSource": "passthrough"
+      }
+    },
+    {
+      "id": "59c24adf-9d28-4353-8897-8f1e9178ce83",
+      "name": "Anfrage bilden",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        80
+      ],
+      "parameters": {
+        "jsCode": "// CR-12: Volltext erfassen – Eingang. Erwartet document_id, mime_type, content_b64 oder (aus document_desk) ki_b64 + ctx.\nconst j = $input.first().json || {};\nconst ctx = j.ctx || {};\nconst id = String(j.document_id || ctx.document_id || '');\nconst mime = String(j.mime_type || ctx.ki_mime || ctx.mime_type || '');\nconst b64 = typeof j.content_b64 === 'string' ? j.content_b64 : (typeof j.ki_b64 === 'string' ? j.ki_b64 : '');\nconst quelle = String(j.quelle || 'upload').slice(0, 30);\nlet proj = '';\nlet proc = '';\ntry { proj = String($vars.JV_DOCAI_PROJECT || '').trim(); } catch (e) { proj = ''; }\ntry { proc = String($vars.JV_DOCAI_OCR_PROCESSOR || '').trim(); } catch (e) { proc = ''; }\nconst MIME = ['application/pdf', 'image/jpeg', 'image/png', 'image/tiff'];\nlet fehler = null;\nif (!/^doc_[0-9A-Z]{26}$/.test(id)) fehler = 'Ungültige Dokument-ID';\nelse if (MIME.indexOf(mime) === -1) fehler = 'Dateityp für die Texterkennung nicht unterstützt: ' + mime.slice(0, 60);\nelse if (!b64) fehler = j.ladefehler ? 'Original nicht ladbar: ' + String(j.ladefehler).slice(0, 200) : 'Kein Dateiinhalt übergeben';\nelse if (b64.length > 27 * 1024 * 1024) fehler = 'Datei für die Texterkennung zu gross (über 20 MB)';\nelse if (!/^[a-z][a-z0-9-]{4,61}[a-z0-9]$/.test(proj) || !/^[a-f0-9]{8,32}$/.test(proc)) fehler = 'Konfiguration der Texterkennung fehlt (n8n-Variablen JV_DOCAI_PROJECT / JV_DOCAI_OCR_PROCESSOR).';\nif (fehler) return [{ json: { ok_anfrage: false, document_id: id, quelle: quelle, fehler: fehler } }];\nconst body = { skipHumanReview: true, rawDocument: { mimeType: mime, content: b64 }, fieldMask: 'text,pages.pageNumber,pages.layout,pages.detectedLanguages' };\nif (mime === 'application/pdf') body.imagelessMode = true;\nreturn [{ json: { ok_anfrage: true, document_id: id, quelle: quelle, url: 'https://eu-documentai.googleapis.com/v1/projects/' + proj + '/locations/eu/processors/' + proc + ':process', body: body } }];\n"
+      }
+    },
+    {
+      "id": "fa0f42fa-8531-4c06-9380-25235d77e4c4",
+      "name": "Anfrage ok?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        448,
+        80
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.ok_anfrage }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "3110d4b6-5abe-4601-9d78-e0daead85ce4",
+      "name": "Text erkennen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        672,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.url }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.body) }}",
+        "options": {
+          "timeout": 90000,
+          "response": {
+            "response": {
+              "neverError": true,
+              "fullResponse": true
+            }
+          }
+        }
+      },
+      "credentials": {
+        "googleApi": {
+          "id": "rYW0mA4ISIRrZ2y9",
+          "name": "jv_privat_docai"
+        }
+      }
+    },
+    {
+      "id": "af99e4cf-fad2-4f71-a3f6-d7d158d5f18f",
+      "name": "Text auswerten",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        896,
+        80
+      ],
+      "parameters": {
+        "jsCode": "// CR-12: Antwort der Texterkennung auswerten und Speicherauftrag bilden. Volltext geht nur in die Datenbank, nie ins Protokoll.\nconst a = $('Anfrage bilden').first().json;\nconst r = $input.first().json || {};\nlet erg = null;\nif (!a.ok_anfrage) {\n  erg = { ok: false, document_id: a.document_id, quelle: a.quelle, fehler: a.fehler };\n} else {\n  const b = (r.body && typeof r.body === 'object') ? r.body : {};\n  const st = Number(r.statusCode) || 0;\n  if (st === 200 && b.document && typeof b.document === 'object') {\n    const d = b.document;\n    const pages = Array.isArray(d.pages) ? d.pages : [];\n    const text = typeof d.text === 'string' ? d.text : '';\n    const konf = pages.map(function (p) { return (p && p.layout && typeof p.layout.confidence === 'number') ? p.layout.confidence : null; }).filter(function (x) { return x !== null; });\n    const mean = konf.length ? Math.round(konf.reduce(function (s, x) { return s + x; }, 0) / konf.length * 10000) / 10000 : null;\n    const spr = {};\n    pages.forEach(function (p) { (Array.isArray(p.detectedLanguages) ? p.detectedLanguages : []).forEach(function (l) { if (l && l.languageCode) spr[l.languageCode] = (spr[l.languageCode] || 0) + (Number(l.confidence) || 0); }); });\n    const sprache = Object.keys(spr).sort(function (x, y) { return spr[y] - spr[x]; })[0] || null;\n    erg = { ok: true, document_id: a.document_id, quelle: a.quelle, full_text: text, page_count: pages.length, mean_confidence: mean,\n      sprache: sprache ? String(sprache).slice(0, 10) : null, provider: 'docai-ocr',\n      pages: pages.map(function (p, ix) { return { nr: Number(p.pageNumber) || ix + 1, konfidenz: (p.layout && typeof p.layout.confidence === 'number') ? Math.round(p.layout.confidence * 10000) / 10000 : null }; }) };\n  } else {\n    const msg = b.error ? String(b.error.status || '') + ': ' + String(b.error.message || '').slice(0, 250) : ('HTTP ' + st + (r.error ? ' ' + String(r.error.message || r.error).slice(0, 200) : ''));\n    erg = { ok: false, document_id: a.document_id, quelle: a.quelle, fehler: msg };\n  }\n}\nreturn [{ json: { p64: Buffer.from(JSON.stringify(erg), 'utf8').toString('base64'), ok: erg.ok, document_id: erg.document_id, seiten: erg.page_count || 0, zeichen: erg.full_text ? erg.full_text.length : 0, konfidenz: erg.mean_confidence || null, fehler: erg.fehler || null } }];\n"
+      }
+    },
+    {
+      "id": "8619e2dc-d3ae-40e0-9f95-b2df000043d3",
+      "name": "Text speichern",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1120,
+        80
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH p AS (SELECT convert_from(decode($1, 'base64'), 'UTF8')::jsonb AS j),\nd AS (\n  SELECT dd.document_id, dd.content_hash FROM jarvis_privat.document dd, p\n  WHERE (p.j->>'ok')::boolean AND dd.document_id = p.j->>'document_id' AND dd.context_id = 'privat'\n),\nup AS (\n  INSERT INTO jarvis_privat.document_text AS t (document_id, context_id, content_hash, page_count, text_character_count, mean_confidence, detected_language, provider_job_id, full_text, pages, extracted_at)\n  SELECT d.document_id, 'privat', d.content_hash, coalesce((p.j->>'page_count')::int, 0), char_length(p.j->>'full_text'), (p.j->>'mean_confidence')::numeric,\n         nullif(p.j->>'sprache', ''), p.j->>'provider', coalesce(p.j->>'full_text', ''), coalesce(p.j->'pages', '[]'::jsonb), now()\n  FROM d, p\n  ON CONFLICT (document_id) DO UPDATE SET content_hash = EXCLUDED.content_hash, page_count = EXCLUDED.page_count, text_character_count = EXCLUDED.text_character_count,\n    mean_confidence = EXCLUDED.mean_confidence, detected_language = EXCLUDED.detected_language, provider_job_id = EXCLUDED.provider_job_id,\n    full_text = EXCLUDED.full_text, pages = EXCLUDED.pages, extracted_at = now()\n  WHERE t.full_text IS DISTINCT FROM EXCLUDED.full_text OR t.content_hash IS DISTINCT FROM EXCLUDED.content_hash\n  RETURNING t.document_id, (xmax = 0) AS neu\n),\nl AS (\n  INSERT INTO jarvis_privat.action_log (entry_kind, actor, summary_de, body)\n  SELECT 'document_text_extracted', 'jarvis', 'Volltext erfasst: ' || up.document_id,\n    jsonb_build_object('document_id', up.document_id, 'seiten', (p.j->>'page_count')::int, 'zeichen', char_length(p.j->>'full_text'), 'konfidenz', p.j->'mean_confidence',\n      'quelle', p.j->>'quelle', 'neu', up.neu, 'change_request', 'CR-12')\n  FROM up, p\n  RETURNING log_id\n),\nf AS (\n  INSERT INTO jarvis_privat.action_log (entry_kind, actor, summary_de, body)\n  SELECT 'document_text_failed', 'jarvis', 'Volltext nicht erfasst: ' || coalesce(p.j->>'document_id', '?'),\n    jsonb_build_object('document_id', p.j->>'document_id', 'fehler', left(p.j->>'fehler', 300), 'quelle', p.j->>'quelle', 'change_request', 'CR-12')\n  FROM p WHERE NOT coalesce((p.j->>'ok')::boolean, false)\n  RETURNING log_id\n)\nSELECT (SELECT count(*) FROM up)::int AS gespeichert, (SELECT count(*) FROM d)::int AS dokument_gefunden, ((SELECT count(*) FROM l) + (SELECT count(*) FROM f))::int AS protokolliert\n",
+        "options": {
+          "queryReplacement": "={{ $json.p64 }}"
+        }
+      },
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "postgres": {
+          "id": "oCkj27EiMe96vXvU",
+          "name": "jv_privat_postgres"
+        }
+      }
+    },
+    {
+      "id": "73ead13f-ef74-439e-9563-9871990917d3",
+      "name": "Ergebnis",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1344,
+        80
+      ],
+      "parameters": {
+        "jsCode": "// CR-12: knappes Ergebnis an den Aufrufer (ohne Volltext).\nconst e = $('Text auswerten').first().json;\nconst s = $input.first().json || {};\nreturn [{ json: { ok: e.ok === true && Number(s.gespeichert || 0) + Number(s.dokument_gefunden || 0) > 0, document_id: e.document_id, seiten: e.seiten, zeichen: e.zeichen, konfidenz: e.konfidenz, gespeichert: Number(s.gespeichert || 0), fehler: e.fehler || (s.error ? 'Speichern fehlgeschlagen' : null) } }];\n"
+      }
+    }
+  ],
+  "connections": {
+    "Aufruf": {
+      "main": [
+        [
+          {
+            "node": "Anfrage bilden",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anfrage bilden": {
+      "main": [
+        [
+          {
+            "node": "Anfrage ok?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anfrage ok?": {
+      "main": [
+        [
+          {
+            "node": "Text erkennen",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Text auswerten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Text erkennen": {
+      "main": [
+        [
+          {
+            "node": "Text auswerten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Text auswerten": {
+      "main": [
+        [
+          {
+            "node": "Text speichern",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Text speichern": {
+      "main": [
+        [
+          {
+            "node": "Ergebnis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "none",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "meta": {
+    "jarvis_source_workflow_id": "muK16kbK2DEoXZTU",
+    "jarvis_phase": "cr-18",
+    "jarvis_spec_phase_0": "1.1.0",
+    "jarvis_spec_phase_1": "4.0.2",
+    "jarvis_exported_at": "2026-10-31",
+    "jarvis_required_credentials": [
+      {
+        "id": "oCkj27EiMe96vXvU",
+        "name": "jv_privat_postgres"
+      },
+      {
+        "id": "rYW0mA4ISIRrZ2y9",
+        "name": "jv_privat_docai"
+      }
+    ]
+  }
+}

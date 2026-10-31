@@ -55,6 +55,8 @@ sondern aus Abhaengigkeiten:
 | `0042a_betreute_person.sql` | CR-15: betreute Personen; **weitere Personen privat (DT-1)** | 0005, 0035 |
 | `0042b_filing_target_uq_person.sql` | Eindeutigkeit Registerziel je Person | 0042a |
 | `0043_cr16_versandform_nachforderung.sql` | CR-16: Versandform je Fall, Vorgangsart «Nachforderung», Fall «Nachreichen» (Beispielnummer neutralisiert, DT-1) | 0038, 0040 |
+| `0044_document_search.sql` | CR-12: Suchspalten und Trigramm-Indizes auf `document_text`, Suchfunktion `document_search` (nur lesend), Erweiterungen `pg_trgm`/`unaccent` (Beispielnummern neutralisiert, DT-1) | 0005, 0041 |
+| `0045_document_search_wortstamm.sql` | CR-12: Wortstamm ohne Vorsilbe «ge» (gekündigt findet Kündigung) | 0044 |
 
 Die Rechtevergabe steht bewusst am Ende: `REVOKE ALL ON ALL TABLES IN SCHEMA`
 wirkt nur auf Tabellen, die zu diesem Zeitpunkt bereits vorhanden sind. Wuerde
